@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Perfil - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Editar Perfil
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6 class="text-muted mb-3">Información Personal</h6>
+                                
+                                <!-- Campo de Nombre Completo -->
+                                <div class="mb-3">
+                                    <label for="id_nombre_completo" class="form-label">{{ form.nombre_completo.label }}</label>
+                                    {{ form.nombre_completo }}
+                                    {% if form.nombre_completo.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.nombre_completo.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Información de solo lectura -->
+                                <div class="mb-3">
+                                    <label class="form-label">Usuario</label>
+                                    <input type="text" class="form-control" value="{{ user.username }}" readonly>
+                                    <small class="form-text text-muted">El nombre de usuario no se puede modificar.</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" value="{{ user.email }}" readonly>
+                                    <small class="form-text text-muted">Para cambiar su email, contacte al administrador.</small>
+                                </div>
+                                
+                                <!-- Información del estado de la cuenta -->
+                                <div class="mb-3">
+                                    <label class="form-label">Estado de la Cuenta</label>
+                                    <div class="d-flex align-items-center">
+                                        {% if user.email_verificado %}
+                                            <span class="badge bg-success me-2">Email Verificado</span>
+                                        {% else %}
+                                            <span class="badge bg-warning me-2">Email No Verificado</span>
+                                        {% endif %}
+                                        
+                                        {% if user.autenticacion_dos_factores_activa %}
+                                            <span class="badge bg-info">iToken Activado</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Acciones del Formulario -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cuentas:perfil' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Acciones Adicionales -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Configuración de Cuenta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Seguridad</h6>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'cuentas:cambiar_contrasena' %}" class="btn btn-outline-warning">
+                                    <i class="fas fa-key me-2"></i>Cambiar Contraseña
+                                </a>
+                                {% if user.autenticacion_dos_factores_activa %}
+                                    <span class="badge bg-success me-2">iToken Activado</span>
+                                    <a href="{% url 'cuentas:itoken_configurar' %}" class="btn btn-outline-info">
+                                        <i class="fas fa-cog me-2"></i>Gestionar iToken
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'cuentas:itoken_configurar' %}" class="btn btn-outline-info">
+                                        <i class="fas fa-shield-alt me-2"></i>Configurar iToken
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Información</h6>
+                            <ul class="list-unstyled small">
+                                <li><strong>Miembro desde:</strong> {{ user.date_joined|date:"d/m/Y" }}</li>
+                                <li><strong>Último acceso:</strong> {{ user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</li>
+                                {% if user.clientes.exists %}
+                                    <li><strong>Clientes asociados:</strong> {{ user.clientes.count }}</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

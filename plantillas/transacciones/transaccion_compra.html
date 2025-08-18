@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Comprar Moneda - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-coins me-2"></i>
+                        Comprar Moneda
+                    </h4>
+                    {% if cliente_activo %}
+                        <div class="text-muted mt-2">
+                            <i class="fas fa-user me-1"></i>
+                            <strong>Cliente:</strong> {{ cliente_activo.obtener_nombre_completo }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if advertencia_sin_cliente %}
+                        <div class="alert alert-warning" role="alert">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Cliente Requerido
+                            </h5>
+                            <p>Para realizar transacciones debe tener un cliente asignado. Por favor, contacte al administrador para que le asigne un cliente o seleccione uno si tiene múltiples opciones.</p>
+                            <hr>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>
+                                    Volver al Panel de Control
+                                </a>
+                                {% if user.clientes.exists %}
+                                <a href="{% url 'cuentas:seleccionar_cliente' %}" class="btn btn-primary">
+                                    <i class="fas fa-user-check me-2"></i>
+                                    Seleccionar Cliente
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <form method="post" id="formularioTransaccionCompra">
+                            {% csrf_token %}
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ formulario.moneda_origen|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ formulario.moneda_destino|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ formulario.monto_origen|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="monto_destino" class="form-label">Cantidad a recibir</label>
+                                        <input type="text" id="monto_destino" class="form-control" readonly placeholder="0.00">
+                                        <small class="form-text text-muted">Calculado automáticamente</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <!-- El campo de cliente está oculto ya que ahora se selecciona a través del selector superior de cliente -->
+                                {{ formulario.cliente }}
+                                <div class="col-md-12">
+                                    {{ formulario.metodo_pago|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <!-- Campos Específicos del Método de Pago -->
+                            <div id="campos-metodo-pago">
+                                <!-- Elemento de Tarjeta de Stripe -->
+                                <div id="campos-stripe" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <label class="form-label">Información de Tarjeta</label>
+                                            <div id="elemento-tarjeta" class="form-control" style="padding: 12px;">
+                                                <!-- Los Elementos de Stripe crearán los elementos del formulario aquí -->
+                                            </div>
+                                            <div id="errores-tarjeta" role="alert" class="text-danger mt-2"></div>
+                                            {{ formulario.id_metodo_pago_stripe }}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Campos de SIPAP -->
+                                <div id="campos-sipap" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ formulario.cuenta_sipap|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Campos de Western Union -->
+                                <div id="campos-western-union" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ formulario.destinatario_western_union|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Campos de Retiro en Caja -->
+                                <div id="campos-retiro-caja" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ formulario.lugar_retiro|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ formulario.identificacion_retiro|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    {{ formulario.notas|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>
+                                    Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-shopping-cart me-2"></i>
+                                    Crear Transacción de Compra
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Información de Tasa de Cambio -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exchange-alt me-2"></i>
+                        Información de Tasa
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="infoTasa">
+                        <p class="text-muted">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Seleccione las monedas para ver la tasa de cambio
+                        </p>
+                    </div>
+                    
+                    <div id="infoComision" style="display: none;">
+                        <hr>
+                        <h6>Comisiones:</h6>
+                        <div id="detallesComision"></div>
+                    </div>
+                    
+                    <div id="infoTotal" style="display: none;">
+                        <hr>
+                        <h6>Resumen:</h6>
+                        <div id="detallesTotal"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Consejos de Transacción -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Consejos
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Verifique las tasas antes de confirmar
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Las tasas pueden cambiar en tiempo real
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Mantenga sus datos de pago actualizados
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not advertencia_sin_cliente %}
+<!-- Stripe.js -->
+<script src="https://js.stripe.com/v3/"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formulario = document.getElementById('formularioTransaccionCompra');
+    const monedaOrigen = document.getElementById('id_moneda_origen');
+    const monedaDestino = document.getElementById('id_moneda_destino');
+    const montoOrigen = document.getElementById('id_monto_origen');
+    const montoDestino = document.getElementById('monto_destino');
+    const infoTasa = document.getElementById('infoTasa');
+    const infoComision = document.getElementById('infoComision');
+    const infoTotal = document.getElementById('infoTotal');
+    const selectorMetodoPago = document.getElementById('id_metodo_pago');
+    
+    // Inicializar Stripe
+    const stripe = Stripe('{{ stripe_clave_publicable }}');
+    const elementos = stripe.elements();
+    
+    // Crear elemento de tarjeta
+    const elementoTarjeta = elementos.create('card', {
+        style: {
+            base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                    color: '#aab7c4',
+                },
+            },
+        },
+    });
+    
+    let tarjetaMontada = false;
+    
+    function actualizarCamposPago() {
+        const opcionSeleccionada = selectorMetodoPago.options[selectorMetodoPago.selectedIndex];
+        const nombreMetodoPago = opcionSeleccionada.text;
+        
+        // Ocultar todos los campos de pago
+        document.querySelectorAll('.campos-pago').forEach(campo => {
+            campo.style.display = 'none';
+        });
+        
+        // Mostrar campos relevantes según el método de pago
+        if (nombreMetodoPago.includes('Stripe')) {
+            document.getElementById('campos-stripe').style.display = 'block';
+            if (!tarjetaMontada) {
+                elementoTarjeta.mount('#elemento-tarjeta');
+                tarjetaMontada = true;
+            }
+        } else if (nombreMetodoPago.includes('SIPAP')) {
+            document.getElementById('campos-sipap').style.display = 'block';
+        } else if (nombreMetodoPago.includes('Western Union')) {
+            document.getElementById('campos-western-union').style.display = 'block';
+        } else if (nombreMetodoPago.includes('Retiro en Caja')) {
+            document.getElementById('campos-retiro-caja').style.display = 'block';
+        }
+    }
+    
+    function actualizarCalculos() {
+        const origen = monedaOrigen.value;
+        const destino = monedaDestino.value;
+        const monto = parseFloat(montoOrigen.value) || 0;
+        
+        if (origen && destino && monto > 0 && origen !== destino) {
+            // Aquí harías una llamada AJAX para obtener las tasas de cambio
+            // Por ahora, usaremos datos de ejemplo
+            const tasaEjemplo = 7500; // Ejemplo: USD a PYG
+            const calculado = monto * tasaEjemplo;
+            
+            montoDestino.value = calculado.toFixed(2);
+            
+            infoTasa.innerHTML = `
+                <p><strong>Tasa de Cambio:</strong><br>
+                1 ${monedaOrigen.options[monedaOrigen.selectedIndex].text} = ${tasaEjemplo.toLocaleString()} ${monedaDestino.options[monedaDestino.selectedIndex].text}</p>
+            `;
+            
+            infoComision.style.display = 'block';
+            document.getElementById('detallesComision').innerHTML = `
+                <p class="mb-1">Comisión: <span class="text-muted">2.5%</span></p>
+                <p class="mb-0">Monto: <span class="text-muted">${(calculado * 0.025).toFixed(2)}</span></p>
+            `;
+            
+            infoTotal.style.display = 'block';
+            document.getElementById('detallesTotal').innerHTML = `
+                <p class="mb-1">Subtotal: <span class="fw-bold">${calculado.toFixed(2)}</span></p>
+                <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${(calculado * 1.025).toFixed(2)}</span></p>
+            `;
+        } else {
+            montoDestino.value = '';
+            infoTasa.innerHTML = '<p class="text-muted"><i class="fas fa-info-circle me-2"></i>Seleccione las monedas para ver la tasa de cambio</p>';
+            infoComision.style.display = 'none';
+            infoTotal.style.display = 'none';
+        }
+    }
+    
+    // Listeners de eventos
+    monedaOrigen.addEventListener('change', actualizarCalculos);
+    monedaDestino.addEventListener('change', actualizarCalculos);
+    montoOrigen.addEventListener('input', actualizarCalculos);
+    selectorMetodoPago.addEventListener('change', actualizarCamposPago);
+    
+    // Inicializar campos de pago
+    actualizarCamposPago();
+    
+    // Manejar errores de la tarjeta de Stripe
+    elementoTarjeta.on('change', function(event) {
+        const mostrarError = document.getElementById('errores-tarjeta');
+        if (event.error) {
+            mostrarError.textContent = event.error.message;
+        } else {
+            mostrarError.textContent = '';
+        }
+    });
+    
+    // Manejar el envío del formulario
+    formulario.addEventListener('submit', async function(event) {
+        const opcionSeleccionada = selectorMetodoPago.options[selectorMetodoPago.selectedIndex];
+        const nombreMetodoPago = opcionSeleccionada.text;
+        
+        if (nombreMetodoPago.includes('Stripe')) {
+            event.preventDefault();
+            
+            // Crear método de pago
+            const {error, paymentMethod} = await stripe.createPaymentMethod({
+                type: 'card',
+                card: elementoTarjeta,
+            });
+            
+            if (error) {
+                document.getElementById('errores-tarjeta').textContent = error.message;
+                return;
+            }
+            
+            // Establecer el ID del método de pago en el campo oculto
+            document.getElementById('id_id_metodo_pago_stripe').value = paymentMethod.id;
+            
+            // Enviar el formulario
+            formulario.submit();
+        }
+    });
+});
+
+// Hacer que actualizarCamposPago sea global para el onchange del HTML
+window.actualizarCamposPago = function() {
+    const evento = new Event('change');
+    document.getElementById('id_metodo_pago').dispatchEvent(evento);
+};
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Activar iToken - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Activar iToken
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Paso 1: Escanee el código QR</h5>
+                            <p class="text-muted">Use su aplicación de autenticación para escanear este código QR:</p>
+                            
+                            <div class="text-center mb-3">
+                                <img src="data:image/png;base64,{{ datos_codigo_qr }}" alt="Código QR para iToken" class="img-fluid border rounded" style="max-width: 250px;">
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <small>
+                                    <strong>¿No puede escanear el código?</strong><br>
+                                    Ingrese manualmente esta clave en su aplicación:<br>
+                                    <code>{{ clave_entrada_manual }}</code>
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Paso 2: Verifique el código</h5>
+                            <p class="text-muted">Ingrese el código de 6 dígitos que aparece en su aplicación de autenticación:</p>
+                            
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="token" class="form-label">Código de Verificación</label>
+                                    <input type="text" 
+                                           class="form-control form-control-lg text-center" 
+                                           id="token" 
+                                           name="token" 
+                                           placeholder="000000" 
+                                           maxlength="6" 
+                                           pattern="[0-9]{6}" 
+                                           required
+                                           style="letter-spacing: 0.5em; font-family: monospace;">
+                                    <div class="form-text">El código cambia cada 30 segundos</div>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-check me-2"></i>Activar iToken
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <div class="alert alert-warning mt-3">
+                                <small>
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <strong>Importante:</strong> Guarde su aplicación de autenticación en un lugar seguro. 
+                                    Una vez activado el iToken, necesitará esta aplicación para acceder a su cuenta.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'cuentas:itoken_configurar' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <div class="text-muted small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Asegúrese de que la hora de su dispositivo esté sincronizada
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-formatear la entrada del token
+document.getElementById('token').addEventListener('input', function(e) {
+    // Eliminar cualquier caracter que no sea un dígito
+    e.target.value = e.target.value.replace(/\D/g, '');
+    
+    // Limitar a 6 dígitos
+    if (e.target.value.length > 6) {
+        e.target.value = e.target.value.slice(0, 6);
+    }
+});
+</script>
+{% endblock %}

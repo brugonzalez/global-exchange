@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Desasociación - Global Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    .warning-header {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .info-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .user-info, .client-info {
+        background-color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Encabezado de Advertencia -->
+            <div class="warning-header text-center">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                <h2>Confirmar Desasociación</h2>
+                <p class="mb-0">Esta acción no se puede deshacer</p>
+            </div>
+
+            <!-- Sección de Información -->
+            <div class="info-section">
+                <h5 class="mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    ¿Está seguro de que desea desasociar este usuario del cliente?
+                </h5>
+
+                <div class="row">
+                    <!-- Información del Usuario -->
+                    <div class="col-md-6">
+                        <div class="user-info">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-user me-2"></i>
+                                Información del Usuario
+                            </h6>
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td class="text-muted"><strong>Nombre:</strong></td>
+                                    <td>{{ usuario.nombre_completo }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted"><strong>Email:</strong></td>
+                                    <td>{{ usuario.email }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted"><strong>Usuario:</strong></td>
+                                    <td>{{ usuario.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted"><strong>Rol Actual:</strong></td>
+                                    <td>
+                                        <span class="badge bg-{% if object.rol == 'PROPIETARIO' %}primary{% elif object.rol == 'AUTORIZADO' %}success{% else %}secondary{% endif %}">
+                                            {{ object.get_rol_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted"><strong>Estado:</strong></td>
+                                    <td>
+                                        <span class="badge bg-{% if object.esta_activo %}success{% else %}danger{% endif %}">
+                                            {% if object.esta_activo %}Activo{% else %}Inactivo{% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Información del Cliente -->
+                    <div class="col-md-6">
+                        <div class="client-info">
+                            <h6 class="text-success border-bottom pb-2">
+                                <i class="fas fa-building me-2"></i>
+                                Información del Cliente
+                            </h6>
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td class="text-muted"><strong>Cliente:</strong></td>
+                                    <td>{{ cliente.obtener_nombre_completo }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted"><strong>Tipo:</strong></td>
+                                    <td>{{ cliente.get_tipo_cliente_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted"><strong>Identificación:</strong></td>
+                                    <td><code>{{ cliente.numero_identificacion }}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted"><strong>Categoría:</strong></td>
+                                    <td>{{ cliente.categoria.get_nombre_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted"><strong>Asignado:</strong></td>
+                                    <td>{{ object.fecha_asignacion|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advertencia de Consecuencias -->
+                <div class="alert alert-warning mt-4">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Consecuencias de esta acción:
+                    </h6>
+                    <ul class="mb-0">
+                        <li><strong>El usuario perderá el acceso</strong> a todas las operaciones del cliente.</li>
+                        <li><strong>No podrá realizar transacciones</strong> en nombre de este cliente.</li>
+                        <li><strong>Se eliminará del selector de clientes</strong> del usuario.</li>
+                        {% if user.ultimo_cliente_seleccionado == cliente %}
+                        <li class="text-danger"><strong>Este es el cliente actualmente seleccionado</strong> por el usuario; será deseleccionado.</li>
+                        {% endif %}
+                        <li><strong>Se mantendrá el registro histórico</strong> de transacciones previas.</li>
+                        <li><strong>La acción se registrará</strong> en los registros de auditoría.</li>
+                    </ul>
+                </div>
+
+                <!-- Información Adicional -->
+                {% if object.asignado_por %}
+                <div class="alert alert-info">
+                    <strong>Información adicional:</strong><br>
+                    Este usuario fue asociado por <strong>{{ object.asignado_por.nombre_completo }}</strong> 
+                    el {{ object.fecha_asignacion|date:"d/m/Y" }} a las {{ object.fecha_asignacion|time:"H:i" }}.
+                </div>
+                {% endif %}
+
+                <!-- Formulario de Confirmación -->
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'clientes:gestionar_usuarios_cliente' cliente.id %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            Cancelar
+                        </a>
+                        
+                        <div>
+                            <button type="button" class="btn btn-outline-danger me-2" 
+                                    onclick="mostrarOpcionesAdicionales()">
+                                <i class="fas fa-cog me-1"></i>
+                                Opciones Avanzadas
+                            </button>
+                            
+                            <button type="submit" class="btn btn-danger" 
+                                    onclick="return confirmarEliminacion()">
+                                <i class="fas fa-unlink me-1"></i>
+                                Confirmar Desasociación
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Opciones Adicionales (Ocultas por defecto) -->
+            <div id="opcionesAdicionales" class="card mt-4" style="display: none;">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Opciones Adicionales
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="notificarUsuario">
+                        <label class="form-check-label" for="notificarUsuario">
+                            <strong>Notificar al usuario por email</strong>
+                            <br>
+                            <small class="text-muted">
+                                Enviar una notificación automática sobre la desasociación
+                            </small>
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="motivoEliminacion" class="form-label">
+                            <strong>Motivo de la desasociación (opcional):</strong>
+                        </label>
+                        <textarea class="form-control" id="motivoEliminacion" rows="3" 
+                                  placeholder="Especifique el motivo de esta desasociación para mantener un registro..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function mostrarOpcionesAdicionales() {
+    const opciones = document.getElementById('opcionesAdicionales');
+    if (opciones.style.display === 'none') {
+        opciones.style.display = 'block';
+        opciones.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        opciones.style.display = 'none';
+    }
+}
+
+function confirmarEliminacion() {
+    const nombreUsuario = '{{ usuario.nombre_completo }}';
+    const nombreCliente = '{{ cliente.obtener_nombre_completo }}';
+    
+    const mensaje = `¿Está completamente seguro de desasociar a "${nombreUsuario}" del cliente "${nombreCliente}"?\n\n` +
+                   `Esta acción:\n` +
+                   `• Eliminará todos los permisos del usuario para este cliente\n` +
+                   `• No se puede deshacer\n` +
+                   `• Se registrará en los registros de auditoría\n\n` +
+                   `Escriba "CONFIRMAR" para proceder:`;
+    
+    const confirmacion = prompt(mensaje);
+    
+    if (confirmacion === 'CONFIRMAR') {
+        // Añadir datos adicionales al formulario si se proporcionan
+        const formulario = document.querySelector('form');
+        
+        const notificarUsuario = document.getElementById('notificarUsuario')?.checked || false;
+        const motivo = document.getElementById('motivoEliminacion')?.value || '';
+        
+        if (notificarUsuario) {
+            const inputNotificar = document.createElement('input');
+            inputNotificar.type = 'hidden';
+            inputNotificar.name = 'notificar_usuario';
+            inputNotificar.value = 'true';
+            formulario.appendChild(inputNotificar);
+        }
+        
+        if (motivo) {
+            const inputMotivo = document.createElement('input');
+            inputMotivo.type = 'hidden';
+            inputMotivo.name = 'motivo_eliminacion';
+            inputMotivo.value = motivo;
+            formulario.appendChild(inputMotivo);
+        }
+        
+        return true;
+    } else if (confirmacion !== null) {
+        alert('Confirmación incorrecta. Debe escribir exactamente "CONFIRMAR" para proceder.');
+    }
+    
+    return false;
+}
+
+// Advertencia cuando el usuario intenta salir
+window.addEventListener('beforeunload', function(e) {
+    // Solo mostrar advertencia si el usuario está en medio del proceso
+    // Esta es una buena práctica de UX para acciones destructivas
+});
+</script>
+{% endblock %}

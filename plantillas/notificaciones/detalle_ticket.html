@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Ticket #{{ ticket.numero_ticket }} - Global Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ticket-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+    }
+    
+    .ticket-status {
+        display: inline-block;
+        padding: 6px 16px;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-open {
+        background-color: rgba(33, 150, 243, 0.2);
+        color: #1976d2;
+        border: 2px solid #1976d2;
+    }
+    
+    .status-in_progress {
+        background-color: rgba(255, 152, 0, 0.2);
+        color: #f57c00;
+        border: 2px solid #f57c00;
+    }
+    
+    .status-resolved {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #388e3c;
+        border: 2px solid #388e3c;
+    }
+    
+    .status-closed {
+        background-color: rgba(156, 39, 176, 0.2);
+        color: #7b1fa2;
+        border: 2px solid #7b1fa2;
+    }
+    
+    .ticket-meta {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .message-thread {
+        max-height: 600px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        background-color: #fff;
+    }
+    
+    .message-item {
+        display: flex;
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .message-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .message-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    .message-content {
+        flex: 1;
+    }
+    
+    .message-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .message-author {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .message-date {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-left: auto;
+    }
+    
+    .message-body {
+        color: #495057;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+    
+    .reply-form {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 25px;
+        margin-top: 30px;
+    }
+    
+    .priority-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .priority-high {
+        background-color: #ffebee;
+        color: #c62828;
+    }
+    
+    .priority-medium {
+        background-color: #fff3e0;
+        color: #ef6c00;
+    }
+    
+    .priority-low {
+        background-color: #e8f5e8;
+        color: #2e7d32;
+    }
+    
+    .category-tag {
+        background-color: #e3f2fd;
+        color: #1565c0;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Encabezado del Ticket -->
+<div class="ticket-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h1 class="mb-2">Ticket #{{ ticket.numero_ticket }}</h1>
+                        <h3 class="mb-3 opacity-75">{{ ticket.asunto }}</h3>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="ticket-status status-{{ ticket.estado|lower }}">
+                                {{ ticket.get_estado_display }}
+                            </span>
+                            <span class="priority-indicator priority-{{ ticket.prioridad|lower }}">
+                                <i class="fas fa-flag me-1"></i>
+                                {{ ticket.get_prioridad_display }}
+                            </span>
+                            <span class="category-tag">
+                                <i class="fas fa-tag me-1"></i>
+                                {{ ticket.get_categoria_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <a href="{% url 'notificaciones:lista_tickets' %}" class="btn btn-light">
+                            <i class="fas fa-arrow-left me-1"></i>Volver a Tickets
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Descripción del Ticket -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-text me-2"></i>Descripción del Problema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0" style="white-space: pre-wrap;">{{ ticket.descripcion }}</p>
+                </div>
+            </div>
+
+            <!-- Hilo de Mensajes -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Conversación
+                        <span class="badge bg-primary ms-2">{{ mensajes.count }} respuesta{{ mensajes.count|pluralize }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if mensajes %}
+                        <div class="message-thread">
+                            {% for mensaje in mensajes %}
+                            <div class="message-item">
+                                <div class="message-avatar">
+                                    {% if mensaje.autor %}
+                                        {{ mensaje.autor.get_full_name|first|upper }}
+                                    {% else %}
+                                        S
+                                    {% endif %}
+                                </div>
+                                <div class="message-content">
+                                    <div class="message-header">
+                                        <span class="message-author">
+                                            {% if mensaje.autor %}
+                                                {{ mensaje.autor.get_full_name|default:mensaje.autor.username }}
+                                                {% if mensaje.autor.is_staff %}
+                                                    <span class="badge bg-warning text-dark ms-1">Soporte</span>
+                                                {% endif %}
+                                            {% else %}
+                                                Sistema
+                                            {% endif %}
+                                        </span>
+                                        <span class="message-date">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ mensaje.fecha_creacion|date:"d/m/Y H:i" }}
+                                        </span>
+                                    </div>
+                                    <div class="message-body">{{ mensaje.mensaje }}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-comments-dollar fa-3x mb-3 opacity-50"></i>
+                            <h5>Sin respuestas aún</h5>
+                            <p>Nuestro equipo de soporte revisará tu ticket pronto.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Formulario de Respuesta -->
+            {% if ticket.estado != 'CERRADO' %}
+            <div class="reply-form">
+                <h5 class="mb-3">
+                    <i class="fas fa-reply me-2"></i>Responder al Ticket
+                </h5>
+                <form method="post" action="{% url 'notificaciones:responder_ticket' ticket_number=ticket.numero_ticket %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ formulario_respuesta.mensaje|add_class:"form-control" }}
+                        <div class="form-text">
+                            Describe cualquier información adicional o actualización sobre tu problema.
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Tu respuesta será enviada al equipo de soporte.
+                        </small>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-1"></i>Enviar Respuesta
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Este ticket está cerrado. Si necesitas ayuda adicional, 
+                <a href="{% url 'notificaciones:crear_ticket' %}" class="alert-link">crea un nuevo ticket</a>.
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <!-- Información del Ticket -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Información del Ticket
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-5"><strong>Número:</strong></div>
+                        <div class="col-sm-7">#{{ ticket.numero_ticket }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-5"><strong>Estado:</strong></div>
+                        <div class="col-sm-7">
+                            <span class="ticket-status status-{{ ticket.estado|lower }}">
+                                {{ ticket.get_estado_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-5"><strong>Prioridad:</strong></div>
+                        <div class="col-sm-7">
+                            <span class="priority-indicator priority-{{ ticket.prioridad|lower }}">
+                                <i class="fas fa-flag me-1"></i>
+                                {{ ticket.get_prioridad_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-5"><strong>Categoría:</strong></div>
+                        <div class="col-sm-7">{{ ticket.get_categoria_display }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-5"><strong>Creado:</strong></div>
+                        <div class="col-sm-7">{{ ticket.fecha_creacion|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    {% if ticket.asignado_a %}
+                    <div class="row mb-3">
+                        <div class="col-sm-5"><strong>Asignado a:</strong></div>
+                        <div class="col-sm-7">{{ ticket.asignado_a.get_full_name }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ticket.ultima_actividad %}
+                    <div class="row mb-3">
+                        <div class="col-sm-5"><strong>Última actividad:</strong></div>
+                        <div class="col-sm-7">hace {{ ticket.ultima_actividad|timesince }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recursos de Ayuda -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>¿Necesitas más ayuda?
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">Mientras esperas una respuesta, puedes consultar nuestros recursos de ayuda:</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'notificaciones:soporte' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-book me-1"></i>Centro de Ayuda
+                        </a>
+                        <a href="{% url 'notificaciones:crear_ticket' %}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-plus me-1"></i>Crear Nuevo Ticket
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información de Contacto de Emergencia -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-headset me-2"></i>Contacto de Emergencia
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Para problemas urgentes:</strong></p>
+                    <p class="mb-1">
+                        <i class="fas fa-phone me-2"></i>
+                        <a href="tel:+595213456789">+595 21 345-6789</a>
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-envelope me-2"></i>
+                        <a href="mailto:soporte@globalexchange.com">soporte@globalexchange.com</a>
+                    </p>
+                    <small class="text-muted">
+                        Horario: Lunes a Viernes, 8:00 - 18:00
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-scroll al final del hilo de mensajes
+    const hiloMensajes = document.querySelector('.message-thread');
+    if (hiloMensajes) {
+        hiloMensajes.scrollTop = hiloMensajes.scrollHeight;
+    }
+    
+    // Auto-recarga para nuevos mensajes (cada 30 segundos)
+    setInterval(function() {
+        if (document.hidden) return; // No recargar si la pestaña no está activa
+        
+        fetch(window.location.href, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const nuevoHiloMensajes = doc.querySelector('.message-thread');
+            const hiloMensajesActual = document.querySelector('.message-thread');
+            
+            if (nuevoHiloMensajes && hiloMensajesActual) {
+                const conteoMensajesActual = hiloMensajesActual.querySelectorAll('.message-item').length;
+                const nuevoConteoMensajes = nuevoHiloMensajes.querySelectorAll('.message-item').length;
+                
+                if (nuevoConteoMensajes > conteoMensajesActual) {
+                    // Se detectaron nuevos mensajes, actualizar el hilo
+                    hiloMensajesActual.innerHTML = nuevoHiloMensajes.innerHTML;
+                    hiloMensajesActual.scrollTop = hiloMensajesActual.scrollHeight;
+                    
+                    // Mostrar notificación
+                    const toast = document.createElement('div');
+                    toast.className = 'toast position-fixed top-0 end-0 m-3';
+                    toast.style.zIndex = '9999';
+                    toast.innerHTML = `
+                        <div class="toast-header">
+                            <i class="fas fa-bell text-primary me-2"></i>
+                            <strong class="me-auto">Nueva respuesta</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                        </div>
+                        <div class="toast-body">
+                            Hay una nueva respuesta en tu ticket.
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(toast);
+                    const bsToast = new bootstrap.Toast(toast);
+                    bsToast.show();
+                    
+                    // Eliminar el toast después de que se oculte
+                    toast.addEventListener('hidden.bs.toast', () => {
+                        toast.remove();
+                    });
+                }
+            }
+        })
+        .catch(error => {
+            console.log('La auto-recarga falló:', error);
+        });
+    }, 30000); // 30 segundos
+    
+    // Contador de caracteres para el formulario de respuesta
+    const textarea = document.querySelector('#id_mensaje');
+    if (textarea) {
+        const contador = document.createElement('small');
+        contador.className = 'text-muted float-end';
+        textarea.parentNode.appendChild(contador);
+        
+        function actualizarContador() {
+            const longitud = textarea.value.length;
+            contador.textContent = `${longitud} caracteres`;
+            
+            if (longitud > 1000) {
+                contador.className = 'text-warning float-end';
+            } else if (longitud > 1500) {
+                contador.className = 'text-danger float-end';
+            } else {
+                contador.className = 'text-muted float-end';
+            }
+        }
+        
+        textarea.addEventListener('input', actualizarContador);
+        actualizarContador();
+    }
+});
+</script>
+{% endblock %}

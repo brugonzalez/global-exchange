@@ -1,0 +1,599 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestionar Usuarios - {{ cliente.obtener_nombre_completo }} - Global Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-card {
+        border-left: 4px solid #28a745;
+        transition: all 0.3s ease;
+    }
+    
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .available-user-card {
+        border-left: 4px solid #007bff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .available-user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left-color: #0056b3;
+    }
+    
+    .client-header {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .role-badge {
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Encabezado -->
+    <div class="client-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2>
+                    <i class="fas fa-users me-2"></i>
+                    Gestionar Usuarios - {{ cliente.obtener_nombre_completo }}
+                </h2>
+                <p class="mb-0">Asocie y gestione usuarios que pueden operar en nombre de este cliente</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="btn btn-light me-2">
+                    <i class="fas fa-arrow-left me-1"></i>Volver al Cliente
+                </a>
+                <a href="{% url 'clientes:anadir_usuario_cliente' cliente.id %}" class="btn btn-warning">
+                    <i class="fas fa-plus me-1"></i>Asociar Usuario
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Usuarios Asociados Actualmente -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Usuarios Asociados ({{ cliente_usuarios|length }})
+                    </h5>
+                    <span class="badge bg-success">{{ cliente_usuarios|length }} usuarios</span>
+                </div>
+                <div class="card-body">
+                    {% if cliente_usuarios %}
+                        <div class="row">
+                            {% for cliente_usuario in cliente_usuarios %}
+                            <div class="col-lg-6 mb-4">
+                                <div class="card user-card h-100">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ cliente_usuario.usuario.nombre_completo }}</strong>
+                                            <span class="badge bg-{% if cliente_usuario.rol == 'PROPIETARIO' %}primary{% elif cliente_usuario.rol == 'AUTORIZADO' %}success{% else %}secondary{% endif %} role-badge ms-2">
+                                                {{ cliente_usuario.get_rol_display }}
+                                            </span>
+                                        </div>
+                                        <span class="badge bg-{% if cliente_usuario.esta_activo %}success{% else %}danger{% endif %}">
+                                            {% if cliente_usuario.esta_activo %}Activo{% else %}Inactivo{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <small class="text-muted">Email:</small>
+                                            <div>{{ cliente_usuario.usuario.email }}</div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">Asignado:</small>
+                                            <div>{{ cliente_usuario.fecha_asignacion|date:"d/m/Y H:i" }}</div>
+                                        </div>
+                                        {% if cliente_usuario.asignado_por %}
+                                        <div class="mb-2">
+                                            <small class="text-muted">Asignado por:</small>
+                                            <div>{{ cliente_usuario.asignado_por.nombre_completo }}</div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="mb-2">
+                                            <small class="text-muted">Permisos:</small>
+                                            <div>
+                                                {% if cliente_usuario.puede_realizar_transacciones %}
+                                                    <span class="badge bg-success me-1">Transacciones</span>
+                                                {% endif %}
+                                                <span class="badge bg-info">Consultas</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <div class="btn-group w-100" role="group">
+                                            <button class="btn btn-outline-info btn-sm" 
+                                                    onclick="verDetallesUsuario({{ cliente_usuario.usuario.id }}, '{{ cliente_usuario.usuario.nombre_completo }}')">
+                                                <i class="fas fa-eye me-1"></i>Ver
+                                            </button>
+                                            <a href="{% url 'clientes:eliminar_usuario_cliente' cliente.id cliente_usuario.usuario.id %}" 
+                                               class="btn btn-outline-danger btn-sm"
+                                               onclick="return confirm('¿Está seguro de desasociar este usuario del cliente?')">
+                                                <i class="fas fa-unlink me-1"></i>Desasociar
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No hay usuarios asociados</h5>
+                            <p class="text-muted">Este cliente aún no tiene usuarios asociados que puedan operar en su nombre.</p>
+                            <a href="{% url 'clientes:anadir_usuario_cliente' cliente.id %}" class="btn btn-success">
+                                <i class="fas fa-plus me-1"></i>Asociar Primer Usuario
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra Lateral de Usuarios Disponibles -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Usuarios Disponibles
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if usuarios_disponibles %}
+                        <p class="text-muted small mb-3">
+                            Usuarios que pueden ser asociados a este cliente:
+                        </p>
+                        
+                        <div class="available-users-list" style="max-height: 400px; overflow-y: auto;">
+                            {% for usuario in usuarios_disponibles|slice:":10" %}
+                            <div class="card available-user-card mb-2" 
+                                 onclick="mostrarDialogoAsignacion({{ usuario.id }}, '{{ usuario.nombre_completo }}', '{{ usuario.email }}')">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong class="small">{{ usuario.nombre_completo }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ usuario.email }}</small>
+                                        </div>
+                                        <i class="fas fa-plus text-primary"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if usuarios_disponibles|length > 10 %}
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                Y {{ usuarios_disponibles|length|add:"-10" }} usuarios más...
+                            </small>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="text-center mt-3">
+                            <a href="{% url 'clientes:anadir_usuario_cliente' cliente.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-list me-1"></i>Ver Todos
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users-slash fa-2x text-muted mb-2"></i>
+                            <p class="text-muted small">No hay usuarios disponibles para asociar</p>
+                            <small class="text-muted">
+                                Todos los usuarios activos ya están asociados a este cliente.
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'clientes:anadir_usuario_cliente' cliente.id %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-plus me-1"></i>Asociar Usuario
+                        </a>
+                        <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-1"></i>Ver Cliente
+                        </a>
+                        <a href="{% url 'clientes:gestionar_favoritos' cliente.id %}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-star me-1"></i>Gestionar Favoritas
+                        </a>
+                        <a href="{% url 'clientes:saldos_cliente' cliente.id %}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-wallet me-1"></i>Ver Saldos
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información del Cliente -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información del Cliente
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td class="text-muted">Tipo:</td>
+                            <td>{{ cliente.get_tipo_cliente_display }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Estado:</td>
+                            <td>
+                                <span class="badge bg-{% if cliente.estado == 'ACTIVO' %}success{% else %}secondary{% endif %}">
+                                    {{ cliente.get_estado_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Categoría:</td>
+                            <td>{{ cliente.categoria.get_nombre_display }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">ID:</td>
+                            <td><code>{{ cliente.numero_identificacion }}</code></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Asignación Rápida -->
+<div class="modal fade" id="modalAsignacionRapida" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Asociar Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Desea asociar a <strong id="nombreUsuarioAsignar"></strong> con el cliente <strong>{{ cliente.obtener_nombre_completo }}</strong>?</p>
+                
+                <div class="mb-3">
+                    <label for="rolAsignar" class="form-label">Rol:</label>
+                    <select class="form-control" id="rolAsignar">
+                        <option value="AUTORIZADO">Autorizado</option>
+                        <option value="PROPIETARIO">Propietario</option>
+                        <option value="CONSULTA">Solo Consulta</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="confirmarAsignacion()">
+                    <i class="fas fa-check me-1"></i>Asociar Usuario
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalles de Usuario -->
+<div class="modal fade" id="modalDetallesUsuario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalles del Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoDetallesUsuario">
+                <!-- El contenido se cargará dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let idUsuarioActual = null;
+
+// Función de fallback para obtener la cookie en caso de que la global no esté disponible
+function obtenerCookie(nombre) {
+    let valorCookie = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, nombre.length + 1) === (nombre + '=')) {
+                valorCookie = decodeURIComponent(cookie.substring(nombre.length + 1));
+                break;
+            }
+        }
+    }
+    return valorCookie;
+}
+
+function mostrarDialogoAsignacion(idUsuario, nombreUsuario, emailUsuario) {
+    idUsuarioActual = idUsuario;
+    document.getElementById('nombreUsuarioAsignar').textContent = nombreUsuario;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalAsignacionRapida'));
+    modal.show();
+}
+
+function confirmarAsignacion() {
+    if (!idUsuarioActual) return;
+    
+    const rol = document.getElementById('rolAsignar').value;
+    
+    // Crear un formulario y enviarlo
+    const formulario = document.createElement('form');
+    formulario.method = 'POST';
+    formulario.action = '{% url "clientes:anadir_usuario_cliente" cliente.id %}';
+    
+    // Añadir token CSRF usando múltiples métodos de fallback
+    let tokenCSRF = null;
+    
+    // Probar primero con la función global
+    if (window.IG && window.IG.obtenerCookie) {
+        tokenCSRF = window.IG.obtenerCookie('csrftoken');
+    }
+    
+    // Fallback a la función local
+    if (!tokenCSRF) {
+        tokenCSRF = obtenerCookie('csrftoken');
+    }
+    
+    // Fallback a la meta etiqueta
+    if (!tokenCSRF) {
+        const metaTag = document.querySelector('meta[name=csrf-token]');
+        if (metaTag) {
+            tokenCSRF = metaTag.getAttribute('content');
+        }
+    }
+    
+    if (tokenCSRF) {
+        const inputCSRF = document.createElement('input');
+        inputCSRF.type = 'hidden';
+        inputCSRF.name = 'csrfmiddlewaretoken';
+        inputCSRF.value = tokenCSRF;
+        formulario.appendChild(inputCSRF);
+    } else {
+        alert('Error de seguridad: No se pudo obtener el token CSRF. La página se recargará para resolver el problema.');
+        window.location.reload();
+        return;
+    }
+    
+    // Añadir campo de usuario
+    const inputUsuario = document.createElement('input');
+    inputUsuario.type = 'hidden';
+    inputUsuario.name = 'usuario';
+    inputUsuario.value = idUsuarioActual;
+    formulario.appendChild(inputUsuario);
+    
+    // Añadir campo de rol
+    const inputRol = document.createElement('input');
+    inputRol.type = 'hidden';
+    inputRol.name = 'rol';
+    inputRol.value = rol;
+    formulario.appendChild(inputRol);
+    
+    // Añadir campo de está_activo
+    const inputActivo = document.createElement('input');
+    inputActivo.type = 'hidden';
+    inputActivo.name = 'esta_activo';
+    inputActivo.value = 'on';
+    formulario.appendChild(inputActivo);
+    
+    document.body.appendChild(formulario);
+    formulario.submit();
+}
+
+function verDetallesUsuario(idUsuario, nombreUsuario) {
+    // Mostrar estado de carga
+    document.getElementById('contenidoDetallesUsuario').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando información del usuario...</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalDetallesUsuario'));
+    modal.show();
+    
+    // Obtener detalles reales del usuario vía AJAX
+    const idCliente = {{ cliente.id }};
+    const url = `/clientes/${idCliente}/usuarios/${idUsuario}/detalles/`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const usuario = data.detalles_usuario;
+                const html = `
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-user me-2"></i>Información Personal
+                            </h6>
+                            <table class="table table-sm table-borderless mb-4">
+                                <tr>
+                                    <td class="text-muted" width="40%">Nombre completo:</td>
+                                    <td><strong>${usuario.nombre_completo}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Nombre de usuario:</td>
+                                    <td><code>${usuario.username}</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Email:</td>
+                                    <td>
+                                        ${usuario.email}
+                                        ${usuario.email_verificado ? 
+                                            '<span class="badge bg-success ms-2">Verificado</span>' : 
+                                            '<span class="badge bg-warning ms-2">No verificado</span>'
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Estado de cuenta:</td>
+                                    <td>
+                                        ${usuario.esta_activo ? 
+                                            '<span class="badge bg-success">Activo</span>' : 
+                                            '<span class="badge bg-danger">Inactivo</span>'
+                                        }
+                                        ${usuario.cuenta_bloqueada ? 
+                                            '<span class="badge bg-danger ms-2">Bloqueado</span>' : 
+                                            ''
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Fecha de registro:</td>
+                                    <td>${usuario.fecha_registro || 'No disponible'}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Último acceso:</td>
+                                    <td>${usuario.ultimo_login}</td>
+                                </tr>
+                            </table>
+
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-shield-alt me-2"></i>Seguridad
+                            </h6>
+                            <table class="table table-sm table-borderless mb-4">
+                                <tr>
+                                    <td class="text-muted" width="40%">Autenticación 2FA:</td>
+                                    <td>
+                                        ${usuario.autenticacion_dos_factores_activa ? 
+                                            '<span class="badge bg-success">Habilitada</span>' : 
+                                            '<span class="badge bg-secondary">Deshabilitada</span>'
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Intentos de login fallidos:</td>
+                                    <td>
+                                        <span class="badge ${usuario.intentos_fallidos_login > 0 ? 'bg-warning' : 'bg-success'}">
+                                            ${usuario.intentos_fallidos_login}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Permisos de personal:</td>
+                                    <td>
+                                        ${usuario.es_staff ? 
+                                            '<span class="badge bg-info">Sí</span>' : 
+                                            '<span class="badge bg-secondary">No</span>'
+                                        }
+                                        ${usuario.es_superuser ? 
+                                            '<span class="badge bg-danger ms-2">Superusuario</span>' : 
+                                            ''
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-handshake me-2"></i>Relación con Cliente
+                            </h6>
+                            <table class="table table-sm table-borderless mb-4">
+                                <tr>
+                                    <td class="text-muted" width="40%">Rol asignado:</td>
+                                    <td><span class="badge bg-primary">${usuario.relacion_cliente.rol}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Estado de asociación:</td>
+                                    <td>
+                                        ${usuario.relacion_cliente.esta_activo ? 
+                                            '<span class="badge bg-success">Activa</span>' : 
+                                            '<span class="badge bg-danger">Inactiva</span>'
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Puede realizar transacciones:</td>
+                                    <td>
+                                        ${usuario.relacion_cliente.puede_realizar_transacciones ? 
+                                            '<span class="badge bg-success">Sí</span>' : 
+                                            '<span class="badge bg-secondary">No</span>'
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Asignado el:</td>
+                                    <td>${usuario.relacion_cliente.fecha_asignacion}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Asignado por:</td>
+                                    <td>${usuario.relacion_cliente.asignado_por}</td>
+                                </tr>
+                            </table>
+
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-building me-2"></i>Información Adicional
+                            </h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-muted" width="40%">Total de clientes asociados:</td>
+                                    <td><span class="badge bg-info">${usuario.total_clientes}</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Último cliente seleccionado:</td>
+                                    <td>
+                                        ${usuario.ultimo_cliente_seleccionado ? 
+                                            usuario.ultimo_cliente_seleccionado.nombre : 
+                                            '<span class="text-muted">Ninguno</span>'
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('contenidoDetallesUsuario').innerHTML = html;
+            } else {
+                document.getElementById('contenidoDetallesUsuario').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6>Error al cargar los detalles</h6>
+                        <p class="mb-0">${data.error || 'No se pudieron cargar los detalles del usuario.'}</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error al obtener los detalles del usuario:', error);
+            document.getElementById('contenidoDetallesUsuario').innerHTML = `
+                <div class="alert alert-danger">
+                    <h6>Error de conexión</h6>
+                    <p class="mb-0">No se pudo conectar con el servidor. Por favor, inténtelo nuevamente.</p>
+                </div>
+            `;
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Generar Nuevo Reporte - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-plus-circle me-2 text-primary"></i>
+                    Generar Nuevo Reporte
+                </h2>
+                <div>
+                    <a href="{% url 'reportes:lista_reportes' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Reportes
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted">Genere reportes personalizados de su actividad comercial</p>
+        </div>
+    </div>
+
+    <!-- Formulario de Generación de Reporte -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Configuración del Reporte
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="formularioReporte">
+                        {% csrf_token %}
+                        
+                        <!-- Información Básica del Reporte -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ formulario.nombre_reporte.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tag me-2"></i>Nombre del Reporte *
+                                </label>
+                                {{ formulario.nombre_reporte }}
+                                {% if formulario.nombre_reporte.errors %}
+                                <div class="text-danger small">{{ formulario.nombre_reporte.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ formulario.tipo_reporte.id_for_label }}" class="form-label">
+                                    <i class="fas fa-list me-2"></i>Tipo de Reporte *
+                                </label>
+                                {{ formulario.tipo_reporte }}
+                                {% if formulario.tipo_reporte.errors %}
+                                <div class="text-danger small">{{ formulario.tipo_reporte.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Formato y Cliente -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ formulario.formato.id_for_label }}" class="form-label">
+                                    <i class="fas fa-file me-2"></i>Formato *
+                                </label>
+                                {{ formulario.formato }}
+                                {% if formulario.formato.errors %}
+                                <div class="text-danger small">{{ formulario.formato.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ formulario.cliente.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user me-2"></i>Cliente (Opcional)
+                                </label>
+                                {{ formulario.cliente }}
+                                {% if formulario.cliente.errors %}
+                                <div class="text-danger small">{{ formulario.cliente.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">Dejar vacío para incluir todos los clientes</small>
+                            </div>
+                        </div>
+
+                        <!-- Rango de Fechas -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ formulario.fecha_desde.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar-alt me-2"></i>Fecha Desde *
+                                </label>
+                                {{ formulario.fecha_desde }}
+                                {% if formulario.fecha_desde.errors %}
+                                <div class="text-danger small">{{ formulario.fecha_desde.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ formulario.fecha_hasta.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar-alt me-2"></i>Fecha Hasta *
+                                </label>
+                                {{ formulario.fecha_hasta }}
+                                {% if formulario.fecha_hasta.errors %}
+                                <div class="text-danger small">{{ formulario.fecha_hasta.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Preselecciones Rápidas de Fecha -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">
+                                    <i class="fas fa-clock me-2"></i>Preselecciones Rápidas
+                                </label>
+                                <div class="btn-group d-flex flex-wrap" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="establecerRangoFechas(7)">
+                                        Últimos 7 días
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="establecerRangoFechas(30)">
+                                        Último mes
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="establecerRangoFechas(90)">
+                                        Últimos 3 meses
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="establecerRangoFechas(365)">
+                                        Último año
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Errores del Formulario -->
+                        {% if formulario.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ formulario.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Botones de Envío -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'reportes:lista_reportes' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-info me-2" onclick="vistaPreviaReporte()">
+                                    <i class="fas fa-eye me-2"></i>Vista Previa
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-cog me-2"></i>Generar Reporte
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra Lateral de Información del Reporte -->
+        <div class="col-lg-4">
+            <!-- Información del Tipo de Reporte -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información del Tipo de Reporte
+                    </h6>
+                </div>
+                <div class="card-body" id="infoTipoReporte">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-arrow-left fa-2x mb-2"></i>
+                        <p>Seleccione un tipo de reporte para ver la información</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información de Formatos -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        Formatos Disponibles
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <i class="fas fa-file-pdf text-danger me-2"></i>
+                                <strong>PDF</strong>
+                                <br><small class="text-muted">Ideal para presentaciones</small>
+                            </div>
+                            <span class="badge bg-primary">Recomendado</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <i class="fas fa-file-excel text-success me-2"></i>
+                                <strong>Excel</strong>
+                                <br><small class="text-muted">Para análisis de datos</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Información de tipo de reporte
+    const infoTipoReporte = {
+        'HISTORIAL_TRANSACCIONES': {
+            title: 'Historial de Transacciones',
+            description: 'Reporte detallado de todas las transacciones realizadas en el período seleccionado.',
+            features: ['Filtrado por cliente', 'Detalles de tasas aplicadas', 'Estados de transacciones', 'Montos y comisiones'],
+            icon: 'fas fa-exchange-alt',
+            color: 'primary'
+        },
+        'TASAS_CAMBIO': {
+            title: 'Tasas de Cambio',
+            description: 'Evolución y análisis de las tasas de cambio en tiempo real.',
+            features: ['Tasas históricas', 'Comparación entre monedas', 'Variaciones porcentuales', 'Análisis de diferenciales'],
+            icon: 'fas fa-chart-line',
+            color: 'info'
+        }
+    };
+
+    // Actualizar la información del tipo de reporte cuando cambia la selección
+    function actualizarInfoTipoReporte() {
+        const tipoReporte = document.getElementById('id_tipo_reporte').value;
+        const contenedorInfo = document.getElementById('infoTipoReporte');
+        
+        if (tipoReporte && infoTipoReporte[tipoReporte]) {
+            const info = infoTipoReporte[tipoReporte];
+            contenedorInfo.innerHTML = `
+                <div class="text-center mb-3">
+                    <i class="${info.icon} fa-3x text-${info.color}"></i>
+                </div>
+                <h6 class="text-${info.color}">${info.title}</h6>
+                <p class="small text-muted">${info.description}</p>
+                <strong class="small">Características:</strong>
+                <ul class="small mt-2">
+                    ${info.features.map(feature => `<li>${feature}</li>`).join('')}
+                </ul>
+            `;
+        } else {
+            contenedorInfo.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-arrow-left fa-2x mb-2"></i>
+                    <p>Seleccione un tipo de reporte para ver la información</p>
+                </div>
+            `;
+        }
+    }
+
+    // Listener de evento para el cambio de tipo de reporte
+    document.getElementById('id_tipo_reporte').addEventListener('change', actualizarInfoTipoReporte);
+    
+    // Inicializar al cargar la página
+    actualizarInfoTipoReporte();
+
+    // Funciones para rango de fechas rápido
+    window.establecerRangoFechas = function(dias) {
+        const ahora = new Date();
+        const fechaDesde = new Date(ahora.getTime() - (dias * 24 * 60 * 60 * 1000));
+        
+        // Formatear fechas para el input datetime-local
+        const formatearFecha = (fecha) => {
+            const anio = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dia = String(fecha.getDate()).padStart(2, '0');
+            const horas = String(fecha.getHours()).padStart(2, '0');
+            const minutos = String(fecha.getMinutes()).padStart(2, '0');
+            return `${anio}-${mes}-${dia}T${horas}:${minutos}`;
+        };
+        
+        document.getElementById('id_fecha_desde').value = formatearFecha(fechaDesde);
+        document.getElementById('id_fecha_hasta').value = formatearFecha(ahora);
+    };
+
+    // Función de vista previa de reporte
+    window.vistaPreviaReporte = function() {
+        const formulario = document.getElementById('formularioReporte');
+        const datosFormulario = new FormData(formulario);
+        
+        // Validación básica
+        const tipoReporte = datosFormulario.get('tipo_reporte');
+        const fechaDesde = datosFormulario.get('fecha_desde');
+        const fechaHasta = datosFormulario.get('fecha_hasta');
+        
+        if (!tipoReporte || !fechaDesde || !fechaHasta) {
+            alert('Por favor complete los campos obligatorios antes de la vista previa.');
+            return;
+        }
+        
+        // Mostrar modal de vista previa o redirigir a la vista previa
+        alert('Vista previa disponible próximamente. Por ahora puede generar el reporte directamente.');
+    };
+
+    // Validación del formulario
+    document.getElementById('formularioReporte').addEventListener('submit', function(e) {
+        const botonEnviar = this.querySelector('button[type="submit"]');
+        const textoOriginal = botonEnviar.innerHTML;
+        
+        // Mostrar estado de carga
+        botonEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generando...';
+        botonEnviar.disabled = true;
+        
+        // Restablecer el botón después de 3 segundos si la validación del formulario falla
+        setTimeout(() => {
+            if (botonEnviar.disabled) {
+                botonEnviar.innerHTML = textoOriginal;
+                botonEnviar.disabled = false;
+            }
+        }, 3000);
+    });
+
+    // Autogenerar nombre de reporte basado en el tipo y la fecha
+    function autoGenerarNombreReporte() {
+        const tipoReporte = document.getElementById('id_tipo_reporte').value;
+        const fechaDesde = document.getElementById('id_fecha_desde').value;
+        const fechaHasta = document.getElementById('id_fecha_hasta').value;
+        const campoNombreReporte = document.getElementById('id_nombre_reporte');
+        
+        if (tipoReporte && fechaDesde && fechaHasta && !campoNombreReporte.value.trim()) {
+            const displayTipo = infoTipoReporte[tipoReporte] ? infoTipoReporte[tipoReporte].title : tipoReporte;
+            const desdeFormateado = new Date(fechaDesde).toLocaleDateString('es-ES');
+            const hastaFormateado = new Date(fechaHasta).toLocaleDateString('es-ES');
+            
+            campoNombreReporte.value = `${displayTipo} - ${desdeFormateado} a ${hastaFormateado}`;
+        }
+    }
+
+    // Autogenerar nombre cuando los campos cambian
+    document.getElementById('id_tipo_reporte').addEventListener('change', autoGenerarNombreReporte);
+    document.getElementById('id_fecha_desde').addEventListener('change', autoGenerarNombreReporte);
+    document.getElementById('id_fecha_hasta').addEventListener('change', autoGenerarNombreReporte);
+});
+</script>
+{% endblock %}

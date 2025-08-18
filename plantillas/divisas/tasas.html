@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Tasas de Cambio - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-chart-line me-2"></i>
+                    Tasas de Cambio
+                </h2>
+                <div>
+                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-home me-2"></i>Volver al Inicio
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tarjetas de Tasas -->
+            {% if datos_tasas %}
+                <div class="row">
+                    {% for tasa in datos_tasas %}
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="card currency-card h-100" data-currency="{{ tasa.moneda.codigo }}">
+                                <div class="card-header bg-primary text-white">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">
+                                            {{ tasa.moneda.simbolo }} {{ tasa.moneda.codigo }}
+                                        </h5>
+                                        {% if tasa.moneda.es_moneda_empresa %}
+                                            <span class="badge bg-light text-dark">Propia</span>
+                                        {% endif %}
+                                    </div>
+                                    <small>{{ tasa.moneda.nombre }}</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <div class="border-end">
+                                                <h6 class="text-success mb-1">Compra</h6>
+                                                <h4 class="tasa-compra text-success">
+                                                    {{ tasa.tasa_compra|floatformat:4 }}
+                                                </h4>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <h6 class="text-danger mb-1">Venta</h6>
+                                            <h4 class="tasa-venta text-danger">
+                                                {{ tasa.tasa_venta|floatformat:4 }}
+                                            </h4>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3 text-center">
+                                        <small class="text-muted ultima-actualizacion">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ tasa.ultima_actualizacion|date:"d/m/Y H:i" }}
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'divisas:historial_tasa' tasa.moneda.codigo %}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-chart-area me-1"></i>
+                                                Ver Historial
+                                            </a>
+                                            
+                                            {% if user.is_authenticated and puede_operar %}
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-success btn-sm" 
+                                                            onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'COMPRA')">
+                                                        <i class="fas fa-arrow-down me-1"></i>Comprar
+                                                    </button>
+                                                    <button class="btn btn-warning btn-sm" 
+                                                            onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'VENTA')">
+                                                        <i class="fas fa-arrow-up me-1"></i>Vender
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No hay tasas de cambio disponibles en este momento.
+                </div>
+            {% endif %}
+
+            <!-- Selección de Moneda para Historial -->
+            {% if datos_tasas %}
+                <div class="row mt-5">
+                    <div class="col-12">
+                        <h4>
+                            <i class="fas fa-chart-area me-2"></i>
+                            Evolución de Tasas
+                        </h4>
+                        
+                        <div class="card">
+                            <div class="card-body">
+                                <form method="get" class="mb-3">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-4">
+                                            <label for="moneda" class="form-label">Seleccionar Moneda</label>
+                                            <select name="moneda" id="moneda" class="form-control">
+                                                <option value="">-- Seleccione una moneda --</option>
+                                                {% for tasa in datos_tasas %}
+                                                    <option value="{{ tasa.moneda.codigo }}" 
+                                                            {% if tasa.moneda.codigo == moneda_seleccionada.codigo %}selected{% endif %}>
+                                                        {{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-search me-2"></i>Ver Evolución
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                {% if moneda_seleccionada and historial_tasa %}
+                                    <div class="mt-4">
+                                        <h5>{{ moneda_seleccionada.nombre }} ({{ moneda_seleccionada.codigo }})</h5>
+                                        
+                                        <!-- Placeholder para el gráfico -->
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-chart-line me-2"></i>
+                                            Gráfico de evolución de tasas para {{ moneda_seleccionada.codigo }} 
+                                            (funcionalidad en desarrollo)
+                                        </div>
+                                        
+                                        <!-- Tabla de historial -->
+                                        <div class="table-responsive mt-3">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Fecha</th>
+                                                        <th>Tasa de Compra</th>
+                                                        <th>Tasa de Venta</th>
+                                                        <th>Volumen</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for historial in historial_tasa %}
+                                                        <tr>
+                                                            <td>{{ historial.marca_de_tiempo|date:"d/m/Y H:i" }}</td>
+                                                            <td class="text-success">{{ historial.tasa_compra|floatformat:4 }}</td>
+                                                            <td class="text-danger">{{ historial.tasa_venta|floatformat:4 }}</td>
+                                                            <td>{{ historial.volumen|floatformat:2 }}</td>
+                                                        </tr>
+                                                    {% empty %}
+                                                        <tr>
+                                                            <td colspan="4" class="text-center text-muted">
+                                                                No hay datos históricos disponibles
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Simulación (igual que en el panel de control) -->
+<div class="modal fade" id="modalSimulacion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calculator me-2"></i>
+                    Simular Conversión
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formularioSimulacion">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tipo_transaccion" class="form-label">Tipo de Operación</label>
+                            <select class="form-control" id="tipo_transaccion" name="tipo_transaccion">
+                                <option value="COMPRA">Comprar</option>
+                                <option value="VENTA">Vender</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="monto" class="form-label">Monto</label>
+                            <input type="number" class="form-control" id="monto" name="monto" 
+                                   step="0.01" min="0.01" placeholder="Ingrese el monto">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="moneda_origen" class="form-label">Moneda Origen</label>
+                            <select class="form-control" id="moneda_origen" name="moneda_origen">
+                                {% for tasa in datos_tasas %}
+                                    <option value="{{ tasa.moneda.id }}" {% if forloop.first %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="moneda_destino" class="form-label">Moneda Destino</label>
+                            <select class="form-control" id="moneda_destino" name="moneda_destino">
+                                {% for tasa in datos_tasas %}
+                                    <option value="{{ tasa.moneda.id }}" {% if forloop.counter == 2 %}selected{% elif forloop.first and datos_tasas|length == 1 %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-calculator me-2"></i>Calcular
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="resultadoSimulacion" class="mt-4" style="display: none;">
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-check-circle me-2"></i>Resultado de la Simulación</h5>
+                        <div id="contenidoResultado"></div>
+                        {% if user.is_authenticated and puede_operar %}
+                            <div class="mt-3">
+                                <button class="btn btn-success" onclick="procederConTransaccion()">
+                                    <i class="fas fa-arrow-right me-2"></i>Proceder con la Transacción
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div id="errorSimulacion" class="mt-4" style="display: none;">
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-circle me-2"></i>Error</h5>
+                        <div id="contenidoError"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Mismo JavaScript de simulación que el panel de control - usando la API fetch para un manejo adecuado de FormData
+    $('#formularioSimulacion').on('submit', function(e) {
+        e.preventDefault();
+        
+        const datosFormulario = new FormData(this);
+        
+        // Añadir token CSRF
+        const tokenCSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
+                         $('meta[name=csrf-token]').attr('content') ||
+                         function() {
+                             let valorCookie = null;
+                             if (document.cookie && document.cookie !== '') {
+                                 const cookies = document.cookie.split(';');
+                                 for (let i = 0; i < cookies.length; i++) {
+                                     const cookie = cookies[i].trim();
+                                     if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken=')) {
+                                         valorCookie = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                                         break;
+                                     }
+                                 }
+                             }
+                             return valorCookie;
+                         }();
+        
+        fetch('{% url "divisas:api_simular" %}', {
+            method: 'POST',
+            body: datosFormulario,
+            headers: {
+                'X-CSRFToken': tokenCSRF
+            }
+        })
+        .then(response => response.json())
+        .then(function(respuesta) {
+            if (respuesta.success) {
+                $('#errorSimulacion').hide();
+                
+                const htmlResultado = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Monto Original:</strong> ${datosFormulario.get('monto')}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Monto Convertido:</strong> ${respuesta.monto_convertido.toFixed(4)}
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <strong>Tasa Aplicada:</strong> ${respuesta.tasa.toFixed(8)}
+                        </div>
+                    </div>
+                `;
+                
+                $('#contenidoResultado').html(htmlResultado);
+                $('#resultadoSimulacion').show();
+            } else {
+                $('#resultadoSimulacion').hide();
+                $('#contenidoError').text(respuesta.error || 'Error desconocido');
+                $('#errorSimulacion').show();
+            }
+        })
+        .catch(function() {
+            $('#resultadoSimulacion').hide();
+            $('#contenidoError').text('Error de conexión. Intente nuevamente.');
+            $('#errorSimulacion').show();
+        });
+    });
+    
+    function simulacionRapida(codigoMoneda, tipo) {
+        $('#tipo_transaccion').val(tipo);
+        if (tipo === 'COMPRA') {
+            $('#moneda_destino option').filter(function() {
+                return $(this).text().indexOf(codigoMoneda) !== -1;
+            }).prop('selected', true);
+        } else {
+            $('#moneda_origen option').filter(function() {
+                return $(this).text().indexOf(codigoMoneda) !== -1;
+            }).prop('selected', true);
+        }
+        
+        new bootstrap.Modal(document.getElementById('modalSimulacion')).show();
+    }
+    
+    function procederConTransaccion() {
+        const tipo = $('#tipo_transaccion').val();
+        if (tipo === 'COMPRA') {
+            window.location.href = '{% url "transacciones:comprar" %}';
+        } else {
+            window.location.href = '{% url "transacciones:vender" %}';
+        }
+    }
+</script>
+{% endblock %}

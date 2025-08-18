@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ reporte.nombre_reporte }} - Detalles del Reporte{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-file-alt me-2 text-primary"></i>
+                    Detalles del Reporte
+                </h2>
+                <div>
+                    {% if reporte.estado == 'COMPLETADO' and reporte.puede_descargar %}
+                    <a href="{% url 'reportes:descargar_reporte' reporte.id %}" class="btn btn-success me-2">
+                        <i class="fas fa-download me-2"></i>Descargar Reporte
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'reportes:lista_reportes' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Reportes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estado del Reporte e Información Básica -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ reporte.nombre_reporte }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Insignia de Estado -->
+                    <div class="mb-3">
+                        {% if reporte.estado == 'COMPLETADO' %}
+                        <span class="badge bg-success fs-6 me-2">
+                            <i class="fas fa-check me-1"></i>Completado
+                        </span>
+                        {% elif reporte.estado == 'GENERANDO' %}
+                        <span class="badge bg-warning fs-6 me-2">
+                            <i class="fas fa-spinner fa-spin me-1"></i>Generando
+                        </span>
+                        {% elif reporte.estado == 'PENDIENTE' %}
+                        <span class="badge bg-info fs-6 me-2">
+                            <i class="fas fa-clock me-1"></i>Pendiente
+                        </span>
+                        {% elif reporte.estado == 'FALLIDO' %}
+                        <span class="badge bg-danger fs-6 me-2">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Error
+                        </span>
+                        {% endif %}
+                        
+                        <span class="badge bg-secondary fs-6 me-2">{{ reporte.get_tipo_reporte_display }}</span>
+                        <span class="badge bg-primary fs-6">{{ reporte.formato }}</span>
+                    </div>
+
+                    <!-- Tabla de Detalles del Reporte -->
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold" width="30%">
+                                        <i class="fas fa-calendar-alt me-2 text-muted"></i>Período:
+                                    </td>
+                                    <td>
+                                        {{ reporte.fecha_desde|date:"d/m/Y H:i" }} - {{ reporte.fecha_hasta|date:"d/m/Y H:i" }}
+                                        <br><small class="text-muted">
+                                            {% with dias=reporte.fecha_hasta|timeuntil:reporte.fecha_desde %}
+                                            Duración: {{ dias }}
+                                            {% endwith %}
+                                        </small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">
+                                        <i class="fas fa-user me-2 text-muted"></i>Cliente:
+                                    </td>
+                                    <td>
+                                        {% if reporte.cliente %}
+                                        <strong>{{ reporte.cliente.nombre_empresa|default:reporte.cliente.nombre_persona }}</strong>
+                                        <br><small class="text-muted">{{ reporte.cliente.get_tipo_cliente_display }}</small>
+                                        {% else %}
+                                        <span class="text-muted">Todos los clientes</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">
+                                        <i class="fas fa-clock me-2 text-muted"></i>Solicitado:
+                                    </td>
+                                    <td>
+                                        {{ reporte.fecha_creacion|date:"d/m/Y H:i" }}
+                                        <br><small class="text-muted">{{ reporte.fecha_creacion|naturaltime }}</small>
+                                    </td>
+                                </tr>
+                                {% if reporte.fecha_finalizacion %}
+                                <tr>
+                                    <td class="fw-bold">
+                                        <i class="fas fa-check-circle me-2 text-muted"></i>Completado:
+                                    </td>
+                                    <td>
+                                        {{ reporte.fecha_finalizacion|date:"d/m/Y H:i" }}
+                                        <br><small class="text-muted">
+                                            Tiempo de generación: 
+                                            {% if reporte.fecha_inicio %}
+                                            {{ reporte.fecha_finalizacion|timeuntil:reporte.fecha_inicio }}
+                                            {% else %}
+                                            No disponible
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if reporte.tamano_archivo > 0 %}
+                                <tr>
+                                    <td class="fw-bold">
+                                        <i class="fas fa-file me-2 text-muted"></i>Tamaño del archivo:
+                                    </td>
+                                    <td>
+                                        {{ reporte.tamano_archivo|filesizeformat }}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td class="fw-bold">
+                                        <i class="fas fa-download me-2 text-muted"></i>Descargas:
+                                    </td>
+                                    <td>
+                                        {{ reporte.conteo_descargas }} de {{ reporte.max_descargas }} permitidas
+                                        {% if reporte.fecha_expiracion %}
+                                        <br><small class="text-muted">
+                                            Expira: {{ reporte.fecha_expiracion|date:"d/m/Y H:i" }}
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Información de Error -->
+                    {% if reporte.estado == 'FALLIDO' and reporte.mensaje_error %}
+                    <div class="alert alert-danger mt-3">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Error en la generación
+                        </h6>
+                        <p class="mb-0">{{ reporte.mensaje_error }}</p>
+                        <hr>
+                        <small class="mb-0">
+                            Contacte al administrador del sistema si el problema persiste.
+                        </small>
+                    </div>
+                    {% endif %}
+
+                    <!-- Información de Descarga -->
+                    {% if reporte.estado == 'COMPLETADO' %}
+                    <div class="alert alert-success mt-3">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-check-circle me-2"></i>Reporte disponible
+                        </h6>
+                        {% if reporte.puede_descargar %}
+                        <p class="mb-2">Su reporte está listo para descargar.</p>
+                        <a href="{% url 'reportes:descargar_reporte' reporte.id %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-download me-2"></i>Descargar Ahora
+                        </a>
+                        {% else %}
+                        <p class="mb-0">
+                            El reporte no está disponible para descarga
+                            {% if reporte.conteo_descargas >= reporte.max_descargas %}
+                            (límite de descargas alcanzado)
+                            {% elif reporte.fecha_expiracion and reporte.fecha_expiracion|date:"U" < "now"|date:"U" %}
+                            (expirado)
+                            {% endif %}.
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra Lateral de Acciones -->
+        <div class="col-lg-4">
+            <!-- Acciones Rápidas -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if reporte.estado == 'COMPLETADO' and reporte.puede_descargar %}
+                        <a href="{% url 'reportes:descargar_reporte' reporte.id %}" class="btn btn-success">
+                            <i class="fas fa-download me-2"></i>Descargar
+                        </a>
+                        {% endif %}
+                        
+                        {% if reporte.estado == 'FALLIDO' %}
+                        <a href="{% url 'reportes:crear_reporte' %}" class="btn btn-warning">
+                            <i class="fas fa-redo me-2"></i>Generar Nuevamente
+                        </a>
+                        {% endif %}
+                        
+                        <button class="btn btn-outline-info" onclick="location.reload()">
+                            <i class="fas fa-sync-alt me-2"></i>Actualizar Estado
+                        </button>
+                        
+                        <button class="btn btn-outline-secondary" onclick="compartirReporte()">
+                            <i class="fas fa-share-alt me-2"></i>Compartir Enlace
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información del Tipo de Reporte -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información del Tipo
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if reporte.tipo_reporte == 'HISTORIAL_TRANSACCIONES' %}
+                    <div class="text-center mb-2">
+                        <i class="fas fa-exchange-alt fa-2x text-primary"></i>
+                    </div>
+                    <h6 class="text-primary">Historial de Transacciones</h6>
+                    <p class="small text-muted">
+                        Reporte detallado de todas las transacciones realizadas en el período seleccionado,
+                        incluyendo montos, tasas aplicadas y estados.
+                    </p>
+                    {% elif reporte.tipo_reporte == 'TASAS_CAMBIO' %}
+                    <div class="text-center mb-2">
+                        <i class="fas fa-chart-line fa-2x text-info"></i>
+                    </div>
+                    <h6 class="text-info">Tasas de Cambio</h6>
+                    <p class="small text-muted">
+                        Evolución y análisis de las tasas de cambio en tiempo real,
+                        con comparaciones y tendencias.
+                    </p>
+                    {% elif reporte.tipo_reporte == 'ANALISIS_GANANCIAS' %}
+                    <div class="text-center mb-2">
+                        <i class="fas fa-dollar-sign fa-2x text-success"></i>
+                    </div>
+                    <h6 class="text-success">Análisis de Ganancias</h6>
+                    <p class="small text-muted">
+                        Monitoreo detallado de ganancias y rentabilidad del negocio
+                        con métricas de performance.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Detalles Técnicos -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Detalles Técnicos
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <small>
+                        <strong>ID del Reporte:</strong> {{ reporte.id }}<br>
+                        <strong>Solicitado por:</strong> {{ reporte.solicitado_por.nombre_completo }}<br>
+                        <strong>Email:</strong> {{ reporte.solicitado_por.email }}<br>
+                        {% if reporte.filtros %}
+                        <strong>Filtros aplicados:</strong>
+                        <ul class="mt-1 mb-0">
+                            {% for clave, valor in reporte.filtros.items %}
+                            <li>{{ clave }}: {{ valor }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicador de Progreso -->
+    {% if reporte.estado == 'GENERANDO' or reporte.estado == 'PENDIENTE' %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="mb-3">
+                        <i class="fas fa-clock me-2"></i>
+                        Estado de Generación
+                    </h6>
+                    <div class="progress mb-3" style="height: 30px;">
+                        {% if reporte.estado == 'PENDIENTE' %}
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                             style="width: 25%">
+                            <span class="text-dark fw-bold">En cola...</span>
+                        </div>
+                        {% elif reporte.estado == 'GENERANDO' %}
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" 
+                             style="width: 75%">
+                            <span class="text-dark fw-bold">Generando...</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Esta página se actualizará automáticamente cada 30 segundos
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Auto-recargar si el reporte aún se está generando
+    {% if reporte.estado == 'GENERANDO' or reporte.estado == 'PENDIENTE' %}
+    const intervaloRecarga = setInterval(function() {
+        console.log('Recargando automáticamente el estado del reporte...');
+        location.reload();
+    }, 30000); // Recargar cada 30 segundos
+    
+    // Detener la auto-recarga cuando la página se vuelve invisible
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            clearInterval(intervaloRecarga);
+        }
+    });
+    {% endif %}
+    
+    // Función para compartir reporte
+    window.compartirReporte = function() {
+        {% if reporte.estado == 'COMPLETADO' and reporte.puede_descargar %}
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ reporte.nombre_reporte|escapejs }}',
+                text: 'Reporte generado en Global Exchange',
+                url: window.location.href
+            }).catch(console.error);
+        } else {
+            // Fallback para copiar URL
+            navigator.clipboard.writeText(window.location.href).then(function() {
+                alert('Enlace copiado al portapapeles');
+            }).catch(function() {
+                // Fallback manual
+                const areaTexto = document.createElement('textarea');
+                areaTexto.value = window.location.href;
+                document.body.appendChild(areaTexto);
+                areaTexto.select();
+                document.execCommand('copy');
+                document.body.removeChild(areaTexto);
+                alert('Enlace copiado al portapapeles');
+            });
+        }
+        {% else %}
+        alert('El reporte debe estar completado para poder compartir el enlace de descarga.');
+        {% endif %}
+    };
+    
+    // Añadir confirmación para la descarga
+    {% if reporte.estado == 'COMPLETADO' and reporte.puede_descargar %}
+    document.querySelectorAll('a[href*="descargar"]').forEach(function(enlace) {
+        enlace.addEventListener('click', function(e) {
+            if ({{ reporte.conteo_descargas }} >= {{ reporte.max_descargas }} - 1) {
+                if (!confirm('Esta será su última descarga permitida. ¿Continuar?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    });
+    {% endif %}
+    
+});
+</script>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Desactivar iToken - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Desactivar iToken
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>¡Advertencia!</h5>
+                        <p class="mb-0">Al desactivar el iToken, su cuenta tendrá menos seguridad. Se recomienda mantener activado el iToken para proteger su cuenta contra accesos no autorizados.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>Al desactivar el iToken:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-times text-danger me-2"></i>Se eliminarán todos los dispositivos de autenticación configurados.</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Se invalidarán todos los códigos de respaldo.</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Su cuenta tendrá menor protección de seguridad.</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Deberá configurar el iToken nuevamente si desea reactivarlo.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <h6>Para confirmar, ingrese su código iToken actual:</h6>
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <input type="text" 
+                                       class="form-control form-control-lg text-center" 
+                                       name="token" 
+                                       placeholder="000000" 
+                                       maxlength="6" 
+                                       pattern="[0-9]{6}" 
+                                       required
+                                       style="letter-spacing: 0.5em; font-family: monospace;">
+                                <div class="form-text">Código de su aplicación de autenticación</div>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="confirmarDesactivacion" name="confirmar" required>
+                                <label class="form-check-label" for="confirmarDesactivacion">
+                                    Entiendo los riesgos de desactivar el iToken
+                                </label>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times me-2"></i>Desactivar iToken
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'cuentas:itoken_configurar' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancelar
+                        </a>
+                        <small class="text-muted align-self-center">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Recomendamos mantener el iToken activado
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-formatear la entrada del token
+document.querySelector('input[name="token"]').addEventListener('input', function(e) {
+    // Eliminar cualquier caracter que no sea un dígito
+    e.target.value = e.target.value.replace(/\D/g, '');
+    
+    // Limitar a 6 dígitos
+    if (e.target.value.length > 6) {
+        e.target.value = e.target.value.slice(0, 6);
+    }
+});
+</script>
+{% endblock %}

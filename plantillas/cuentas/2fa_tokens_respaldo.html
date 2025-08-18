@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}Códigos de Respaldo iToken - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-key me-2"></i>Códigos de Respaldo iToken
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>¡Importante!</h5>
+                        <p class="mb-0">Guarde estos códigos en un lugar seguro. Cada código solo puede usarse una vez y le permitirán acceder a su cuenta si pierde el acceso a su aplicación de autenticación.</p>
+                    </div>
+                    
+                    {% if tokens_respaldo %}
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6>Sus códigos de respaldo:</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <div class="row">
+                                        {% for token in tokens_respaldo %}
+                                            <div class="col-6 mb-2">
+                                                <code class="h6">{{ token }}</code>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <button class="btn btn-outline-primary" onclick="imprimirTokensRespaldo()">
+                                        <i class="fas fa-print me-2"></i>Imprimir
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="copiarTokensRespaldo()">
+                                        <i class="fas fa-copy me-2"></i>Copiar al Portapapeles
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Instrucciones:</h6>
+                                <ul class="small">
+                                    <li>Cada código solo puede usarse una vez.</li>
+                                    <li>Guárdelos en un lugar seguro y accesible.</li>
+                                    <li>No los comparta con nadie.</li>
+                                    <li>Úselos solo si no puede acceder a su aplicación de autenticación.</li>
+                                </ul>
+                                
+                                <div class="mt-3">
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="regenerar" value="true">
+                                        <button type="submit" class="btn btn-warning btn-sm">
+                                            <i class="fas fa-sync-alt me-2"></i>Regenerar Códigos
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center">
+                            <i class="fas fa-key fa-3x text-muted mb-3"></i>
+                            <h5>No hay códigos de respaldo</h5>
+                            <p class="text-muted">Genere códigos de respaldo para poder acceder a su cuenta en caso de emergencia.</p>
+                            
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="generar" value="true">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Generar Códigos de Respaldo
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'cuentas:itoken_configurar' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Configuración iToken
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Versión imprimible oculta -->
+<div id="tokens-imprimibles" class="d-none">
+    <h3>Global Exchange - Códigos de Respaldo iToken</h3>
+    <p><strong>Usuario:</strong> {{ user.email }}</p>
+    <p><strong>Fecha:</strong> {{ "now"|date:"d/m/Y H:i" }}</p>
+    <hr>
+    {% if tokens_respaldo %}
+        <div style="font-family: monospace; font-size: 14px;">
+            {% for token in tokens_respaldo %}
+                <div style="margin-bottom: 10px;">{{ forloop.counter }}. {{ token }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <hr>
+    <p><small>
+        <strong>Importante:</strong> Guarde estos códigos en un lugar seguro. 
+        Cada código solo puede usarse una vez para acceder a su cuenta si pierde el acceso a su aplicación de autenticación.
+    </small></p>
+</div>
+
+<script>
+function imprimirTokensRespaldo() {
+    const contenidoImprimible = document.getElementById('tokens-imprimibles').innerHTML;
+    const contenidoOriginal = document.body.innerHTML;
+    
+    document.body.innerHTML = contenidoImprimible;
+    window.print();
+    document.body.innerHTML = contenidoOriginal;
+    window.location.reload();
+}
+
+function copiarTokensRespaldo() {
+    {% if tokens_respaldo %}
+        const tokens = [{% for token in tokens_respaldo %}'{{ token }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+        const textoTokens = tokens.join('\n');
+        
+        navigator.clipboard.writeText(textoTokens).then(function() {
+            alert('Códigos copiados al portapapeles');
+        }, function(err) {
+            console.error('Error al copiar: ', err);
+            // Fallback para navegadores antiguos
+            const areaTexto = document.createElement('textarea');
+            areaTexto.value = textoTokens;
+            document.body.appendChild(areaTexto);
+            areaTexto.select();
+            document.execCommand('copy');
+            document.body.removeChild(areaTexto);
+            alert('Códigos copiados al portapapeles');
+        });
+    {% endif %}
+}
+</script>
+{% endblock %}

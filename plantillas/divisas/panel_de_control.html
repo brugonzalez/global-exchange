@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Panel de Control - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Sección de Bienvenida -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="jumbotron bg-primary text-white p-5 rounded">
+                <h1 class="display-4">
+                    <i class="fas fa-exchange-alt me-3"></i>
+                    Bienvenido a Global Exchange
+                </h1>
+                <p class="lead">
+                    Su casa de cambio digital de confianza. Consulte tasas en tiempo real, 
+                    realice simulaciones y opere con las mejores condiciones del mercado.
+                </p>
+                {% if not user.is_authenticated %}
+                    <div class="mt-4">
+                        <a class="btn btn-light btn-lg me-3" href="{% url 'cuentas:registro' %}">
+                            <i class="fas fa-user-plus me-2"></i>Registrarse
+                        </a>
+                        <a class="btn btn-outline-light btn-lg" href="{% url 'cuentas:iniciar_sesion' %}">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                        </a>
+                    </div>
+                {% elif not puede_operar %}
+                    <div class="mt-4">
+                        <div class="alert alert-warning d-inline-block">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Para realizar operaciones de compra y venta, debe estar asociado a un cliente. 
+                            <a href="{% url 'notificaciones:soporte' %}" class="alert-link">Contacte a soporte</a> para más información.
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    {% if user.is_authenticated and puede_operar %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <h3><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h3>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'transacciones:comprar' %}" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-arrow-down me-2"></i>
+                            <div>Comprar Divisas</div>
+                            <small>Adquirir monedas extranjeras</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'transacciones:vender' %}" class="btn btn-warning btn-lg w-100">
+                            <i class="fas fa-arrow-up me-2"></i>
+                            <div>Vender Divisas</div>
+                            <small>Convertir a moneda local</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="#modalSimulacion" class="btn btn-info btn-lg w-100" data-bs-toggle="modal">
+                            <i class="fas fa-calculator me-2"></i>
+                            <div>Simular</div>
+                            <small>Calcular conversiones</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'transacciones:lista_transacciones' %}" class="btn btn-outline-primary btn-lg w-100">
+                            <i class="fas fa-history me-2"></i>
+                            <div>Historial</div>
+                            <small>Ver transacciones</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Tasas de Cambio Actuales -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3><i class="fas fa-chart-line me-2"></i>Tasas de Cambio Actuales</h3>
+                <div>
+                    <small class="text-muted me-3">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Actualización automática cada 30 segundos
+                    </small>
+                    <a href="{% url 'divisas:tasas' %}" class="btn btn-outline-primary btn-sm">
+                        Ver Todas las Tasas
+                    </a>
+                </div>
+            </div>
+            
+            {% if datos_tasas %}
+                <div class="row">
+                    {% for tasa in datos_tasas %}
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                            <div class="card currency-card h-100" data-currency="{{ tasa.moneda.codigo }}">
+                                <div class="card-body text-center">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h5 class="card-title mb-0">
+                                            {{ tasa.moneda.simbolo }} {{ tasa.moneda.codigo }}
+                                        </h5>
+                                        {% if tasa.moneda.es_moneda_empresa %}
+                                            <span class="badge bg-primary">Propia</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <h6 class="text-muted">{{ tasa.moneda.nombre }}</h6>
+                                    
+                                    <div class="row mt-3">
+                                        <div class="col-6">
+                                            <div class="border-end">
+                                                <strong class="text-success">Compra</strong>
+                                                <div class="h5 tasa-compra">{{ tasa.tasa_compra|floatformat:4 }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong class="text-danger">Venta</strong>
+                                            <div class="h5 tasa-venta">{{ tasa.tasa_venta|floatformat:4 }}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <small class="text-muted ultima-actualizacion">
+                                            Actualizado: {{ tasa.ultima_actualizacion|date:"H:i" }}
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <div class="btn-group w-100" role="group">
+                                            <a href="{% url 'divisas:historial_tasa' tasa.moneda.codigo %}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-chart-area me-1"></i>Historial
+                                            </a>
+                                            {% if user.is_authenticated and puede_operar %}
+                                                <button class="btn btn-outline-success btn-sm" 
+                                                        onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'COMPRA')">
+                                                    <i class="fas fa-arrow-down me-1"></i>Comprar
+                                                </button>
+                                                <button class="btn btn-outline-warning btn-sm" 
+                                                        onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'VENTA')">
+                                                    <i class="fas fa-arrow-up me-1"></i>Vender
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No hay tasas de cambio disponibles en este momento.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Resumen del Mercado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3><i class="fas fa-globe me-2"></i>Resumen del Mercado</h3>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="fas fa-coins fa-2x text-primary mb-2"></i>
+                            <h5>{{ datos_tasas|length }}</h5>
+                            <p class="mb-0">Monedas Disponibles</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                            <h5>24/7</h5>
+                            <p class="mb-0">Disponibilidad</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                            <h5>100%</h5>
+                            <p class="mb-0">Seguro</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Características -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3><i class="fas fa-star me-2"></i>Características</h3>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-sync-alt text-primary me-2"></i>
+                                Tasas en Tiempo Real
+                            </h5>
+                            <p class="card-text">
+                                Acceda a las tasas de cambio más actualizadas del mercado, 
+                                con actualizaciones automáticas cada 30 segundos.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-calculator text-success me-2"></i>
+                                Simulador de Conversiones
+                            </h5>
+                            <p class="card-text">
+                                Calcule el resultado de sus operaciones antes de ejecutarlas, 
+                                sin compromiso y de forma gratuita.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-mobile-alt text-info me-2"></i>
+                                Transacciones Digitales
+                            </h5>
+                            <p class="card-text">
+                                Realice compras y ventas de divisas completamente en línea, 
+                                con transferencias directas a sus cuentas.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-file-invoice text-warning me-2"></i>
+                                Facturación Electrónica
+                            </h5>
+                            <p class="card-text">
+                                Reciba facturas electrónicas por todas sus transacciones, 
+                                con validez fiscal completa.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Simulación -->
+<div class="modal fade" id="modalSimulacion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calculator me-2"></i>
+                    Simular Conversión
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formularioSimulacion">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tipo_transaccion" class="form-label">Tipo de Operación</label>
+                            <select class="form-control" id="tipo_transaccion" name="tipo_transaccion">
+                                <option value="COMPRA">Comprar</option>
+                                <option value="VENTA">Vender</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="monto" class="form-label">Monto</label>
+                            <input type="number" class="form-control" id="monto" name="monto" 
+                                   step="0.01" min="0.01" placeholder="Ingrese el monto">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="moneda_origen" class="form-label">Moneda Origen</label>
+                            <select class="form-control" id="moneda_origen" name="moneda_origen">
+                                {% for tasa in datos_tasas %}
+                                    <option value="{{ tasa.moneda.id }}" {% if forloop.first %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="moneda_destino" class="form-label">Moneda Destino</label>
+                            <select class="form-control" id="moneda_destino" name="moneda_destino">
+                                {% for tasa in datos_tasas %}
+                                    <option value="{{ tasa.moneda.id }}" {% if forloop.counter == 2 %}selected{% elif forloop.first and datos_tasas|length == 1 %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-calculator me-2"></i>Calcular
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="resultadoSimulacion" class="mt-4" style="display: none;">
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-check-circle me-2"></i>Resultado de la Simulación</h5>
+                        <div id="contenidoResultado"></div>
+                        {% if user.is_authenticated and puede_operar %}
+                            <div class="mt-3">
+                                <button class="btn btn-success" onclick="procederConTransaccion()">
+                                    <i class="fas fa-arrow-right me-2"></i>Proceder con la Transacción
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div id="errorSimulacion" class="mt-4" style="display: none;">
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-circle me-2"></i>Error</h5>
+                        <div id="contenidoError"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Manejo del formulario de simulación - usando la API fetch para un manejo adecuado de FormData
+    document.addEventListener('DOMContentLoaded', function() {
+        const formularioSimulacion = document.getElementById('formularioSimulacion');
+        if (formularioSimulacion) {
+            formularioSimulacion.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const datosFormulario = new FormData(this);
+                
+                // Añadir token CSRF
+                const tokenCSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                                 document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
+                                 IG.obtenerCookie('csrftoken');
+                
+                fetch('{% url "divisas:api_simular" %}', {
+                    method: 'POST',
+                    body: datosFormulario,
+                    headers: {
+                        'X-CSRFToken': tokenCSRF
+                    }
+                })
+                .then(response => response.json())
+                .then(function(respuesta) {
+                    const divError = document.getElementById('errorSimulacion');
+                    const divResultado = document.getElementById('resultadoSimulacion');
+                    const contenidoResultado = document.getElementById('contenidoResultado');
+                    const contenidoError = document.getElementById('contenidoError');
+                    
+                    if (respuesta.success) {
+                        if (divError) divError.style.display = 'none';
+                        
+                        const htmlResultado = `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Monto Original:</strong> ${datosFormulario.get('monto')}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Monto Convertido:</strong> ${respuesta.monto_convertido.toFixed(4)}
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <strong>Tasa Aplicada:</strong> ${respuesta.tasa.toFixed(8)}
+                                </div>
+                            </div>
+                        `;
+                        
+                        if (contenidoResultado) contenidoResultado.innerHTML = htmlResultado;
+                        if (divResultado) divResultado.style.display = 'block';
+                    } else {
+                        if (divResultado) divResultado.style.display = 'none';
+                        if (contenidoError) contenidoError.textContent = respuesta.error || 'Error desconocido';
+                        if (divError) divError.style.display = 'block';
+                    }
+                })
+                .catch(function() {
+                    const divError = document.getElementById('errorSimulacion');
+                    const divResultado = document.getElementById('resultadoSimulacion');
+                    const contenidoError = document.getElementById('contenidoError');
+                    
+                    if (divResultado) divResultado.style.display = 'none';
+                    if (contenidoError) contenidoError.textContent = 'Error de conexión. Intente nuevamente.';
+                    if (divError) divError.style.display = 'block';
+                });
+            });
+        }
+    });
+    
+    // Función de simulación rápida
+    function simulacionRapida(codigoMoneda, tipo) {
+        // Establecer valores por defecto en el modal de simulación
+        const elTipoTransaccion = document.getElementById('tipo_transaccion');
+        const opcionesMonedaDestino = document.querySelectorAll('#moneda_destino option');
+        const opcionesMonedaOrigen = document.querySelectorAll('#moneda_origen option');
+        
+        if (elTipoTransaccion) elTipoTransaccion.value = tipo;
+        
+        if (tipo === 'COMPRA') {
+            opcionesMonedaDestino.forEach(opcion => {
+                if (opcion.textContent.indexOf(codigoMoneda) !== -1) {
+                    opcion.selected = true;
+                }
+            });
+        } else {
+            opcionesMonedaOrigen.forEach(opcion => {
+                if (opcion.textContent.indexOf(codigoMoneda) !== -1) {
+                    opcion.selected = true;
+                }
+            });
+        }
+        
+        // Mostrar modal (si la funcionalidad de modal de Bootstrap existe)
+        const elModal = document.getElementById('modalSimulacion');
+        if (elModal && window.bootstrap) {
+            new bootstrap.Modal(elModal).show();
+        }
+    }
+    
+    // Función para proceder con la transacción
+    function procederConTransaccion() {
+        const elTipoTransaccion = document.getElementById('tipo_transaccion');
+        if (elTipoTransaccion) {
+            const tipo = elTipoTransaccion.value;
+            if (tipo === 'COMPRA') {
+                window.location.href = '{% url "transacciones:comprar" %}';
+            } else {
+                window.location.href = '{% url "transacciones:vender" %}';
+            }
+        }
+    }
+</script>
+{% endblock %}

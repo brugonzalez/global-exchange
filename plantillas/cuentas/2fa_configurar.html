@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurar iToken - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Configurar iToken
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if tiene_dispositivo_totp %}
+                        <div class="alert alert-success">
+                            <h5><i class="fas fa-check-circle me-2"></i>iToken Configurado</h5>
+                            <p class="mb-0">Su iToken ya está configurado y activo. Puede gestionar sus dispositivos y configuraciones a continuación.</p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Dispositivos Activos</h6>
+                                {% for dispositivo in dispositivos_totp %}
+                                    <div class="card mb-2">
+                                        <div class="card-body p-3">
+                                            <h6 class="card-title mb-1">{{ dispositivo.name }}</h6>
+                                            <small class="text-muted">
+                                                Creado: {{ dispositivo.created_at|date:"d/m/Y H:i" }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Configuraciones</h6>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'cuentas:itoken_desactivar' %}" class="btn btn-outline-danger">
+                                        <i class="fas fa-times me-2"></i>Desactivar iToken
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle me-2"></i>¿Qué es iToken?</h5>
+                            <p>El iToken es un sistema de autenticación de dos factores que proporciona una capa adicional de seguridad para su cuenta. Utiliza una aplicación de autenticación en su teléfono móvil para generar códigos únicos cada 30 segundos.</p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Beneficios del iToken</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-check text-success me-2"></i>Mayor seguridad para su cuenta</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Protección contra accesos no autorizados</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Autenticación de dos factores robusta</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Compatible con aplicaciones estándar</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Aplicaciones Compatibles</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fab fa-google me-2"></i>Google Authenticator</li>
+                                    <li><i class="fas fa-mobile-alt me-2"></i>Microsoft Authenticator</li>
+                                    <li><i class="fas fa-key me-2"></i>Authy</li>
+                                    <li><i class="fas fa-shield-alt me-2"></i>Otras aplicaciones TOTP</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{% url 'cuentas:itoken_activar' %}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-shield-alt me-2"></i>Configurar iToken Ahora
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'cuentas:editar_perfil' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver al Perfil
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

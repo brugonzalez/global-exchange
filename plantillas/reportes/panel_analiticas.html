@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Panel Analítico - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-chart-line me-2 text-primary"></i>
+                    Panel Analítico
+                </h2>
+                <div>
+                    <a href="{% url 'reportes:analisis_ganancias' %}" class="btn btn-success me-2">
+                        <i class="fas fa-dollar-sign me-2"></i>Análisis de Ganancias
+                    </a>
+                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver al Panel
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted">Monitoreo en tiempo real de métricas de negocio</p>
+        </div>
+    </div>
+
+    <!-- Métricas en Tiempo Real -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        Métricas en Tiempo Real
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="metricasTiempoReal">
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-exchange-alt fa-2x mb-2"></i>
+                                    <h4 id="transaccionesHoy">{{ conteo_transacciones_hoy }}</h4>
+                                    <p class="mb-0">Transacciones Hoy</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                                    <h4 id="gananciaHoy">-</h4>
+                                    <p class="mb-0">Ganancia Hoy</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                                    <h4 id="volumenHoy">{{ volumen_hoy|floatformat:2 }}</h4>
+                                    <p class="mb-0">Volumen Hoy</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-coins fa-2x mb-2"></i>
+                                    <h4>{{ total_monedas_activas }}</h4>
+                                    <p class="mb-0">Monedas Activas</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <small class="text-muted">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Actualización automática cada 30 segundos
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparación de Períodos -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-calendar-day me-2"></i>Hoy
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-12 mb-2">
+                            <h5 class="text-primary">{{ conteo_transacciones_hoy }}</h5>
+                            <small>Transacciones</small>
+                        </div>
+                        <div class="col-12">
+                            <h6 class="text-success">$ {{ volumen_hoy|floatformat:2 }}</h6>
+                            <small>Volumen</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-calendar-week me-2"></i>Última Semana
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-12 mb-2">
+                            <h5 class="text-primary">{{ conteo_transacciones_semana }}</h5>
+                            <small>Transacciones</small>
+                        </div>
+                        <div class="col-12">
+                            <h6 class="text-success">$ {{ volumen_semana|floatformat:2 }}</h6>
+                            <small>Volumen</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>Último Mes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-12 mb-2">
+                            <h5 class="text-primary">{{ conteo_transacciones_mes }}</h5>
+                            <small>Transacciones</small>
+                        </div>
+                        <div class="col-12">
+                            <h6 class="text-success">$ {{ volumen_mes|floatformat:2 }}</h6>
+                            <small>Volumen</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Gráficos -->
+    <div class="row mb-4">
+        <div class="col-md-8 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-area me-2"></i>
+                        Evolución de Transacciones (Últimos 7 días)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoTendenciaTransacciones" width="400" height="200" style="max-width: 100%; height: 200px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Distribución por Tipo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="mb-3">
+                            <h6 class="text-success">Compras</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar bg-success" style="width: 60%"></div>
+                            </div>
+                            <small>60%</small>
+                        </div>
+                        <div>
+                            <h6 class="text-danger">Ventas</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar bg-danger" style="width: 40%"></div>
+                            </div>
+                            <small>40%</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Actualizar métricas en tiempo real
+    function actualizarMetricas() {
+        IG.ajax({
+            url: '{% url "reportes:api_metricas" %}',
+            method: 'GET',
+            success: function(respuesta) {
+                if (respuesta.success) {
+                    const metricas = respuesta.metricas;
+                    
+                    // Actualizar visualizaciones de métricas
+                    document.getElementById('transaccionesHoy').textContent = metricas.transacciones_hoy;
+                    document.getElementById('gananciaHoy').textContent = 
+                        '$' + IG.formatearMoneda(metricas.estimacion_ganancia_total, 2);
+                    document.getElementById('volumenHoy').textContent = 
+                        '$' + IG.formatearMoneda(metricas.volumen_hoy, 2);
+                    
+                    console.log('Métricas actualizadas:', metricas);
+                }
+            },
+            error: function() {
+                console.log('Error al actualizar métricas');
+            }
+        });
+    }
+    
+    // Actualizar métricas cada 30 segundos
+    actualizarMetricas();
+    setInterval(actualizarMetricas, 30000);
+    
+    // Crear gráfico simple de tendencia de transacciones
+    const datosGrafico = {
+        labels: ['hace 6 días', 'hace 5 días', 'hace 4 días', 'hace 3 días', 'hace 2 días', 'Ayer', 'Hoy'],
+        datasets: [
+            {
+                label: 'Transacciones',
+                data: [12, 15, 8, 20, 18, 25, {{ conteo_transacciones_hoy }}]
+            }
+        ]
+    };
+    
+    IG.crearGrafico('graficoTendenciaTransacciones', datosGrafico, {
+        title: 'Evolución de Transacciones',
+        yAxisLabel: 'Número de Transacciones',
+        xAxisLabel: 'Período',
+        colors: ['#007bff']
+    });
+    
+});
+</script>
+{% endblock %}

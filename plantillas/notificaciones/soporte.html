@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Centro de Soporte - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-life-ring"></i>
+                Centro de Soporte
+            </h1>
+            <p class="lead">Estamos aquí para ayudarte. Encuentra respuestas a preguntas frecuentes o crea un ticket de soporte.</p>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-question-circle fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Preguntas Frecuentes</h5>
+                    <p class="card-text">Encuentra respuestas rápidas a las preguntas más comunes.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-ticket-alt fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Crear Ticket</h5>
+                    <p class="card-text">¿No encontraste tu respuesta? Crea un ticket de soporte.</p>
+                    <a href="{% url 'notificaciones:crear_ticket' %}" class="btn btn-success">Crear Ticket</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-list fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Mis Tickets</h5>
+                    <p class="card-text">Revisa el estado de tus consultas anteriores.</p>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'notificaciones:lista_tickets' %}" class="btn btn-info">Ver Tickets</a>
+                    {% else %}
+                        <a href="{% url 'cuentas:iniciar_sesion' %}" class="btn btn-info">Iniciar Sesión</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Preguntas Frecuentes -->
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-question-circle"></i>
+                Preguntas Frecuentes
+            </h2>
+            
+            <div class="accordion" id="acordeonPreguntasFrecuentes">
+                {% for pregunta_frecuente in preguntas_frecuentes %}
+                <div class="card">
+                    <div class="card-header" id="faq{{ forloop.counter }}">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse{{ forloop.counter }}" 
+                                    aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
+                                    aria-controls="collapse{{ forloop.counter }}">
+                                {{ pregunta_frecuente.pregunta }}
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapse{{ forloop.counter }}" 
+                         class="collapse {% if forloop.first %}show{% endif %}" 
+                         aria-labelledby="faq{{ forloop.counter }}" 
+                         data-bs-parent="#acordeonPreguntasFrecuentes">
+                        <div class="card-body">
+                            {{ pregunta_frecuente.respuesta }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Solución de Problemas -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-tools"></i>
+                Guía de Solución de Problemas
+            </h2>
+            
+            {% for guia in solucion_problemas %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{ guia.problema }}
+                    </h5>
+                    <div class="card-text">
+                        <p><strong>Posibles soluciones:</strong></p>
+                        <ul>
+                            {% for solucion in guia.soluciones %}
+                            <li>{{ solucion }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Información de Contacto -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5>
+                    <i class="fas fa-info-circle"></i>
+                    ¿Aún necesitas ayuda?
+                </h5>
+                <p class="mb-0">
+                    Si no encontraste la solución a tu problema, no dudes en 
+                    <a href="{% url 'notificaciones:crear_ticket' %}" class="alert-link">crear un ticket de soporte</a>. 
+                    Nuestro equipo te responderá lo antes posible.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-colapsar otros ítems de preguntas frecuentes al abrir uno (Bootstrap 5)
+document.getElementById('acordeonPreguntasFrecuentes').addEventListener('show.bs.collapse', function (e) {
+    const accordion = document.getElementById('acordeonPreguntasFrecuentes');
+    const allCollapses = accordion.querySelectorAll('.collapse');
+    allCollapses.forEach(function(collapse) {
+        if (collapse !== e.target && collapse.classList.contains('show')) {
+            const bsCollapse = new bootstrap.Collapse(collapse);
+            bsCollapse.hide();
+        }
+    });
+});
+</script>
+{% endblock %}

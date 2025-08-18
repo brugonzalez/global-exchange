@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mis Tickets de Soporte - Global Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ticket-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .ticket-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .ticket-header {
+        background-color: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .ticket-body {
+        padding: 20px;
+    }
+    
+    .ticket-status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-open {
+        background-color: #e3f2fd;
+        color: #1976d2;
+    }
+    
+    .status-in_progress {
+        background-color: #fff3e0;
+        color: #f57c00;
+    }
+    
+    .status-resolved {
+        background-color: #e8f5e8;
+        color: #388e3c;
+    }
+    
+    .status-closed {
+        background-color: #f3e5f5;
+        color: #7b1fa2;
+    }
+    
+    .priority-high {
+        color: #d32f2f;
+    }
+    
+    .priority-medium {
+        color: #f57c00;
+    }
+    
+    .priority-low {
+        color: #388e3c;
+    }
+    
+    .ticket-meta {
+        display: flex;
+        gap: 20px;
+        margin-top: 10px;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-ticket-alt me-2"></i>Mis Tickets de Soporte</h2>
+                    <p class="text-muted mb-0">Gestiona tus solicitudes de soporte técnico</p>
+                </div>
+                <div>
+                    <a href="{% url 'notificaciones:crear_ticket' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Nuevo Ticket
+                    </a>
+                    <a href="{% url 'notificaciones:soporte' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-question-circle me-1"></i>Ayuda
+                    </a>
+                </div>
+            </div>
+
+            {% if tickets %}
+                <!-- Lista de Tickets -->
+                <div class="tickets-list">
+                    {% for ticket in tickets %}
+                    <div class="ticket-card">
+                        <div class="ticket-header">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="mb-1">
+                                        <a href="{% url 'notificaciones:detalle_ticket' ticket_number=ticket.numero_ticket %}" 
+                                           class="text-decoration-none text-dark">
+                                            #{{ ticket.numero_ticket }} - {{ ticket.asunto }}
+                                        </a>
+                                    </h5>
+                                    <div class="ticket-meta">
+                                        <span>
+                                            <i class="fas fa-tag me-1"></i>
+                                            {{ ticket.get_categoria_display }}
+                                        </span>
+                                        <span class="priority-{{ ticket.prioridad|lower }}">
+                                            <i class="fas fa-flag me-1"></i>
+                                            {{ ticket.get_prioridad_display }}
+                                        </span>
+                                        <span>
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ ticket.fecha_creacion|date:"d/m/Y H:i" }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="ticket-status status-{{ ticket.estado|lower }}">
+                                        {{ ticket.get_estado_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ticket-body">
+                            <p class="mb-3">{{ ticket.descripcion|truncatewords:30 }}</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-muted small">
+                                    {% if ticket.mensajes.count > 0 %}
+                                        <i class="fas fa-comments me-1"></i>
+                                        {{ ticket.mensajes.count }} respuesta{{ ticket.mensajes.count|pluralize }}
+                                        {% if ticket.ultima_actividad %}
+                                            • Última actividad: hace {{ ticket.ultima_actividad|timesince }}
+                                        {% endif %}
+                                    {% else %}
+                                        <i class="fas fa-clock me-1"></i>
+                                        Sin respuestas aún
+                                    {% endif %}
+                                </div>
+                                
+                                <div>
+                                    <a href="{% url 'notificaciones:detalle_ticket' ticket_number=ticket.numero_ticket %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Ver Detalles
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Paginación -->
+                {% if is_paginated %}
+                <div class="d-flex justify-content-center mt-4">
+                    <nav aria-label="Paginación de tickets">
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                        <i class="fas fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                        <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+
+            {% else %}
+                <!-- Estado Vacío -->
+                <div class="empty-state">
+                    <div class="mb-4">
+                        <i class="fas fa-ticket-alt"></i>
+                    </div>
+                    <h4>No tienes tickets de soporte</h4>
+                    <p class="mb-4">
+                        Cuando necesites ayuda, puedes crear un ticket de soporte y nuestro equipo te ayudará.
+                    </p>
+                    <div>
+                        <a href="{% url 'notificaciones:crear_ticket' %}" class="btn btn-primary me-2">
+                            <i class="fas fa-plus me-1"></i>Crear Primer Ticket
+                        </a>
+                        <a href="{% url 'notificaciones:soporte' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-question-circle me-1"></i>Ver Ayuda
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Añadir efectos hover a las tarjetas de tickets
+    const tarjetasTicket = document.querySelectorAll('.ticket-card');
+    
+    tarjetasTicket.forEach(tarjeta => {
+        tarjeta.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        
+        tarjeta.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Auto-recarga para actualizaciones de estado (cada 30 segundos)
+    setInterval(function() {
+        // Solo recargar si hay tickets abiertos
+        const hayTicketsAbiertos = document.querySelector('.status-open, .status-in_progress');
+        if (hayTicketsAbiertos) {
+            // Recarga sutil sin recargar toda la página
+            fetch(window.location.href, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Parsear la respuesta y actualizar solo las insignias de estado
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const nuevosElementosEstado = doc.querySelectorAll('.ticket-status');
+                const elementosEstadoActuales = document.querySelectorAll('.ticket-status');
+                
+                nuevosElementosEstado.forEach((nuevoEstado, indice) => {
+                    if (elementosEstadoActuales[indice] && 
+                        nuevoEstado.textContent.trim() !== elementosEstadoActuales[indice].textContent.trim()) {
+                        elementosEstadoActuales[indice].className = nuevoEstado.className;
+                        elementosEstadoActuales[indice].textContent = nuevoEstado.textContent;
+                        
+                        // Añadir una animación sutil para indicar la actualización
+                        elementosEstadoActuales[indice].style.animation = 'pulso 0.5s ease-in-out';
+                        setTimeout(() => {
+                            elementosEstadoActuales[indice].style.animation = '';
+                        }, 500);
+                    }
+                });
+            })
+            .catch(error => {
+                console.log('La auto-recarga falló:', error);
+            });
+        }
+    }, 30000); // 30 segundos
+});
+</script>
+
+<style>
+@keyframes pulso {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+</style>
+{% endblock %}

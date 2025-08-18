@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Verificar Email - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    {% if success %}
+                        <div class="mb-4">
+                            <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                        </div>
+                        <h3 class="text-success mb-3">¡Email Verificado!</h3>
+                        <p class="mb-4">
+                            Su dirección de email ha sido verificada correctamente. 
+                            Ya puede iniciar sesión en su cuenta.
+                        </p>
+                        <a href="{% url 'cuentas:iniciar_sesion' %}" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Iniciar Sesión
+                        </a>
+                    {% else %}
+                        <div class="mb-4">
+                            <i class="fas fa-times-circle text-danger" style="font-size: 4rem;"></i>
+                        </div>
+                        <h3 class="text-danger mb-3">Error de Verificación</h3>
+                        <p class="mb-4">
+                            El enlace de verificación es inválido o ha expirado. 
+                            Por favor, solicite un nuevo enlace de verificación.
+                        </p>
+                        <a href="{% url 'cuentas:registro' %}" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Registrarse Nuevamente
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Reportes - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-file-alt me-2 text-primary"></i>
+                    Gestión de Reportes
+                </h2>
+                <div>
+                    <a href="{% url 'reportes:crear_reporte' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-2"></i>Generar Nuevo Reporte
+                    </a>
+                    <a href="{% url 'reportes:panel_analiticas' %}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-line me-2"></i>Panel Analítico
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted">Genere y descargue reportes personalizados de su actividad comercial</p>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-pdf fa-2x mb-2"></i>
+                    <h4>{{ reportes.count }}</h4>
+                    <p class="mb-0">Reportes Generados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h4>{{ reportes.count }}</h4>
+                    <p class="mb-0">Completados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h4>0</h4>
+                    <p class="mb-0">En Proceso</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-download fa-2x mb-2"></i>
+                    <h4>{% now "d/m/Y" %}</h4>
+                    <p class="mb-0">Último Acceso</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tipos de Reportes Disponibles -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Tipos de Reportes Disponibles
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-primary h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-exchange-alt fa-3x text-primary mb-3"></i>
+                                    <h6>Historial de Transacciones</h6>
+                                    <p class="text-muted small">Reporte detallado de todas las transacciones realizadas en un período específico</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-success h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-dollar-sign fa-3x text-success mb-3"></i>
+                                    <h6>Análisis de Ganancias</h6>
+                                    <p class="text-muted small">Monitoreo de ganancias y rentabilidad del negocio</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-info h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                                    <h6>Tasas de Cambio</h6>
+                                    <p class="text-muted small">Evolución y análisis de las tasas de cambio en el tiempo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Reportes -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Mis Reportes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if reportes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Tipo</th>
+                                    <th>Formato</th>
+                                    <th>Período</th>
+                                    <th>Estado</th>
+                                    <th>Creado</th>
+                                    <th>Tamaño</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reporte in reportes %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ reporte.nombre_reporte }}</strong>
+                                        {% if reporte.estado == 'COMPLETADO' and reporte.puede_descargar %}
+                                        <br><small class="text-success">
+                                            <i class="fas fa-check-circle me-1"></i>Disponible para descarga
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ reporte.get_tipo_reporte_display }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ reporte.formato }}</span>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            {{ reporte.fecha_desde|date:"d/m/Y" }} - 
+                                            {{ reporte.fecha_hasta|date:"d/m/Y" }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if reporte.estado == 'COMPLETADO' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Completado
+                                        </span>
+                                        {% elif reporte.estado == 'GENERANDO' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-spinner fa-spin me-1"></i>Generando
+                                        </span>
+                                        {% elif reporte.estado == 'PENDIENTE' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-clock me-1"></i>Pendiente
+                                        </span>
+                                        {% elif reporte.estado == 'FALLIDO' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Error
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ reporte.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if reporte.tamano_archivo > 0 %}
+                                        <small>{{ reporte.tamano_archivo|filesizeformat }}</small>
+                                        {% else %}
+                                        <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'reportes:detalle_reporte' reporte.id %}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="Ver detalles">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if reporte.estado == 'COMPLETADO' and reporte.puede_descargar %}
+                                            <a href="{% url 'reportes:descargar_reporte' reporte.id %}" 
+                                               class="btn btn-sm btn-success" 
+                                               title="Descargar">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            {% else %}
+                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                    disabled 
+                                                    title="No disponible para descarga">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Paginación -->
+                    {% if is_paginated %}
+                    <nav aria-label="Paginación de reportes">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1">« Primera</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última »</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                    {% else %}
+                    <!-- Estado Vacío -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No tienes reportes generados</h4>
+                        <p class="text-muted">Comience generando su primer reporte personalizado</p>
+                        <a href="{% url 'reportes:crear_reporte' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Generar Mi Primer Reporte
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-recargar el estado del reporte cada 30 segundos
+    setInterval(function() {
+        // Solo recargar si hay reportes pendientes o en generación
+        const reportesPendientes = document.querySelectorAll('.badge:contains("Pendiente"), .badge:contains("Generando")');
+        if (reportesPendientes.length > 0) {
+            console.log('Recargando automáticamente el estado de los reportes...');
+            // Usar una recarga sutil sin recargar toda la página
+            // Esto podría mejorarse con AJAX para actualizar solo las columnas de estado
+        }
+    }, 30000);
+    
+    // Añadir confirmación para las descargas
+    document.querySelectorAll('a[href*="descargar"]').forEach(function(enlace) {
+        enlace.addEventListener('click', function(e) {
+            const nombreReporte = this.closest('tr').querySelector('strong').textContent;
+            if (!confirm(`¿Descargar el reporte "${nombreReporte}"?`)) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

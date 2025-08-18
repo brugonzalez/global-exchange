@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Cancelar Transacción #{{ transaccion.numero_transaccion }} - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Cancelar Transacción
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Transacción #{{ transaccion.numero_transaccion }} - {{ transaccion.get_tipo_transaccion_display }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'transacciones:detalle_transaccion' transaccion.id_transaccion %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a la Transacción
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Alerta de Advertencia -->
+            <div class="alert alert-warning border-warning">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="alert-heading">¡Atención!</h5>
+                        <p class="mb-2">
+                            Estás a punto de cancelar esta transacción. Esta acción <strong>no se puede deshacer</strong>.
+                        </p>
+                        <ul class="mb-2">
+                            <li>La transacción quedará marcada como cancelada.</li>
+                            <li>No se procesará ningún pago relacionado.</li>
+                            <li>Se enviará una notificación de cancelación.</li>
+                            <li>Esta acción quedará registrada en el sistema.</li>
+                        </ul>
+                        <p class="mb-0">
+                            <strong>Por favor, asegúrate de que realmente deseas cancelar esta transacción.</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario de Cancelación -->
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-times-circle me-2"></i>
+                        Formulario de Cancelación
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ formulario_cancelacion.codigo_motivo.id_for_label }}" class="form-label">
+                                {{ formulario_cancelacion.codigo_motivo.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ formulario_cancelacion.codigo_motivo }}
+                            {% if formulario_cancelacion.codigo_motivo.help_text %}
+                            <div class="form-text">{{ formulario_cancelacion.codigo_motivo.help_text }}</div>
+                            {% endif %}
+                            {% if formulario_cancelacion.codigo_motivo.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in formulario_cancelacion.codigo_motivo.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ formulario_cancelacion.motivo.id_for_label }}" class="form-label">
+                                {{ formulario_cancelacion.motivo.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ formulario_cancelacion.motivo }}
+                            {% if formulario_cancelacion.motivo.help_text %}
+                            <div class="form-text">{{ formulario_cancelacion.motivo.help_text }}</div>
+                            {% endif %}
+                            {% if formulario_cancelacion.motivo.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in formulario_cancelacion.motivo.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                {{ formulario_cancelacion.confirmar_cancelacion }}
+                                <label class="form-check-label" for="{{ formulario_cancelacion.confirmar_cancelacion.id_for_label }}">
+                                    {{ formulario_cancelacion.confirmar_cancelacion.label }}
+                                </label>
+                                {% if formulario_cancelacion.confirmar_cancelacion.help_text %}
+                                <div class="form-text">{{ formulario_cancelacion.confirmar_cancelacion.help_text }}</div>
+                                {% endif %}
+                                {% if formulario_cancelacion.confirmar_cancelacion.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in formulario_cancelacion.confirmar_cancelacion.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'transacciones:detalle_transaccion' transaccion.id_transaccion %}" 
+                               class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar y Volver
+                            </a>
+                            <button type="submit" class="btn btn-danger" id="btnConfirmarCancelacion" disabled>
+                                <i class="fas fa-times-circle me-2"></i>Confirmar Cancelación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen de la Transacción -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Resumen de la Transacción
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Número:</strong><br>
+                        #{{ transaccion.numero_transaccion }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Tipo:</strong><br>
+                        {% if transaccion.tipo_transaccion == 'COMPRA' %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-arrow-down me-1"></i>Compra
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning">
+                            <i class="fas fa-arrow-up me-1"></i>Venta
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Monedas:</strong><br>
+                        {{ transaccion.moneda_origen.codigo }} → {{ transaccion.moneda_destino.codigo }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Monto:</strong><br>
+                        {{ transaccion.monto_origen|floatformat:2 }} {{ transaccion.moneda_origen.codigo }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Estado Actual:</strong><br>
+                        <span class="badge bg-warning">{{ transaccion.get_estado_display }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Fecha de Creación:</strong><br>
+                        {{ transaccion.fecha_creacion|date:"d/m/Y H:i" }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Cliente:</strong><br>
+                        {{ transaccion.cliente.obtener_nombre_completo }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjeta de Ayuda -->
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>
+                        ¿Necesitas Ayuda?
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        Si tienes dudas sobre la cancelación de esta transacción, puedes:
+                    </p>
+                    <ul class="small mb-3">
+                        <li>Contactar al soporte técnico</li>
+                        <li>Revisar nuestras políticas de cancelación</li>
+                        <li>Consultar con tu representante de cuenta</li>
+                    </ul>
+                    <a href="#" class="btn btn-outline-info btn-sm w-100" onclick="alert('Funcionalidad de soporte en desarrollo')">
+                        <i class="fas fa-headset me-2"></i>Contactar Soporte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxConfirmar = document.getElementById('{{ formulario_cancelacion.confirmar_cancelacion.id_for_label }}');
+    const btnConfirmar = document.getElementById('btnConfirmarCancelacion');
+    const textareaMotivo = document.getElementById('{{ formulario_cancelacion.motivo.id_for_label }}');
+    
+    function actualizarEstadoBoton() {
+        if (checkboxConfirmar.checked && textareaMotivo.value.trim().length >= 10) {
+            btnConfirmar.disabled = false;
+            btnConfirmar.classList.remove('btn-secondary');
+            btnConfirmar.classList.add('btn-danger');
+        } else {
+            btnConfirmar.disabled = true;
+            btnConfirmar.classList.remove('btn-danger');
+            btnConfirmar.classList.add('btn-secondary');
+        }
+    }
+    
+    // Actualizar el estado del botón cuando cambia el checkbox
+    checkboxConfirmar.addEventListener('change', actualizarEstadoBoton);
+    
+    // Actualizar el estado del botón cuando cambia el texto del motivo
+    textareaMotivo.addEventListener('input', actualizarEstadoBoton);
+    
+    // Estado inicial
+    actualizarEstadoBoton();
+    
+    // Confirmación antes de enviar
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (!confirm('¿Estás seguro de que deseas cancelar esta transacción? Esta acción no se puede deshacer.')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

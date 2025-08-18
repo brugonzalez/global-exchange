@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Notificaciones - Global Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-item {
+        border-bottom: 1px solid #dee2e6;
+        padding: 15px 0;
+        transition: background-color 0.3s ease;
+    }
+    
+    .notification-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .notification-unread {
+        background-color: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding-left: 15px;
+    }
+    
+    .notification-read {
+        opacity: 0.7;
+    }
+    
+    .notification-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+    }
+    
+    .notification-content {
+        flex: 1;
+    }
+    
+    .notification-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #2c3e50;
+    }
+    
+    .notification-message {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+    
+    .notification-date {
+        color: #adb5bd;
+        font-size: 0.8rem;
+    }
+    
+    .notification-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .filter-pills .btn {
+        border-radius: 20px;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-bell me-2"></i>Notificaciones</h2>
+                    <p class="text-muted mb-0">Centro de notificaciones del sistema</p>
+                </div>
+                <div>
+                    <a href="{% url 'notificaciones:preferencias' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-cog me-1"></i>Preferencias
+                    </a>
+                </div>
+            </div>
+
+            <!-- Píldoras de Filtro -->
+            <div class="filter-pills mb-4">
+                <a href="?filtro=todas" class="btn {% if filtro_actual == 'todas' %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm">
+                    <i class="fas fa-list me-1"></i>Todas
+                </a>
+                <a href="?filtro=no_leidas" class="btn {% if filtro_actual == 'no_leidas' %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm">
+                    <i class="fas fa-envelope me-1"></i>No leídas
+                </a>
+                <a href="?filtro=transacciones" class="btn {% if filtro_actual == 'transacciones' %}btn-primary{% else %}btn-outline-info{% endif %} btn-sm">
+                    <i class="fas fa-exchange-alt me-1"></i>Transacciones
+                </a>
+                <a href="?filtro=tasas" class="btn {% if filtro_actual == 'tasas' %}btn-primary{% else %}btn-outline-success{% endif %} btn-sm">
+                    <i class="fas fa-chart-line me-1"></i>Tasas de Cambio
+                </a>
+            </div>
+
+            <!-- Token CSRF para solicitudes AJAX -->
+            {% csrf_token %}
+
+            <!-- Lista de Notificaciones -->
+            <div class="card">
+                <div class="card-body p-0">
+                    {% if notificaciones %}
+                        {% for notificacion in notificaciones %}
+                        <div class="notification-item d-flex {% if notificacion.estado == 'ENVIADO' or notificacion.estado == 'ENTREGADO' %}notification-unread{% else %}notification-read{% endif %}" 
+                             data-notification-id="{{ notificacion.id }}"
+                             data-type="{% if notificacion.plantilla %}{{ notificacion.plantilla.tipo_plantilla|lower }}{% else %}general{% endif %}">
+                            
+                            <!-- Icono de Notificación -->
+                            <div class="notification-icon 
+                                {% if notificacion.plantilla and 'TRANSACTION' in notificacion.plantilla.tipo_plantilla %}bg-primary text-white
+                                {% elif notificacion.plantilla and notificacion.plantilla.tipo_plantilla == 'RATE_ALERT' %}bg-warning text-white
+                                {% elif notificacion.plantilla and 'SYSTEM' in notificacion.plantilla.tipo_plantilla %}bg-info text-white
+                                {% else %}bg-secondary text-white{% endif %}">
+                                {% if notificacion.plantilla and 'TRANSACTION' in notificacion.plantilla.tipo_plantilla %}
+                                    <i class="fas fa-exchange-alt"></i>
+                                {% elif notificacion.plantilla and notificacion.plantilla.tipo_plantilla == 'RATE_ALERT' %}
+                                    <i class="fas fa-chart-line"></i>
+                                {% elif notificacion.plantilla and 'SYSTEM' in notificacion.plantilla.tipo_plantilla %}
+                                    <i class="fas fa-cog"></i>
+                                {% else %}
+                                    <i class="fas fa-bell"></i>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Contenido de la Notificación -->
+                            <div class="notification-content">
+                                <div class="notification-title">
+                                    {% if notificacion.plantilla %}{{ notificacion.plantilla.nombre }}{% else %}{{ notificacion.asunto }}{% endif %}
+                                </div>
+                                <div class="notification-message">{{ notificacion.mensaje|truncatewords:20 }}</div>
+                                <div class="notification-date">
+                                    <i class="fas fa-clock me-1"></i>
+                                    hace {{ notificacion.fecha_creacion|timesince }}
+                                </div>
+                            </div>
+                            
+                            <!-- Acciones de la Notificación -->
+                            <div class="notification-actions">
+                                {% if notificacion.estado == 'ENVIADO' or notificacion.estado == 'ENTREGADO' %}
+                                <button class="btn btn-sm btn-outline-primary marcar-como-leido" 
+                                        data-notification-id="{{ notificacion.id }}">
+                                    <i class="fas fa-check me-1"></i>Marcar como leída
+                                </button>
+                                {% else %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>Leída
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Paginación -->
+                        {% if is_paginated %}
+                        <div class="d-flex justify-content-center mt-4 p-3">
+                            <nav aria-label="Paginación de notificaciones">
+                                <ul class="pagination">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if filtro_actual != 'todas' %}filtro={{ filtro_actual }}&{% endif %}page=1">
+                                                <i class="fas fa-angle-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if filtro_actual != 'todas' %}filtro={{ filtro_actual }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                                <i class="fas fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?{% if filtro_actual != 'todas' %}filtro={{ filtro_actual }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if filtro_actual != 'todas' %}filtro={{ filtro_actual }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                                <i class="fas fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if filtro_actual != 'todas' %}filtro={{ filtro_actual }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                                                <i class="fas fa-angle-double-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                        {% endif %}
+                        
+                    {% else %}
+                        <!-- Estado Vacío -->
+                        <div class="text-center py-5">
+                            <div class="mb-4">
+                                <i class="fas fa-bell-slash text-muted" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-muted">No tienes notificaciones</h4>
+                            <p class="text-muted">Cuando recibas nuevas notificaciones aparecerán aquí.</p>
+                            <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-primary">
+                                <i class="fas fa-home me-1"></i>Volver al Panel de Control
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Funcionalidad de marcar como leído
+    const botonesMarcarComoLeido = document.querySelectorAll('.marcar-como-leido');
+    
+    botonesMarcarComoLeido.forEach(boton => {
+        boton.addEventListener('click', function() {
+            const idNotificacion = this.getAttribute('data-notification-id');
+            const itemNotificacion = this.closest('.notification-item');
+            
+            // Realizar solicitud AJAX para marcar como leído
+            const elementoTokenCSRF = document.querySelector('[name=csrfmiddlewaretoken]');
+            const metaElementoCSRF = document.querySelector('meta[name=csrf-token]');
+            const tokenCSRF = (elementoTokenCSRF && elementoTokenCSRF.value) || 
+                            (metaElementoCSRF && metaElementoCSRF.getAttribute('content'));
+            
+            fetch(`/notificaciones/${idNotificacion}/leer/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': tokenCSRF,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Actualizar UI
+                    itemNotificacion.classList.remove('notification-unread');
+                    itemNotificacion.classList.add('notification-read');
+                    
+                    // Reemplazar botón con insignia
+                    this.outerHTML = `
+                        <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>Leída
+                        </span>
+                    `;
+                } else {
+                    alert('Error al marcar la notificación como leída');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al marcar la notificación como leída');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

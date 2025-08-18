@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Monedas Favoritas - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-star me-2 text-warning"></i>
+                    Monedas Favoritas
+                </h2>
+                <div>
+                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver al Panel de Control
+                    </a>
+                </div>
+            </div>
+            {% if cliente_actual %}
+                <p class="text-muted">Cliente: {{ cliente_actual.obtener_nombre_completo }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not puede_gestionar %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Atención:</strong> Para gestionar monedas favoritas, debe estar asociado a un cliente.
+                    <a href="{% url 'notificaciones:soporte' %}" class="alert-link">Contacte a soporte</a> para más información.
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Sección de Monedas Favoritas -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-heart me-2 text-danger"></i>
+                            Mis Monedas Favoritas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if monedas_favoritas %}
+                            <div id="listaFavoritas" class="row">
+                                {% for moneda in monedas_favoritas %}
+                                    <div class="col-md-4 mb-3" data-currency-id="{{ moneda.id }}">
+                                        <div class="card favorite-currency-card">
+                                            <div class="card-body text-center">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h5 class="card-title mb-0">
+                                                        {{ moneda.simbolo }} {{ moneda.codigo }}
+                                                    </h5>
+                                                    <div>
+                                                        <button class="btn btn-sm btn-outline-danger quitar-favorito" 
+                                                                data-currency-id="{{ moneda.id }}"
+                                                                title="Quitar de favoritos">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                        <span class="manija-arrastre ms-2" title="Arrastrar para reordenar">
+                                                            <i class="fas fa-grip-vertical text-muted"></i>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <p class="card-text text-muted">{{ moneda.nombre }}</p>
+                                                {% with tasa=moneda.obtener_tasa_actual %}
+                                                {% if tasa %}
+                                                    <div class="row text-center">
+                                                        <div class="col-6">
+                                                            <small class="text-success">Compra</small><br>
+                                                            <strong class="text-success">{{ tasa.tasa_compra|floatformat:4 }}</strong>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <small class="text-danger">Venta</small><br>
+                                                            <strong class="text-danger">{{ tasa.tasa_venta|floatformat:4 }}</strong>
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <p class="text-muted">Sin tasa disponible</p>
+                                                {% endif %}
+                                                {% endwith %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3">
+                                <p class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Arrastra las tarjetas para cambiar el orden de tus monedas favoritas.
+                                </p>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                                <h5>No tienes monedas favoritas</h5>
+                                <p class="text-muted">Agrega monedas a tus favoritas desde la lista de abajo para un acceso rápido.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Todas las Monedas -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-coins me-2"></i>
+                            Todas las Monedas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for moneda in todas_las_monedas %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title mb-0">
+                                                    {{ moneda.simbolo }} {{ moneda.codigo }}
+                                                    {% if moneda.es_moneda_empresa %}
+                                                        <span class="badge bg-primary ms-1">Propia</span>
+                                                    {% endif %}
+                                                </h6>
+                                                <button class="btn btn-sm alternar-favorito 
+                                                             {% if moneda in monedas_favoritas %}btn-warning{% else %}btn-outline-warning{% endif %}" 
+                                                        data-currency-id="{{ moneda.id }}"
+                                                        title="{% if moneda in monedas_favoritas %}Quitar de favoritos{% else %}Agregar a favoritos{% endif %}">
+                                                    <i class="fas fa-star"></i>
+                                                </button>
+                                            </div>
+                                            <p class="card-text text-muted small">{{ moneda.nombre }}</p>
+                                            {% with tasa=moneda.obtener_tasa_actual %}
+                                            {% if tasa %}
+                                                <div class="row text-center small">
+                                                    <div class="col-6">
+                                                        <span class="text-success">{{ tasa.tasa_compra|floatformat:4 }}</span>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <span class="text-danger">{{ tasa.tasa_venta|floatformat:4 }}</span>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            {% endwith %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .favorite-currency-card {
+        border: 2px solid #ffc107;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .favorite-currency-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+    }
+    
+    .drag-handle {
+        cursor: grab;
+    }
+    
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+    
+    .sortable-ghost {
+        opacity: 0.5;
+    }
+    
+    .sortable-chosen {
+        background-color: #fff3cd;
+    }
+    
+    .toggle-favorite {
+        transition: all 0.2s;
+    }
+    
+    .toggle-favorite:hover {
+        transform: scale(1.1);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Funcionalidad para alternar favorito
+    document.querySelectorAll('.alternar-favorito').forEach(boton => {
+        boton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const idMoneda = this.getAttribute('data-currency-id');
+            
+            IG.ajax({
+                url: '{% url "divisas:api_alternar_favorito" %}',
+                method: 'POST',
+                data: new URLSearchParams({
+                    'currency_id': idMoneda,
+                    'csrfmiddlewaretoken': IG.obtenerCookie('csrftoken')
+                }).toString(),
+                success: function(respuesta) {
+                    if (respuesta.success) {
+                        const boton = document.querySelector(`[data-currency-id="${idMoneda}"]`);
+                        if (respuesta.es_favorito) {
+                            boton.classList.remove('btn-outline-warning');
+                            boton.classList.add('btn-warning');
+                            boton.title = 'Quitar de favoritos';
+                            
+                            // Mostrar mensaje de éxito
+                            mostrarMensaje(`${respuesta.codigo_moneda} agregado a favoritos`, 'success');
+                        } else {
+                            boton.classList.remove('btn-warning');
+                            boton.classList.add('btn-outline-warning');
+                            boton.title = 'Agregar a favoritos';
+                            
+                            // Mostrar mensaje de éxito
+                            mostrarMensaje(`${respuesta.codigo_moneda} removido de favoritos`, 'info');
+                        }
+                        
+                        // Recargar la página después de 1 segundo para actualizar la lista de favoritos
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        mostrarMensaje('Error: ' + respuesta.error, 'danger');
+                    }
+                },
+                error: function() {
+                    mostrarMensaje('Error de conexión', 'danger');
+                }
+            });
+        });
+    });
+    
+    // Quitar de favoritos
+    document.querySelectorAll('.quitar-favorito').forEach(boton => {
+        boton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const idMoneda = this.getAttribute('data-currency-id');
+            
+            if (confirm('¿Estás seguro de que quieres quitar esta moneda de tus favoritas?')) {
+                IG.ajax({
+                    url: '{% url "divisas:api_alternar_favorito" %}',
+                    method: 'POST',
+                    data: new URLSearchParams({
+                        'currency_id': idMoneda,
+                        'csrfmiddlewaretoken': IG.obtenerCookie('csrftoken')
+                    }).toString(),
+                    success: function(respuesta) {
+                        if (respuesta.success) {
+                            mostrarMensaje(`${respuesta.codigo_moneda} removido de favoritos`, 'info');
+                            // Recargar la página para actualizar la lista
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            mostrarMensaje('Error: ' + respuesta.error, 'danger');
+                        }
+                    },
+                    error: function() {
+                        mostrarMensaje('Error de conexión', 'danger');
+                    }
+                });
+            }
+        });
+    });
+    
+    // Arrastrar y soltar simple para reordenar (implementación básica)
+    const listaFavoritas = document.getElementById('listaFavoritas');
+    if (listaFavoritas) {
+        let elementoArrastrado = null;
+        
+        listaFavoritas.addEventListener('dragstart', function(e) {
+            if (e.target.closest('.favorite-currency-card')) {
+                elementoArrastrado = e.target.closest('.col-md-4');
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        });
+        
+        listaFavoritas.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        
+        listaFavoritas.addEventListener('drop', function(e) {
+            e.preventDefault();
+            const objetivoSoltar = e.target.closest('.col-md-4');
+            
+            if (objetivoSoltar && elementoArrastrado && objetivoSoltar !== elementoArrastrado) {
+                const padre = objetivoSoltar.parentNode;
+                const todosLosItems = Array.from(padre.children);
+                const indiceArrastrado = todosLosItems.indexOf(elementoArrastrado);
+                const indiceObjetivo = todosLosItems.indexOf(objetivoSoltar);
+                
+                if (indiceArrastrado < indiceObjetivo) {
+                    padre.insertBefore(elementoArrastrado, objetivoSoltar.nextSibling);
+                } else {
+                    padre.insertBefore(elementoArrastrado, objetivoSoltar);
+                }
+                
+                // Actualizar orden en el servidor
+                actualizarOrdenFavoritas();
+            }
+        });
+        
+        // Hacer las tarjetas arrastrables
+        listaFavoritas.querySelectorAll('.col-md-4').forEach(item => {
+            item.draggable = true;
+        });
+    }
+    
+    function actualizarOrdenFavoritas() {
+        const listaFavoritas = document.getElementById('listaFavoritas');
+        if (!listaFavoritas) return;
+        
+        const idsMonedas = Array.from(listaFavoritas.children).map(item => 
+            item.getAttribute('data-currency-id')
+        );
+        
+        IG.ajax({
+            url: '{% url "divisas:api_reordenar_favoritos" %}',
+            method: 'POST',
+            data: JSON.stringify({
+                'currency_ids': idsMonedas
+            }),
+            success: function(respuesta) {
+                if (respuesta.success) {
+                    mostrarMensaje('Orden actualizado', 'success');
+                } else {
+                    mostrarMensaje('Error al actualizar orden: ' + respuesta.error, 'danger');
+                }
+            },
+            error: function() {
+                mostrarMensaje('Error de conexión', 'danger');
+            }
+        });
+    }
+    
+    function mostrarMensaje(mensaje, tipo) {
+        const divAlerta = document.createElement('div');
+        divAlerta.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+        divAlerta.style.top = '100px';
+        divAlerta.style.right = '20px';
+        divAlerta.style.zIndex = '9999';
+        divAlerta.innerHTML = `
+            ${mensaje}
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        `;
+        
+        document.body.appendChild(divAlerta);
+        
+        // Descartar automáticamente después de 3 segundos
+        setTimeout(() => {
+            divAlerta.remove();
+        }, 3000);
+        
+        // Descarte manual
+        divAlerta.querySelector('.btn-close').addEventListener('click', () => {
+            divAlerta.remove();
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Iniciar Sesión - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h3>
+                            <i class="fas fa-sign-in-alt text-primary me-2"></i>
+                            Iniciar Sesión
+                        </h3>
+                        <p class="text-muted">Acceda a su cuenta de Global Exchange</p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ formulario.identificador.id_for_label }}" class="form-label">
+                                {{ formulario.identificador.label }}
+                            </label>
+                            {{ formulario.identificador }}
+                            {% if formulario.identificador.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ formulario.identificador.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ formulario.contrasena.id_for_label }}" class="form-label">
+                                {{ formulario.contrasena.label }}
+                            </label>
+                            {{ formulario.contrasena }}
+                            {% if formulario.contrasena.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ formulario.contrasena.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if formulario.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ formulario.non_field_errors.0 }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                Iniciar Sesión
+                            </button>
+                        </div>
+                        
+                        <div class="text-center">
+                            <p class="mb-2">
+                                <a href="{% url 'cuentas:restablecer_contrasena' %}" class="text-decoration-none">
+                                    ¿Olvidó su contraseña?
+                                </a>
+                            </p>
+                            <p class="mb-0">
+                                ¿No tiene cuenta? 
+                                <a href="{% url 'cuentas:registro' %}" class="text-decoration-none">
+                                    Regístrese aquí
+                                </a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}

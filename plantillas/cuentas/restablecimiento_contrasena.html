@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Restablecer Contraseña - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h3>
+                            <i class="fas fa-lock text-success me-2"></i>
+                            Nueva Contraseña
+                        </h3>
+                        <p class="text-muted">
+                            Ingrese su nueva contraseña para <strong>{{ usuario.nombre_completo }}</strong>
+                        </p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ formulario.nueva_contrasena1.id_for_label }}" class="form-label">
+                                {{ formulario.nueva_contrasena1.label }}
+                            </label>
+                            {{ formulario.nueva_contrasena1 }}
+                            {% if formulario.nueva_contrasena1.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ formulario.nueva_contrasena1.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ formulario.nueva_contrasena2.id_for_label }}" class="form-label">
+                                {{ formulario.nueva_contrasena2.label }}
+                            </label>
+                            {{ formulario.nueva_contrasena2 }}
+                            {% if formulario.nueva_contrasena2.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ formulario.nueva_contrasena2.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if formulario.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ formulario.non_field_errors.0 }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>
+                                Restablecer Contraseña
+                            </button>
+                        </div>
+                        
+                        <div class="text-center">
+                            <p class="mb-0">
+                                <a href="{% url 'cuentas:iniciar_sesion' %}" class="text-decoration-none">
+                                    <i class="fas fa-arrow-left me-1"></i>
+                                    Volver al Login
+                                </a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Información de Seguridad -->
+            <div class="card mt-3 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-shield-alt text-success me-2"></i>
+                        Seguridad de la Contraseña
+                    </h6>
+                    <p class="card-text small mb-2">
+                        • Use al menos 8 caracteres.<br>
+                        • Incluya letras, números y símbolos.<br>
+                        • Evite usar información personal.<br>
+                        • No comparta su contraseña con nadie.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

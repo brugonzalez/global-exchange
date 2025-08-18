@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Análisis de Ganancias - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-chart-line me-2 text-success"></i>
+                    Análisis de Ganancias
+                </h2>
+                <div>
+                    <button class="btn btn-success me-2" onclick="refrescarMetricas()">
+                        <i class="fas fa-sync-alt me-2"></i>Actualizar
+                    </button>
+                    <a href="{% url 'reportes:panel_analiticas' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Panel Analítico
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted">Monitoreo en tiempo real de ganancias y rentabilidad</p>
+        </div>
+    </div>
+
+    <!-- Métricas de Ganancias en Tiempo Real -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-3x mb-3"></i>
+                    <h3 id="displayGananciaHoy">$ {{ ganancia_hoy|floatformat:2 }}</h3>
+                    <p class="mb-0">Ganancia Hoy</p>
+                    <small class="opacity-75">Actualizado en tiempo real</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-week fa-3x mb-3"></i>
+                    <h3>$ {{ ganancia_semana|floatformat:2 }}</h3>
+                    <p class="mb-0">Ganancia Semana</p>
+                    <small class="opacity-75">Últimos 7 días</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt fa-3x mb-3"></i>
+                    <h3>$ {{ ganancia_mes|floatformat:2 }}</h3>
+                    <p class="mb-0">Ganancia Mes</p>
+                    <small class="opacity-75">Últimos 30 días</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                    <h3>$ {{ ganancia_total|floatformat:2 }}</h3>
+                    <p class="mb-0">Ganancia Total</p>
+                    <small class="opacity-75">Histórico completo</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Tendencia de Ganancias -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-area me-2"></i>
+                        Evolución de Ganancias (Últimos 7 días)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoTendenciaGanancias" width="400" height="150" style="max-width: 100%; height: 150px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Ganancias por Tipo de Transacción -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Ganancias por Tipo de Transacción
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-arrow-down fa-2x text-success"></i>
+                                </div>
+                                <h4 class="text-success">$ {{ ganancia_por_tipo_transaccion.compra|floatformat:2 }}</h4>
+                                <p class="mb-0">Compras</p>
+                                <div class="progress mt-2">
+                                    {% widthratio ganancia_por_tipo_transaccion.compra ganancia_total 100 as porcentaje_compra %}
+                                    <div class="progress-bar bg-success" style="width: {{ porcentaje_compra|default:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ porcentaje_compra|default:0 }}%</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-arrow-up fa-2x text-warning"></i>
+                                </div>
+                                <h4 class="text-warning">$ {{ ganancia_por_tipo_transaccion.venta|floatformat:2 }}</h4>
+                                <p class="mb-0">Ventas</p>
+                                <div class="progress mt-2">
+                                    {% widthratio ganancia_por_tipo_transaccion.venta ganancia_total 100 as porcentaje_venta %}
+                                    <div class="progress-bar bg-warning" style="width: {{ porcentaje_venta|default:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ porcentaje_venta|default:0 }}%</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Monedas por Ganancia -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trophy me-2"></i>
+                        Top Monedas por Ganancia
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if ganancia_por_moneda %}
+                    <div class="list-group list-group-flush">
+                        {% for item in ganancia_por_moneda|slice:":5" %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-coins text-warning"></i>
+                                </div>
+                                <div>
+                                    <strong>{{ item.moneda.codigo }}</strong>
+                                    <br><small class="text-muted">{{ item.moneda.nombre }}</small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success fs-6">$ {{ item.ganancia|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>No hay datos de ganancias por moneda disponibles</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Monedas por Volumen de Transacciones -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Top Monedas por Volumen de Transacciones
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if monedas_principales %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Posición</th>
+                                    <th>Moneda</th>
+                                    <th>Transacciones</th>
+                                    <th>Volumen Total</th>
+                                    <th>Promedio por Transacción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for moneda in monedas_principales %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary">#{{ forloop.counter }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-coins text-warning me-2"></i>
+                                            <div>
+                                                <strong>{{ moneda.moneda_origen__codigo }}</strong>
+                                                <br><small class="text-muted">{{ moneda.moneda_origen__nombre }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ moneda.conteo_transacciones }}</span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ moneda.volumen_total|floatformat:2 }}</strong>
+                                        <small class="text-muted">{{ moneda.moneda_origen__codigo }}</small>
+                                    </td>
+                                    <td>
+                                        {% widthratio moneda.volumen_total moneda.conteo_transacciones 1 as monto_promedio %}
+                                        {{ monto_promedio|floatformat:2 }}
+                                        <small class="text-muted">{{ moneda.moneda_origen__codigo }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>No hay datos de volumen por moneda disponibles</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Función para refrescar métricas
+    window.refrescarMetricas = function() {
+        const botonRefrescar = document.querySelector('[onclick="refrescarMetricas()"]');
+        const contenidoOriginal = botonRefrescar.innerHTML;
+        botonRefrescar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
+        botonRefrescar.disabled = true;
+        
+        IG.ajax({
+            url: '{% url "reportes:api_metricas" %}',
+            method: 'GET',
+            success: function(respuesta) {
+                if (respuesta.success) {
+                    const metricas = respuesta.metricas;
+                    
+                    // Actualizar el display de la ganancia de hoy
+                    document.getElementById('displayGananciaHoy').textContent = 
+                        '$ ' + IG.formatearMoneda(metricas.estimacion_ganancia_total, 2);
+                    
+                    console.log('Métricas de ganancias actualizadas:', metricas);
+                    
+                    // Mostrar mensaje de éxito
+                    IG.mostrarAlerta('Métricas actualizadas exitosamente', 'success');
+                }
+            },
+            error: function() {
+                IG.mostrarAlerta('Error al actualizar métricas', 'error');
+            },
+            complete: function() {
+                botonRefrescar.innerHTML = contenidoOriginal;
+                botonRefrescar.disabled = false;
+            }
+        });
+    };
+    
+    // Auto-refrescar métricas cada 60 segundos
+    setInterval(refrescarMetricas, 60000);
+    
+    // Crear gráfico de tendencia de ganancias
+    const datosTendenciaGanancias = {
+        labels: [
+            {% for item in tendencia_ganancias %}
+            '{{ item.fecha|date:"d/m" }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [
+            {
+                label: 'Ganancia Diaria ($)',
+                data: [
+                    {% for item in tendencia_ganancias %}
+                    {{ item.ganancia }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: true
+            }
+        ]
+    };
+    
+    IG.crearGrafico('graficoTendenciaGanancias', datosTendenciaGanancias, {
+        title: 'Evolución de Ganancias',
+        yAxisLabel: 'Ganancia ($)',
+        xAxisLabel: 'Fecha',
+        colors: ['#28a745'],
+        type: 'line'
+    });
+    
+});
+</script>
+{% endblock %}

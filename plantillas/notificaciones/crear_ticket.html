@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Crear Ticket de Soporte - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-ticket-alt"></i>
+                Crear Ticket de Soporte
+            </h1>
+            <p class="lead">Complete el formulario a continuación para reportar un problema o hacer una consulta.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ formulario|crispy }}
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane"></i>
+                                Enviar Ticket
+                            </button>
+                            <a href="{% url 'notificaciones:soporte' %}" class="btn btn-secondary btn-lg ml-2">
+                                <i class="fas fa-arrow-left"></i>
+                                Volver
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        Información Importante
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Antes de crear un ticket:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> Revise las preguntas frecuentes.</li>
+                        <li><i class="fas fa-check text-success"></i> Describa el problema con detalle.</li>
+                        <li><i class="fas fa-check text-success"></i> Incluya los pasos para reproducir el error.</li>
+                        <li><i class="fas fa-check text-success"></i> Mencione el navegador que utiliza.</li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <h6>Tiempos de respuesta:</h6>
+                    <ul class="list-unstyled">
+                        <li><span class="badge badge-danger">Urgente</span> 1-2 horas</li>
+                        <li><span class="badge badge-warning">Alta</span> 4-6 horas</li>
+                        <li><span class="badge badge-info">Media</span> 12-24 horas</li>
+                        <li><span class="badge badge-secondary">Baja</span> 2-3 días</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

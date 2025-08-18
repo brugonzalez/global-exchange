@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}Seleccionar Cliente - Global Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    .client-selection-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #007bff;
+        cursor: pointer;
+    }
+    
+    .client-selection-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        border-left-color: #0056b3;
+    }
+    
+    .client-selection-card.selected {
+        border-left-color: #28a745;
+        background-color: #f8fff9;
+    }
+    
+    .client-type-badge {
+        font-size: 0.75rem;
+    }
+    
+    .current-client-banner {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .select-client-btn {
+        border-radius: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .select-client-btn:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Encabezado -->
+            <div class="text-center mb-4">
+                <h2><i class="fas fa-exchange-alt me-2"></i>Seleccionar Cliente</h2>
+                <p class="text-muted">Elija el cliente en cuyo nombre desea operar</p>
+            </div>
+
+            <!-- Banner de Cliente Actual -->
+            {% if user.ultimo_cliente_seleccionado %}
+                <div class="current-client-banner">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">Cliente Activo Actual</h5>
+                            <p class="mb-0">{{ user.ultimo_cliente_seleccionado.obtener_nombre_completo }}</p>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-light btn-sm" onclick="deseleccionarCliente()">
+                                <i class="fas fa-times me-2"></i>Deseleccionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>No hay cliente seleccionado.</strong> Debe seleccionar un cliente para realizar operaciones de compra y venta.
+                </div>
+            {% endif %}
+
+            <!-- Tarjetas de Selección de Cliente -->
+            {% if clientes %}
+                <div class="row">
+                    {% for cliente in clientes %}
+                        <div class="col-md-6 mb-4">
+                            <div class="card client-selection-card h-100 {% if user.ultimo_cliente_seleccionado.id == cliente.id %}selected{% endif %}" 
+                                 onclick="seleccionarCliente({{ cliente.id }})">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-{% if cliente.tipo_cliente == 'FISICA' %}user{% else %}building{% endif %} me-2"></i>
+                                        <span class="fw-bold">{{ cliente.obtener_nombre_completo }}</span>
+                                    </div>
+                                    {% if user.ultimo_cliente_seleccionado.id == cliente.id %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Disponible</span>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2">
+                                        <small class="text-muted">Tipo:</small>
+                                        <span class="badge bg-primary ms-1 client-type-badge">{{ cliente.get_tipo_cliente_display }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">Categoría:</small>
+                                        <span class="badge bg-info ms-1 client-type-badge">{{ cliente.categoria.get_nombre_display }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">Identificación:</small>
+                                        <code class="small">{{ cliente.numero_identificacion }}</code>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Email:</small>
+                                        <small class="d-block">{{ cliente.email }}</small>
+                                    </div>
+                                    
+                                    {% if user.ultimo_cliente_seleccionado.id == cliente.id %}
+                                        <button class="btn btn-success w-100 select-client-btn" disabled>
+                                            <i class="fas fa-check me-2"></i>Cliente Activo
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-primary w-100 select-client-btn" 
+                                                onclick="event.stopPropagation(); seleccionarCliente({{ cliente.id }})">
+                                            <i class="fas fa-hand-pointer me-2"></i>Seleccionar Cliente
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- No hay Clientes Disponibles -->
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No hay clientes asociados</h4>
+                        <p class="text-muted mb-4">
+                            Su cuenta de usuario no está asociada a ningún cliente. Para realizar operaciones de compra y venta de divisas, 
+                            debe estar asociado a al menos un cliente.
+                        </p>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-home me-2"></i>Volver al Inicio
+                            </a>
+                            <a href="{% url 'cuentas:perfil' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-user me-2"></i>Ver Mi Perfil
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Botones de Acción -->
+            <div class="text-center mt-4">
+                <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Volver al Panel de Control
+                </a>
+                {% if clientes %}
+                    <a href="{% url 'cuentas:perfil' %}" class="btn btn-outline-info">
+                        <i class="fas fa-user me-2"></i>Ver Mi Perfil
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulario oculto para la selección de cliente -->
+<form id="formularioSeleccionCliente" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function seleccionarCliente(idCliente) {
+    if (confirm('¿Está seguro de que desea cambiar al cliente seleccionado?')) {
+        // Actualizar la acción del formulario y enviarlo
+        const formulario = document.getElementById('formularioSeleccionCliente');
+        formulario.action = '{% url "cuentas:cambiar_cliente" 0 %}'.replace('0', idCliente);
+        formulario.submit();
+    }
+}
+
+function deseleccionarCliente() {
+    if (confirm('¿Está seguro de que desea deseleccionar el cliente activo? No podrá realizar transacciones hasta seleccionar otro cliente.')) {
+        // Actualizar la acción del formulario para deseleccionar y enviarlo
+        const formulario = document.getElementById('formularioSeleccionCliente');
+        formulario.action = '{% url "cuentas:deseleccionar_cliente" %}';
+        formulario.submit();
+    }
+}
+
+// Añadir manejadores de clic para la selección de tarjetas
+document.addEventListener('DOMContentLoaded', function() {
+    const tarjetas = document.querySelectorAll('.client-selection-card');
+    
+    tarjetas.forEach(function(tarjeta) {
+        tarjeta.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.borderLeftColor = '#ffc107';
+            }
+        });
+        
+        tarjeta.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.borderLeftColor = '#007bff';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

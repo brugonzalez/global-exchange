@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ titulo }} - Global Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007bff;
+    }
+    
+    .section-title {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    
+    .conditional-fields {
+        transition: all 0.3s ease;
+    }
+    
+    .hidden {
+        display: none !important;
+    }
+    
+    .required-field label:after {
+        content: " *";
+        color: red;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Encabezado -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-{% if form.instance.pk %}edit{% else %}plus{% endif %} me-2"></i>{{ titulo }}</h2>
+                    <p class="text-muted mb-0">
+                        {% if form.instance.pk %}
+                            Actualice la información del cliente
+                        {% else %}
+                            Complete la información para crear un nuevo cliente
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver
+                </a>
+            </div>
+
+            <!-- Formulario -->
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <!-- Sección de Información Básica -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-info-circle me-2"></i>Información Básica
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ formulario.tipo_cliente|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ formulario.estado|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ formulario.categoria|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos Específicos por Tipo de Persona -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-user me-2"></i>Información Personal/Empresarial
+                    </h5>
+
+                    <!-- Campos de Persona Física -->
+                    <div id="campos-fisica" class="conditional-fields">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ formulario.nombre|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ formulario.apellido|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos de Persona Jurídica -->
+                    <div id="campos-juridica" class="conditional-fields hidden">
+                        <div class="row">
+                            <div class="col-md-8">
+                                {{ formulario.nombre_empresa|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ formulario.representante_legal|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de Información de Contacto -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-address-card me-2"></i>Información de Contacto
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ formulario.numero_identificacion|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ formulario.email|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ formulario.telefono|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ formulario.direccion|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </a>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>{{ texto_submit }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function alternarCamposPorTipoCliente() {
+    const tipoCliente = document.getElementById('id_tipo_cliente').value;
+    const camposFisica = document.getElementById('campos-fisica');
+    const camposJuridica = document.getElementById('campos-juridica');
+    
+    // Limpiar primero los atributos 'required'
+    const todasLasEntradas = document.querySelectorAll('#campos-fisica input, #campos-juridica input');
+    todasLasEntradas.forEach(input => {
+        input.removeAttribute('required');
+        input.closest('.form-group')?.classList.remove('required-field');
+    });
+    
+    if (tipoCliente === 'FISICA') {
+        camposFisica.classList.remove('hidden');
+        camposJuridica.classList.add('hidden');
+        
+        // Añadir atributos 'required' a los campos de persona física
+        document.getElementById('id_nombre').setAttribute('required', 'required');
+        document.getElementById('id_apellido').setAttribute('required', 'required');
+        document.getElementById('id_nombre').closest('.form-group')?.classList.add('required-field');
+        document.getElementById('id_apellido').closest('.form-group')?.classList.add('required-field');
+        
+        // Limpiar campos de persona jurídica
+        document.getElementById('id_nombre_empresa').value = '';
+        document.getElementById('id_representante_legal').value = '';
+        
+    } else if (tipoCliente === 'JURIDICA') {
+        camposFisica.classList.add('hidden');
+        camposJuridica.classList.remove('hidden');
+        
+        // Añadir atributos 'required' a los campos de persona jurídica
+        document.getElementById('id_nombre_empresa').setAttribute('required', 'required');
+        document.getElementById('id_nombre_empresa').closest('.form-group')?.classList.add('required-field');
+        
+        // Limpiar campos de persona física
+        document.getElementById('id_nombre').value = '';
+        document.getElementById('id_apellido').value = '';
+        
+    } else {
+        // Ningún tipo seleccionado, ocultar ambos
+        camposFisica.classList.add('hidden');
+        camposJuridica.classList.add('hidden');
+    }
+}
+
+// Inicializar formulario al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    alternarCamposPorTipoCliente();
+    
+    // Añadir listener de evento 'change'
+    document.getElementById('id_tipo_cliente').addEventListener('change', alternarCamposPorTipoCliente);
+    
+    // Validación del formulario
+    const formulario = document.querySelector('form');
+    formulario.addEventListener('submit', function(e) {
+        const tipoCliente = document.getElementById('id_tipo_cliente').value;
+        let esValido = true;
+        
+        if (tipoCliente === 'FISICA') {
+            const nombre = document.getElementById('id_nombre').value.trim();
+            const apellido = document.getElementById('id_apellido').value.trim();
+            
+            if (!nombre || !apellido) {
+                esValido = false;
+                alert('Por favor complete el nombre y apellido para personas físicas.');
+            }
+        } else if (tipoCliente === 'JURIDICA') {
+            const nombreEmpresa = document.getElementById('id_nombre_empresa').value.trim();
+            
+            if (!nombreEmpresa) {
+                esValido = false;
+                alert('Por favor complete el nombre de la empresa para personas jurídicas.');
+            }
+        } else {
+            esValido = false;
+            alert('Por favor seleccione el tipo de cliente.');
+        }
+        
+        if (!esValido) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

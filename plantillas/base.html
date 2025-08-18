@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}Global Exchange{% endblock %}</title>
+    
+    {% load static %}
+    
+    <!-- Bootstrap CSS -->
+    <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+    
+    <!-- Iconos de Font Awesome -->
+    <link href="{% static 'vendor/fontawesome/all.min.css' %}" rel="stylesheet">
+    
+    <!-- CSS Personalizado -->
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+    
+    <!-- CSS Personalizado -->
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+            color: #2c3e50 !important;
+        }
+        
+        .currency-card {
+            transition: transform 0.2s;
+            border: 1px solid #dee2e6;
+        }
+        
+        .currency-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .rate-up {
+            color: #28a745;
+        }
+        
+        .rate-down {
+            color: #dc3545;
+        }
+        
+        .rate-stable {
+            color: #6c757d;
+        }
+        
+        .client-selector {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            margin-top: 50px;
+        }
+        
+        .sidebar {
+            background-color: #f8f9fa;
+            min-height: calc(100vh - 56px);
+        }
+        
+        .main-content {
+            padding: 20px;
+        }
+        
+        .alert-dismissible .btn-close {
+            padding: 0.375rem 0.75rem;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+    
+    <style>
+        /* Asegurar que el pie de página se mantenga en la parte inferior */
+        html, body {
+            height: 100%;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        main {
+            flex: 1;
+        }
+        
+        .footer {
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navegación -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'divisas:panel_de_control' %}">
+                <i class="fas fa-exchange-alt me-2"></i>
+                Global Exchange
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'divisas:panel_de_control' %}">
+                            <i class="fas fa-home me-1"></i>Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'divisas:tasas' %}">
+                            <i class="fas fa-chart-line me-1"></i>Tasas de Cambio
+                        </a>
+                    </li>
+                    {% if user.is_authenticated %}
+                        {% if user.puede_operar_transacciones %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-exchange-alt me-1"></i>Transacciones
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'transacciones:comprar' %}">Comprar Divisas</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'transacciones:vender' %}">Vender Divisas</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'transacciones:lista_transacciones' %}">Mis Transacciones</a></li>
+                                </ul>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'reportes:lista_reportes' %}">
+                                <i class="fas fa-file-alt me-1"></i>Reportes
+                            </a>
+                        </li>
+                        {% if user.is_staff %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog me-1"></i>Administración
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'divisas:gestionar_tasas' %}">Gestionar Tasas</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'clientes:lista_clientes' %}">Gestionar Clientes</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'reportes:panel_analiticas' %}">Panel Analítico</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/admin/">Panel de Admin</a></li>
+                                </ul>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i>{{ user.nombre_completo|default:user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'cuentas:perfil' %}">Mi Perfil</a></li>
+                                {% if user.clientes.exists %}
+                                    <li><a class="dropdown-item" href="{% url 'cuentas:seleccionar_cliente' %}">Cambiar Cliente</a></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{% url 'divisas:gestionar_favoritos' %}">Mis Favoritas</a></li>
+                                <li><a class="dropdown-item" href="{% url 'notificaciones:lista_notificaciones' %}">Notificaciones</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'cuentas:cerrar_sesion' %}">Cerrar Sesión</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'cuentas:iniciar_sesion' %}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'cuentas:registro' %}">
+                                <i class="fas fa-user-plus me-1"></i>Registrarse
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Selector de Cliente (mostrado siempre para usuarios autenticados) -->
+    {% if user.is_authenticated %}
+        <div class="container mt-3">
+            <div class="client-selector">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <strong>Cliente Activo:</strong>
+                        {% if user.ultimo_cliente_seleccionado %}
+                            {{ user.ultimo_cliente_seleccionado.obtener_nombre_completo }}
+                        {% else %}
+                            <span class="text-muted">Ningún cliente seleccionado</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <a href="{% url 'cuentas:seleccionar_cliente' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-exchange-alt me-1"></i>Cambiar Cliente
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Mensajes -->
+    {% if messages %}
+        <div class="container mt-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Contenido Principal -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Pie de Página -->
+    <footer class="footer mt-auto">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Global Exchange</h5>
+                    <p class="mb-0">Casa de cambio digital moderna y segura.</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p class="mb-1">
+                        <a href="{% url 'notificaciones:soporte' %}" class="text-white text-decoration-none">
+                            <i class="fas fa-headset me-1"></i>Soporte
+                        </a>
+                    </p>
+                    <small class="text-white">© 2024 Global Exchange. Todos los derechos reservados.</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Paquete de JavaScript de Bootstrap -->
+    <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+    
+    <!-- JavaScript Personalizado -->
+    <script src="{% static 'js/global-exchange.js' %}"></script>
+    
+    <!-- Establecer URLs de API y modo debug para JavaScript -->
+    <script>
+        document.querySelector('body').setAttribute('data-rates-api', '{% url "divisas:api_tasas" %}');
+        {% if debug %}
+        document.querySelector('body').setAttribute('data-debug', 'true');
+        {% endif %}
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

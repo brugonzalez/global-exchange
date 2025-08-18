@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Preferencias de Notificaciones - Global Exchange{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preference-section {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background-color: #fff;
+    }
+    
+    .preference-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .preference-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        color: white;
+    }
+    
+    .preference-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .preference-item:last-child {
+        border-bottom: none;
+    }
+    
+    .form-switch .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+    }
+    
+    .form-switch .form-check-input:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-cog me-2"></i>Preferencias de Notificaciones</h2>
+                    <p class="text-muted mb-0">Configura cómo y cuándo recibir notificaciones</p>
+                </div>
+                <div>
+                    <a href="{% url 'notificaciones:lista_notificaciones' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Volver
+                    </a>
+                </div>
+            </div>
+
+            <form method="post" class="preferences-form">
+                {% csrf_token %}
+                
+                <!-- Notificaciones por Email -->
+                <div class="preference-section">
+                    <div class="preference-header">
+                        <div class="preference-icon bg-primary">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">Notificaciones por Email</h5>
+                            <small class="text-muted">Configura las notificaciones que deseas recibir por correo electrónico</small>
+                        </div>
+                    </div>
+                    
+                    <div class="preference-item">
+                        <div>
+                            <strong>Actualizaciones de Transacciones</strong>
+                            <br><small class="text-muted">Confirmaciones y cambios de estado en transacciones</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.email_actualizaciones_transaccion }}
+                        </div>
+                    </div>
+                    
+                    <div class="preference-item">
+                        <div>
+                            <strong>Alertas de Tasas de Cambio</strong>
+                            <br><small class="text-muted">Notificaciones cuando las tasas de cambio se actualicen manualmente</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.email_alertas_tasa }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botón de Guardar -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save me-2"></i>Guardar Preferencias
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejar el envío del formulario
+    const formulario = document.querySelector('.preferences-form');
+    
+    formulario.addEventListener('submit', function(e) {
+        // Permitir el envío normal del formulario
+        return true;
+    });
+    
+    // Añadir retroalimentación visual para los interruptores
+    const interruptores = document.querySelectorAll('.form-check-input');
+    
+    interruptores.forEach(interruptor => {
+        interruptor.addEventListener('change', function() {
+            const item = this.closest('.preference-item');
+            
+            if (this.checked) {
+                item.style.backgroundColor = '#f8fff8';
+            } else {
+                item.style.backgroundColor = '#fff8f8';
+            }
+            
+            // Restablecer el fondo después de la animación
+            setTimeout(() => {
+                item.style.backgroundColor = '';
+            }, 1000);
+        });
+    });
+});
+</script>
+{% endblock %}

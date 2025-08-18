@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}Gestión de Tasas - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-cog me-2"></i>
+                    Gestión de Tasas de Cambio
+                </h2>
+                <div>
+                    <button type="button" class="btn btn-success me-2" id="btnActualizarDesdeApi">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Actualizar desde API
+                    </button>
+                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-home me-2"></i>Volver al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-coins text-primary mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-primary">{{ total_monedas }}</h4>
+                    <p class="mb-0">Monedas Activas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line text-success mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-success">{{ tasas_activas }}</h4>
+                    <p class="mb-0">Tasas Activas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-globe text-info mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-info">{{ moneda_base.codigo|default:"N/A" }}</h4>
+                    <p class="mb-0">Moneda Base</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock text-warning mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-warning" id="horaUltimaActualizacion">--:--</h4>
+                    <p class="mb-0">Última Actualización</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gestión de Tasas de Cambio -->
+    <div class="row">
+        {% if datos_tasas %}
+            {% for info_tasa in datos_tasas %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 tarjeta-tasa-moneda" data-currency-id="{{ info_tasa.moneda.id }}">
+                        <div class="card-header bg-primary text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-money-bill-wave me-2"></i>
+                                    {{ info_tasa.moneda.simbolo }} {{ info_tasa.moneda.codigo }}
+                                </h5>
+                                {% if info_tasa.moneda.es_moneda_empresa %}
+                                    <span class="badge bg-light text-dark">Propia</span>
+                                {% elif info_tasa.moneda.es_moneda_base %}
+                                    <span class="badge bg-info">Base</span>
+                                {% endif %}
+                            </div>
+                            <small>{{ info_tasa.moneda.nombre }}</small>
+                        </div>
+                        
+                        <div class="card-body">
+                            {% if info_tasa.tasa_actual %}
+                                <!-- Visualización de Tasas Actuales -->
+                                <div class="row text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="border-end">
+                                            <h6 class="text-success mb-1">Compra</h6>
+                                            <h4 class="tasa-compra text-success" data-rate="{{ info_tasa.tasa_actual.tasa_compra }}">
+                                                {{ info_tasa.tasa_actual.tasa_compra|floatformat:4 }}
+                                            </h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <h6 class="text-danger mb-1">Venta</h6>
+                                        <h4 class="tasa-venta text-danger" data-rate="{{ info_tasa.tasa_actual.tasa_venta }}">
+                                            {{ info_tasa.tasa_actual.tasa_venta|floatformat:4 }}
+                                        </h4>
+                                    </div>
+                                </div>
+
+                                <!-- Información de Actualización de Tasa -->
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Actualizado: hace {{ info_tasa.tasa_actual.fecha_actualizacion|timesince }}
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        Fuente: {{ info_tasa.tasa_actual.get_fuente_display }}
+                                        {% if info_tasa.tasa_actual.actualizado_por %}
+                                            por {{ info_tasa.tasa_actual.actualizado_por.get_full_name|default:info_tasa.tasa_actual.actualizado_por.username }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+
+                                <!-- Formulario de Actualización Manual -->
+                                <div class="border-top pt-3">
+                                    <h6 class="mb-2">
+                                        <i class="fas fa-edit me-1"></i>
+                                        Actualizar Manualmente
+                                    </h6>
+                                    <form class="formulario-actualizar-tasa" data-currency-id="{{ info_tasa.moneda.id }}">
+                                        {% csrf_token %}
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="form-group mb-2">
+                                                    <label class="form-label small">Compra</label>
+                                                    <input type="number" 
+                                                           class="form-control form-control-sm input-tasa-compra" 
+                                                           step="0.00000001" 
+                                                           min="0" 
+                                                           placeholder="Tasa de compra"
+                                                           value="{{ info_tasa.tasa_actual.tasa_compra|unlocalize }}">
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="form-group mb-2">
+                                                    <label class="form-label small">Venta</label>
+                                                    <input type="number" 
+                                                           class="form-control form-control-sm input-tasa-venta" 
+                                                           step="0.00000001" 
+                                                           min="0" 
+                                                           placeholder="Tasa de venta"
+                                                           value="{{ info_tasa.tasa_actual.tasa_venta|unlocalize }}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                                            <i class="fas fa-save me-1"></i>
+                                            Actualizar Tasa
+                                        </button>
+                                    </form>
+                                </div>
+                            {% else %}
+                                <!-- No hay Tasa Disponible -->
+                                <div class="text-center text-muted mb-3">
+                                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem;"></i>
+                                    <p class="mt-2">No hay tasa configurada</p>
+                                </div>
+
+                                <!-- Formulario de Tasa Inicial -->
+                                <form class="formulario-actualizar-tasa" data-currency-id="{{ info_tasa.moneda.id }}">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="form-group mb-2">
+                                                <label class="form-label small">Compra</label>
+                                                <input type="number" 
+                                                       class="form-control form-control-sm input-tasa-compra" 
+                                                       step="0.00000001" 
+                                                       min="0" 
+                                                       placeholder="Tasa de compra">
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="form-group mb-2">
+                                                <label class="form-label small">Venta</label>
+                                                <input type="number" 
+                                                       class="form-control form-control-sm input-tasa-venta" 
+                                                       step="0.00000001" 
+                                                       min="0" 
+                                                       placeholder="Tasa de venta">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success btn-sm w-100">
+                                        <i class="fas fa-plus me-1"></i>
+                                        Crear Tasa Inicial
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+
+                        <!-- Mini Gráfico de Historial Reciente -->
+                        {% if info_tasa.historial_reciente %}
+                            <div class="card-footer">
+                                <small class="text-muted">
+                                    <i class="fas fa-chart-area me-1"></i>
+                                    Histórico (7 días)
+                                </small>
+                                <div class="mini-grafico" id="grafico-{{ info_tasa.moneda.id }}" style="height: 60px;">
+                                    <!-- El gráfico será renderizado aquí por JavaScript -->
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No hay monedas activas configuradas en el sistema.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Contenedor de Alertas de Éxito/Error -->
+<div id="contenedorAlertas" style="position: fixed; top: 20px; right: 20px; z-index: 1050; max-width: 400px;"></div>
+
+<!-- Superposición de Carga -->
+<div id="superposicionCarga" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000;">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="text-center text-white">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Actualizando tasas...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tokenCSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Actualizar la hora de la última actualización
+    actualizarHoraUltimaActualizacion();
+    
+    // Configurar actualización periódica
+    setInterval(actualizarHoraUltimaActualizacion, 60000); // Actualizar cada minuto
+    
+    // Manejar actualizaciones manuales de tasas
+    document.querySelectorAll('.formulario-actualizar-tasa').forEach(formulario => {
+        formulario.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const idMoneda = this.dataset.currencyId;
+            const tasaCompra = this.querySelector('.input-tasa-compra').value;
+            const tasaVenta = this.querySelector('.input-tasa-venta').value;
+            
+            if (!tasaCompra || !tasaVenta) {
+                mostrarAlerta('error', 'Por favor ingrese ambas tasas (compra y venta)');
+                return;
+            }
+            
+            if (parseFloat(tasaVenta) <= parseFloat(tasaCompra)) {
+                mostrarAlerta('error', 'La tasa de venta debe ser mayor que la tasa de compra');
+                return;
+            }
+            
+            actualizarTasa(idMoneda, tasaCompra, tasaVenta, this);
+        });
+    });
+    
+    // Manejar actualizaciones desde API
+    document.getElementById('btnActualizarDesdeApi').addEventListener('click', function() {
+        actualizarDesdeAPI();
+    });
+    
+    function actualizarTasa(idMoneda, tasaCompra, tasaVenta, formulario) {
+        const botonEnviar = formulario.querySelector('button[type="submit"]');
+        const textoOriginal = botonEnviar.innerHTML;
+        
+        // Mostrar estado de carga
+        botonEnviar.disabled = true;
+        botonEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Actualizando...';
+        
+        fetch('{% url "divisas:api_actualizar_tasas" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': tokenCSRF
+            },
+            body: new URLSearchParams({
+                'type': 'manual',
+                'currency_id': idMoneda,
+                'buy_rate': tasaCompra,
+                'sell_rate': tasaVenta
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('success', data.message || 'Tasa actualizada correctamente');
+                // Recargar la página para mostrar los datos actualizados
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                mostrarAlerta('error', data.error || 'Error al actualizar la tasa');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('error', 'Error de conexión al actualizar la tasa');
+        })
+        .finally(() => {
+            // Restaurar estado del botón
+            botonEnviar.disabled = false;
+            botonEnviar.innerHTML = textoOriginal;
+        });
+    }
+    
+    function actualizarDesdeAPI() {
+        const btn = document.getElementById('btnActualizarDesdeApi');
+        const textoOriginal = btn.innerHTML;
+        
+        // Mostrar superposición de carga
+        document.getElementById('superposicionCarga').style.display = 'block';
+        
+        // Deshabilitar botón
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
+        
+        fetch('{% url "divisas:api_actualizar_tasas" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': tokenCSRF
+            },
+            body: new URLSearchParams({
+                'type': 'api'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('success', data.message || 'Tasas actualizadas desde API');
+                // Recargar la página para mostrar los datos actualizados
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                mostrarAlerta('error', data.error || 'Error al actualizar desde API');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarAlerta('error', 'Error de conexión al actualizar desde API');
+        })
+        .finally(() => {
+            // Ocultar superposición de carga
+            document.getElementById('superposicionCarga').style.display = 'none';
+            
+            // Restaurar estado del botón
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+        });
+    }
+    
+    function mostrarAlerta(tipo, mensaje) {
+        const contenedorAlertas = document.getElementById('contenedorAlertas');
+        const claseAlerta = tipo === 'success' ? 'alert-success' : 'alert-danger';
+        const icono = tipo === 'success' ? 'check-circle' : 'exclamation-triangle';
+        
+        const alerta = document.createElement('div');
+        alerta.className = `alert ${claseAlerta} alert-dismissible fade show`;
+        alerta.innerHTML = `
+            <i class="fas fa-${icono} me-2"></i>
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        contenedorAlertas.appendChild(alerta);
+        
+        // Eliminar automáticamente después de 5 segundos
+        setTimeout(() => {
+            if (alerta.parentNode) {
+                alerta.remove();
+            }
+        }, 5000);
+    }
+    
+    function actualizarHoraUltimaActualizacion() {
+        const ahora = new Date();
+        const cadenaTiempo = ahora.toLocaleTimeString('es-ES', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        document.getElementById('horaUltimaActualizacion').textContent = cadenaTiempo;
+    }
+});
+</script>
+{% endblock %}

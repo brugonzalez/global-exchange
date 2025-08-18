@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Página en Construcción - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <i class="fas fa-tools text-warning" style="font-size: 4rem;"></i>
+                    </div>
+                    <h3 class="text-warning mb-3">Página en Construcción</h3>
+                    <p class="mb-4">
+                        Esta funcionalidad está siendo desarrollada y estará disponible próximamente.
+                    </p>
+                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i>
+                        Volver al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Historial de {{ moneda.nombre }} - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-chart-line me-2"></i>
+                    Historial de {{ moneda.simbolo }} {{ moneda.codigo }}
+                </h2>
+                <div>
+                    <a href="{% url 'divisas:tasas' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Tasas
+                    </a>
+                </div>
+            </div>
+            <p class="text-muted">{{ moneda.nombre }}</p>
+        </div>
+    </div>
+
+    <!-- Selección de Período -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-calendar me-2"></i>Período de Tiempo
+                    </h5>
+                    <div class="btn-group" role="group">
+                        <a href="?periodo=1" class="btn {% if periodo_seleccionado == '1' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            24 Horas
+                        </a>
+                        <a href="?periodo=7" class="btn {% if periodo_seleccionado == '7' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            7 Días
+                        </a>
+                        <a href="?periodo=30" class="btn {% if periodo_seleccionado == '30' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            30 Días
+                        </a>
+                        <a href="?periodo=all" class="btn {% if periodo_seleccionado == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            Todo el Tiempo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Gráficos -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Evolución de Tasas de Cambio
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if historial_tasa %}
+                        <canvas id="graficoTasa" width="800" height="400" style="max-width: 100%; height: 400px;"></canvas>
+                    {% else %}
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No hay datos históricos disponibles para el período seleccionado.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    {% if historial_tasa %}
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-arrow-up fa-2x text-success mb-2"></i>
+                    <h5 class="card-title">Tasa Máxima</h5>
+                    <p class="card-text">
+                        <strong id="tasaMaxima">-</strong><br>
+                        <small class="text-muted">Compra</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-arrow-down fa-2x text-danger mb-2"></i>
+                    <h5 class="card-title">Tasa Mínima</h5>
+                    <p class="card-text">
+                        <strong id="tasaMinima">-</strong><br>
+                        <small class="text-muted">Compra</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-chart-bar fa-2x text-info mb-2"></i>
+                    <h5 class="card-title">Promedio</h5>
+                    <p class="card-text">
+                        <strong id="tasaPromedio">-</strong><br>
+                        <small class="text-muted">Compra</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-exchange-alt fa-2x text-warning mb-2"></i>
+                    <h5 class="card-title">Variación</h5>
+                    <p class="card-text">
+                        <strong id="variacion">-</strong><br>
+                        <small class="text-muted">%</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabla de Datos -->
+    {% if historial_tasa %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        Datos Históricos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fecha y Hora</th>
+                                    <th>Tasa de Compra</th>
+                                    <th>Tasa de Venta</th>
+                                    <th>Diferencial</th>
+                                    <th>Volumen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tasa in historial_tasa %}
+                                <tr>
+                                    <td>{{ tasa.marca_de_tiempo|date:"d/m/Y H:i" }}</td>
+                                    <td class="text-success">{{ tasa.tasa_compra|floatformat:4 }}</td>
+                                    <td class="text-danger">{{ tasa.tasa_venta|floatformat:4 }}</td>
+                                    <td><span class="diferencial" data-sell="{{ tasa.tasa_venta }}" data-buy="{{ tasa.tasa_compra }}">-</span></td>
+                                    <td>{{ tasa.volumen|floatformat:2|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Información de la Tasa Actual -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información Actual
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Moneda: {{ moneda.nombre }}</h6>
+                            <p><strong>Código:</strong> {{ moneda.codigo }}</p>
+                            <p><strong>Símbolo:</strong> {{ moneda.simbolo }}</p>
+                            <p><strong>Tipo:</strong> {{ moneda.get_tipo_moneda_display }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% with tasa_actual=moneda.obtener_tasa_actual %}
+                            {% if tasa_actual %}
+                                <h6>Tasa Actual:</h6>
+                                <p><strong>Compra:</strong> <span class="text-success">{{ tasa_actual.tasa_compra|floatformat:4 }}</span></p>
+                                <p><strong>Venta:</strong> <span class="text-danger">{{ tasa_actual.tasa_venta|floatformat:4 }}</span></p>
+                                <p><strong>Última Actualización:</strong> {{ tasa_actual.fecha_actualizacion|date:"d/m/Y H:i" }}</p>
+                            {% else %}
+                                <p class="text-muted">No hay tasa actual disponible</p>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Preparar datos del gráfico
+    const datosGrafico = {
+        labels: [
+            {% for tasa in historial_tasa %}
+                "{{ tasa.marca_de_tiempo|date:'d/m H:i' }}"{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [
+            {
+                label: 'Tasa de Compra',
+                data: [
+                    {% for tasa in historial_tasa %}
+                        {{ tasa.tasa_compra }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            },
+            {
+                label: 'Tasa de Venta',
+                data: [
+                    {% for tasa in historial_tasa %}
+                        {{ tasa.tasa_venta }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            }
+        ]
+    };
+
+    // Crear gráfico si existen datos
+    if (datosGrafico.labels.length > 0) {
+        IG.crearGrafico('graficoTasa', datosGrafico, {
+            title: 'Evolución de Tasas - {{ moneda.codigo }}',
+            yAxisLabel: 'Tasa de Cambio',
+            xAxisLabel: 'Tiempo',
+            colors: ['#28a745', '#dc3545']
+        });
+
+        // Calcular y mostrar estadísticas
+        const tasasCompra = datosGrafico.datasets[0].data;
+        const tasasVenta = datosGrafico.datasets[1].data;
+        
+        if (tasasCompra.length > 0) {
+            const tasaMaxCompra = Math.max(...tasasCompra);
+            const tasaMinCompra = Math.min(...tasasCompra);
+            const tasaPromCompra = tasasCompra.reduce((a, b) => a + b, 0) / tasasCompra.length;
+            const variacion = tasasCompra.length > 1 ? 
+                ((tasasCompra[tasasCompra.length - 1] - tasasCompra[0]) / tasasCompra[0] * 100) : 0;
+
+            document.getElementById('tasaMaxima').textContent = IG.formatearMoneda(tasaMaxCompra);
+            document.getElementById('tasaMinima').textContent = IG.formatearMoneda(tasaMinCompra);
+            document.getElementById('tasaPromedio').textContent = IG.formatearMoneda(tasaPromCompra);
+            document.getElementById('variacion').textContent = variacion.toFixed(2) + '%';
+            
+            // Colorear variación según sea positiva/negativa
+            const elVariacion = document.getElementById('variacion');
+            if (variacion > 0) {
+                elVariacion.style.color = '#28a745';
+            } else if (variacion < 0) {
+                elVariacion.style.color = '#dc3545';
+            }
+        }
+    }
+    
+    // Calcular diferenciales en la tabla
+    const diferenciales = document.querySelectorAll('.diferencial');
+    diferenciales.forEach(span => {
+        const tasaVenta = parseFloat(span.getAttribute('data-sell'));
+        const tasaCompra = parseFloat(span.getAttribute('data-buy'));
+        const dif = tasaVenta - tasaCompra;
+        span.textContent = IG.formatearMoneda(dif);
+    });
+});
+</script>
+{% endblock %}
