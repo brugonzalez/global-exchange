@@ -27,6 +27,9 @@ class Usuario(AbstractUser):
     tokens_respaldo = models.JSONField(default=list, blank=True)
     requerir_2fa_para_acciones_sensibles = models.BooleanField(default=True)
     
+    # Sistema de roles
+    roles = models.ManyToManyField('Rol', related_name='usuarios', blank=True)
+    
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -105,6 +108,44 @@ class Usuario(AbstractUser):
             return True
         return False
 
+    def obtener_roles(self):
+        """Obtiene todos los roles asignados a este usuario."""
+        return self.roles.all()
+
+    def obtener_permisos(self):
+        """Obtiene todos los permisos del usuario basados en sus roles."""
+        permisos = set()
+        for rol in self.roles.all():
+            permisos.update(rol.obtener_permisos())
+        return list(permisos)
+
+    def tiene_permiso(self, codename_permiso):
+        """Verifica si el usuario tiene un permiso específico."""
+        return any(
+            permiso.codename == codename_permiso 
+            for permiso in self.obtener_permisos()
+        )
+
+    def tiene_rol(self, nombre_rol):
+        """Verifica si el usuario tiene un rol específico."""
+        return self.roles.filter(nombre_rol=nombre_rol).exists()
+
+    def es_administrador(self):
+        """Verifica si el usuario tiene rol de administrador."""
+        return self.tiene_rol('Administrador') or self.is_superuser
+
+    def es_cajero(self):
+        """Verifica si el usuario tiene rol de cajero."""
+        return self.tiene_rol('Cajero')
+
+    def es_usuario_regular(self):
+        """Verifica si el usuario tiene rol de usuario regular."""
+        return self.tiene_rol('Usuario')
+
+    def es_visitante(self):
+        """Verifica si el usuario tiene rol de visitante."""
+        return self.tiene_rol('Visitante')
+
 
 class VerificacionEmail(models.Model):
     """
@@ -177,6 +218,50 @@ class ConfiguracionDosFactoresUsuario(models.Model):
         return f"Configuración 2FA para {self.usuario.username}"
 
 
+class Permiso(models.Model):
+    """
+    Modelo para permisos del sistema.
+    """
+    codename = models.CharField(max_length=100, unique=True)
+    descripcion = models.CharField(max_length=255)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cuentas_permiso'
+        verbose_name = 'Permiso'
+        verbose_name_plural = 'Permisos'
+        ordering = ['descripcion']
+
+    def __str__(self):
+        return self.descripcion
+
+
+class Rol(models.Model):
+    """
+    Modelo para roles del sistema.
+    """
+    nombre_rol = models.CharField(max_length=50, unique=True)
+    descripcion = models.TextField(blank=True)
+    permisos = models.ManyToManyField(Permiso, related_name='roles', blank=True)
+    es_sistema = models.BooleanField(default=False, help_text="Rol del sistema que no se puede eliminar")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cuentas_rol'
+        verbose_name = 'Rol'
+        verbose_name_plural = 'Roles'
+        ordering = ['nombre_rol']
+
+    def __str__(self):
+        return self.nombre_rol
+
+    def obtener_permisos(self):
+        """Obtiene todos los permisos asociados a este rol."""
+        return self.permisos.all()
+
+
 class RegistroAuditoria(models.Model):
     """
     Modelo para almacenar registros de auditoría para seguridad y seguimiento.
@@ -197,6 +282,11 @@ class RegistroAuditoria(models.Model):
         ('2FA_DISABLE', 'Desactivación 2FA'),
         ('2FA_VERIFY', 'Verificación 2FA'),
         ('BACKUP_TOKEN_USED', 'Token de Respaldo Usado'),
+        ('ROLE_ASSIGNED', 'Rol Asignado'),
+        ('ROLE_REMOVED', 'Rol Removido'),
+        ('ROLE_CREATED', 'Rol Creado'),
+        ('ROLE_UPDATED', 'Rol Actualizado'),
+        ('ROLE_DELETED', 'Rol Eliminado'),
     ]
 
     usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, blank=True, null=True)
