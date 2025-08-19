@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Gestión de Roles - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Encabezado -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-users-cog me-2"></i>Gestión de Roles
+                    </h2>
+                    <p class="text-muted mb-0">Administre los roles del sistema y sus permisos</p>
+                </div>
+                <a href="{% url 'cuentas:crear_rol' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Crear Nuevo Rol
+                </a>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h3 class="text-primary">{{ total_roles }}</h3>
+                            <p class="mb-0">Roles Totales</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <h3 class="text-info">{{ total_permisos }}</h3>
+                            <p class="mb-0">Permisos Disponibles</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <h3 class="text-success">{{ roles|length }}</h3>
+                            <p class="mb-0">Roles Activos</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <h3 class="text-warning">4</h3>
+                            <p class="mb-0">Roles del Sistema</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Roles -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Roles del Sistema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if roles %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Rol</th>
+                                        <th>Descripción</th>
+                                        <th>Permisos</th>
+                                        <th>Tipo</th>
+                                        <th>Usuarios</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rol in roles %}
+                                    <tr>
+                                        <td>
+                                            <strong class="text-primary">{{ rol.nombre_rol }}</strong>
+                                        </td>
+                                        <td>
+                                            {{ rol.descripcion|default:"Sin descripción" }}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ rol.permisos.count }} permisos</span>
+                                            {% if rol.permisos.count > 0 %}
+                                                <button class="btn btn-link btn-sm p-0 ms-1" 
+                                                        data-bs-toggle="collapse" 
+                                                        data-bs-target="#permisos-{{ rol.id }}" 
+                                                        aria-expanded="false">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if rol.es_sistema %}
+                                                <span class="badge bg-warning">Sistema</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Personalizado</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">{{ rol.usuarios.count }} usuarios</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'cuentas:editar_rol' rol.id %}" 
+                                                   class="btn btn-outline-primary btn-sm"
+                                                   title="Editar rol">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                {% if not rol.es_sistema %}
+                                                    <a href="{% url 'cuentas:eliminar_rol' rol.id %}" 
+                                                       class="btn btn-outline-danger btn-sm"
+                                                       title="Eliminar rol"
+                                                       onclick="return confirm('¿Está seguro de eliminar este rol?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% if rol.permisos.count > 0 %}
+                                    <tr class="collapse" id="permisos-{{ rol.id }}">
+                                        <td colspan="6">
+                                            <div class="bg-light p-3 rounded">
+                                                <h6>Permisos asignados:</h6>
+                                                <div class="row">
+                                                    {% for permiso in rol.permisos.all %}
+                                                        <div class="col-md-4 mb-1">
+                                                            <span class="badge bg-secondary">{{ permiso.descripcion }}</span>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users-cog fa-3x text-muted mb-3"></i>
+                            <h5>No hay roles configurados</h5>
+                            <p class="text-muted">Comience creando su primer rol personalizado.</p>
+                            <a href="{% url 'cuentas:crear_rol' %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Crear Primer Rol
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones adicionales -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user-friends me-2"></i>Gestión de Usuarios
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">Asigne roles a usuarios específicos del sistema.</p>
+                            <a href="{% url 'cuentas:gestionar_roles_usuarios' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-user-tag me-1"></i>Gestionar Roles de Usuarios
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>Información de Seguridad
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">Los cambios de roles se registran en el sistema de auditoría.</p>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Los roles del sistema no pueden eliminarse por seguridad.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Actualizar badge de permisos dinámicamente si es necesario
+    console.log('Gestión de roles cargada');
+});
+</script>
+{% endblock %}

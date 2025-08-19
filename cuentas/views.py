@@ -1,3 +1,4 @@
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -12,7 +13,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 import uuid
 
-from .models import Usuario, VerificacionEmail, RestablecimientoContrasena, RegistroAuditoria
+from .models import Usuario, VerificacionEmail, RestablecimientoContrasena, RegistroAuditoria, Rol, Permiso
 from .forms import FormularioLogin, FormularioRegistro, FormularioPerfil, FormularioCambioContrasena
 from clientes.models import Cliente
 
@@ -788,3 +789,288 @@ class VistaVerificarDosFactoresSensible(LoginRequiredMixin, TemplateView):
         else:
             messages.error(solicitud, 'Código de verificación inválido.')
             return self.get(solicitud, *args, **kwargs)
+
+
+# Decorador para verificar permisos de administrador
+def requiere_permiso_admin(permiso):
+    """Decorador para requerir permisos específicos de administrador."""
+    from django.contrib.auth.decorators import user_passes_test
+    from django.core.exceptions import PermissionDenied
+    
+    def test_permiso(user):
+        if not user.is_authenticated:
+            return False
+        if user.is_superuser:
+            return True
+        return user.tiene_permiso(permiso)
+    
+    return user_passes_test(test_permiso, login_url='cuentas:iniciar_sesion')
+
+
+class MixinPermisosAdmin:
+    """Mixin para verificar permisos de administrador en vistas basadas en clases."""
+    permiso_requerido = None
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.error(request, 'Debe iniciar sesión para acceder a esta página.')
+            return redirect('cuentas:iniciar_sesion')
+        
+        if not request.user.is_superuser and not request.user.tiene_permiso(self.permiso_requerido):
+            messages.error(request, 'No tiene permisos para acceder a esta funcionalidad.')
+            return redirect('divisas:panel_de_control')
+        
+        return super().dispatch(request, *args, **kwargs)
+
+
+class VistaGestionarRoles(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+    """
+    Vista para gestionar roles del sistema.
+    """
+    template_name = 'cuentas/gestionar_roles.html'
+    permiso_requerido = 'gestionar_roles'
+    
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto.update({
+            'roles': Rol.objects.all().prefetch_related('permisos'),
+            'total_roles': Rol.objects.count(),
+            'total_permisos': Permiso.objects.count(),
+        })
+        return contexto
+
+
+class VistaCrearRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+    """
+    Vista para crear un nuevo rol.
+    """
+    template_name = 'cuentas/crear_rol.html'
+    permiso_requerido = 'gestionar_roles'
+    
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        from .forms import FormularioRol
+        contexto['formulario'] = FormularioRol()
+        contexto['permisos'] = Permiso.objects.all().order_by('descripcion')
+        return contexto
+    
+    def post(self, request, *args, **kwargs):
+        from .forms import FormularioRol
+        formulario = FormularioRol(request.POST)
+        
+        if formulario.is_valid():
+            # Crear el rol
+            rol = formulario.save()
+            
+            # Registrar en auditoría
+            RegistroAuditoria.objects.create(
+                usuario=request.user,
+                accion='ROLE_CREATED',
+                descripcion=f'Creó el rol: {rol.nombre_rol}',
+                direccion_ip=request.META.get('REMOTE_ADDR'),
+                agente_usuario=request.META.get('HTTP_USER_AGENT'),
+                datos_adicionales={'rol_id': rol.id, 'rol_nombre': rol.nombre_rol}
+            )
+            
+            messages.success(request, f'Rol "{rol.nombre_rol}" creado exitosamente.')
+            return redirect('cuentas:gestionar_roles')
+        else:
+            contexto = self.get_context_data(**kwargs)
+            contexto['formulario'] = formulario
+            messages.error(request, 'Error al crear el rol. Verifique los datos ingresados.')
+            return render(request, self.template_name, contexto)
+
+
+class VistaEditarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+    """
+    Vista para editar un rol existente.
+    """
+    template_name = 'cuentas/editar_rol.html'
+    permiso_requerido = 'gestionar_roles'
+    
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        rol_id = kwargs.get('rol_id')
+        rol = get_object_or_404(Rol, id=rol_id)
+        
+        from .forms import FormularioRol
+        contexto.update({
+            'rol': rol,
+            'formulario': FormularioRol(instance=rol),
+            'permisos': Permiso.objects.all().order_by('descripcion'),
+            'es_edicion': True
+        })
+        return contexto
+    
+    def post(self, request, *args, **kwargs):
+        rol_id = kwargs.get('rol_id')
+        rol = get_object_or_404(Rol, id=rol_id)
+        
+        # Verificar que no se editen roles críticos del sistema
+        if rol.es_sistema and rol.nombre_rol == 'Administrador':
+            # Permitir solo editar descripción y algunos permisos específicos
+            pass
+        
+        from .forms import FormularioRol
+        formulario = FormularioRol(request.POST, instance=rol)
+        
+        if formulario.is_valid():
+            rol_actualizado = formulario.save()
+            
+            # Registrar en auditoría
+            RegistroAuditoria.objects.create(
+                usuario=request.user,
+                accion='ROLE_UPDATED',
+                descripcion=f'Actualizó el rol: {rol_actualizado.nombre_rol}',
+                direccion_ip=request.META.get('REMOTE_ADDR'),
+                agente_usuario=request.META.get('HTTP_USER_AGENT'),
+                datos_adicionales={'rol_id': rol_actualizado.id, 'rol_nombre': rol_actualizado.nombre_rol}
+            )
+            
+            messages.success(request, f'Rol "{rol_actualizado.nombre_rol}" actualizado exitosamente.')
+            return redirect('cuentas:gestionar_roles')
+        else:
+            contexto = self.get_context_data(**kwargs)
+            contexto['formulario'] = formulario
+            messages.error(request, 'Error al actualizar el rol. Verifique los datos ingresados.')
+            return render(request, self.template_name, contexto)
+
+
+class VistaEliminarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+    """
+    Vista para eliminar un rol.
+    """
+    template_name = 'cuentas/eliminar_rol.html'
+    permiso_requerido = 'gestionar_roles'
+    
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        rol_id = kwargs.get('rol_id')
+        rol = get_object_or_404(Rol, id=rol_id)
+        
+        contexto.update({
+            'rol': rol,
+            'usuarios_afectados': Usuario.objects.filter(roles=rol),
+            'puede_eliminar': not rol.es_sistema
+        })
+        return contexto
+    
+    def post(self, request, *args, **kwargs):
+        rol_id = kwargs.get('rol_id')
+        rol = get_object_or_404(Rol, id=rol_id)
+        
+        # No permitir eliminar roles del sistema
+        if rol.es_sistema:
+            messages.error(request, 'No se pueden eliminar roles del sistema.')
+            return redirect('cuentas:gestionar_roles')
+        
+        nombre_rol = rol.nombre_rol
+        
+        # Registrar en auditoría antes de eliminar
+        RegistroAuditoria.objects.create(
+            usuario=request.user,
+            accion='ROLE_DELETED',
+            descripcion=f'Eliminó el rol: {nombre_rol}',
+            direccion_ip=request.META.get('REMOTE_ADDR'),
+            agente_usuario=request.META.get('HTTP_USER_AGENT'),
+            datos_adicionales={'rol_id': rol.id, 'rol_nombre': nombre_rol}
+        )
+        
+        # Eliminar el rol
+        rol.delete()
+        
+        messages.success(request, f'Rol "{nombre_rol}" eliminado exitosamente.')
+        return redirect('cuentas:gestionar_roles')
+
+
+class VistaGestionarRolesUsuarios(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+    """
+    Vista para gestionar roles de usuarios.
+    """
+    template_name = 'cuentas/gestionar_roles_usuarios.html'
+    permiso_requerido = 'asignar_roles'
+    
+    def get_context_data(self, **kwargs):
+        from django.db import models
+        contexto = super().get_context_data(**kwargs)
+        
+        # Paginación de usuarios
+        from django.core.paginator import Paginator
+        usuarios = Usuario.objects.all().prefetch_related('roles').order_by('nombre_completo')
+        
+        # Filtros
+        buscar = self.request.GET.get('buscar', '')
+        if buscar:
+            usuarios = usuarios.filter(
+                models.Q(nombre_completo__icontains=buscar) |
+                models.Q(email__icontains=buscar) |
+                models.Q(username__icontains=buscar)
+            )
+        
+        paginator = Paginator(usuarios, 20)  # 20 usuarios por página
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        contexto.update({
+            'usuarios': page_obj,
+            'roles_disponibles': Rol.objects.all(),
+            'buscar': buscar
+        })
+        return contexto
+
+
+class VistaAsignarRolesUsuario(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+    """
+    Vista para asignar roles a un usuario específico.
+    """
+    template_name = 'cuentas/asignar_roles_usuario.html'
+    permiso_requerido = 'asignar_roles'
+    
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        usuario_id = kwargs.get('usuario_id')
+        usuario = get_object_or_404(Usuario, id=usuario_id)
+        
+        from .forms import FormularioAsignarRoles
+        contexto.update({
+            'usuario_objetivo': usuario,
+            'formulario': FormularioAsignarRoles(usuario=usuario),
+            'roles_actuales': usuario.roles.all(),
+            'permisos_actuales': usuario.obtener_permisos()
+        })
+        return contexto
+    
+    def post(self, request, *args, **kwargs):
+        usuario_id = kwargs.get('usuario_id')
+        usuario = get_object_or_404(Usuario, id=usuario_id)
+        
+        from .forms import FormularioAsignarRoles
+        formulario = FormularioAsignarRoles(usuario=usuario, data=request.POST)
+        
+        if formulario.is_valid():
+            roles_anteriores = list(usuario.roles.all())
+            usuario_actualizado = formulario.save()
+            roles_nuevos = list(usuario.roles.all())
+            
+            # Registrar en auditoría
+            RegistroAuditoria.objects.create(
+                usuario=request.user,
+                accion='ROLE_ASSIGNED',
+                descripcion=f'Modificó roles del usuario: {usuario.email}',
+                direccion_ip=request.META.get('REMOTE_ADDR'),
+                agente_usuario=request.META.get('HTTP_USER_AGENT'),
+                datos_adicionales={
+                    'usuario_id': usuario.id,
+                    'usuario_email': usuario.email,
+                    'roles_anteriores': [r.nombre_rol for r in roles_anteriores],
+                    'roles_nuevos': [r.nombre_rol for r in roles_nuevos]
+                }
+            )
+            
+            messages.success(request, f'Roles actualizados para {usuario.nombre_completo}.')
+            return redirect('cuentas:gestionar_roles_usuarios')
+        else:
+            contexto = self.get_context_data(**kwargs)
+            contexto['formulario'] = formulario
+            messages.error(request, 'Error al asignar roles. Verifique los datos.')
+            return render(request, self.template_name, contexto)

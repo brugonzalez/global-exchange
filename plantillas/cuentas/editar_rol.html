@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Editar Rol: {{ rol.nombre_rol }} - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Encabezado -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Editar Rol: {{ rol.nombre_rol }}
+                    </h2>
+                    <p class="text-muted mb-0">Modifique la información y permisos del rol</p>
+                </div>
+                <a href="{% url 'cuentas:gestionar_roles' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver a Roles
+                </a>
+            </div>
+
+            {% if rol.es_sistema and rol.nombre_rol == 'Administrador' %}
+            <div class="alert alert-warning" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Atención:</strong> Este es un rol crítico del sistema. Algunos permisos no pueden ser removidos para mantener la seguridad.
+            </div>
+            {% endif %}
+
+            <div class="row">
+                <!-- Formulario -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user-cog me-2"></i>Información del Rol
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <!-- Información básica -->
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        {{ formulario.nombre_rol|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Estado del Rol</label>
+                                            <div class="form-control-static">
+                                                {% if rol.es_sistema %}
+                                                    <span class="badge bg-warning">Rol del Sistema</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Rol Personalizado</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    {{ formulario.descripcion|as_crispy_field }}
+                                </div>
+
+                                <!-- Selección de Permisos -->
+                                <div class="mb-4">
+                                    <label class="form-label">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        Permisos del Rol
+                                    </label>
+                                    <div class="border rounded p-3 bg-light">
+                                        <div class="row">
+                                            <div class="col-12 mb-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="seleccionar-todos">
+                                                    <label class="form-check-label fw-bold" for="seleccionar-todos">
+                                                        Seleccionar todos los permisos
+                                                    </label>
+                                                </div>
+                                                <hr>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Permisos de Administrador -->
+                                        <div class="mb-4">
+                                            <h6 class="text-primary">
+                                                <i class="fas fa-crown me-1"></i>Permisos de Administrador
+                                            </h6>
+                                            <div class="row">
+                                                {% for permiso in permisos %}
+                                                    {% if 'crear_usuarios' in permiso.codename or 'editar_usuarios' in permiso.codename or 'eliminar_usuarios' in permiso.codename or 'crear_clientes' in permiso.codename or 'editar_clientes' in permiso.codename or 'eliminar_clientes' in permiso.codename or 'configurar_monedas' in permiso.codename or 'configurar_tasas' in permiso.codename or 'ver_reportes' in permiso.codename or 'asignar_roles' in permiso.codename or 'ver_logs' in permiso.codename or 'gestionar_roles' in permiso.codename %}
+                                                        <div class="col-md-6 mb-2">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input permiso-checkbox" type="checkbox" 
+                                                                       name="permisos" value="{{ permiso.id }}" id="permiso-{{ permiso.id }}"
+                                                                       {% if permiso in rol.permisos.all %}checked{% endif %}
+                                                                       {% if rol.es_sistema and rol.nombre_rol == 'Administrador' and 'gestionar_roles' in permiso.codename %}disabled{% endif %}>
+                                                                <label class="form-check-label" for="permiso-{{ permiso.id }}">
+                                                                    {{ permiso.descripcion }}
+                                                                    {% if rol.es_sistema and rol.nombre_rol == 'Administrador' and 'gestionar_roles' in permiso.codename %}
+                                                                        <i class="fas fa-lock text-warning ms-1" title="Permiso crítico del sistema"></i>
+                                                                    {% endif %}
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Permisos de Cajero -->
+                                        <div class="mb-4">
+                                            <h6 class="text-success">
+                                                <i class="fas fa-cash-register me-1"></i>Permisos de Cajero
+                                            </h6>
+                                            <div class="row">
+                                                {% for permiso in permisos %}
+                                                    {% if 'registrar_depositos' in permiso.codename or 'registrar_retiros' in permiso.codename or 'confirmar_pagos' in permiso.codename %}
+                                                        <div class="col-md-6 mb-2">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input permiso-checkbox" type="checkbox" 
+                                                                       name="permisos" value="{{ permiso.id }}" id="permiso-{{ permiso.id }}"
+                                                                       {% if permiso in rol.permisos.all %}checked{% endif %}>
+                                                                <label class="form-check-label" for="permiso-{{ permiso.id }}">
+                                                                    {{ permiso.descripcion }}
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Permisos de Usuario -->
+                                        <div class="mb-4">
+                                            <h6 class="text-info">
+                                                <i class="fas fa-user me-1"></i>Permisos de Usuario
+                                            </h6>
+                                            <div class="row">
+                                                {% for permiso in permisos %}
+                                                    {% if 'visualizar_clientes' in permiso.codename or 'seleccionar_cliente' in permiso.codename or 'solicitudes_cambio_compra' in permiso.codename or 'solicitudes_cambio_venta' in permiso.codename or 'consultar_transacciones' in permiso.codename or 'simulacion_cambios' in permiso.codename %}
+                                                        <div class="col-md-6 mb-2">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input permiso-checkbox" type="checkbox" 
+                                                                       name="permisos" value="{{ permiso.id }}" id="permiso-{{ permiso.id }}"
+                                                                       {% if permiso in rol.permisos.all %}checked{% endif %}>
+                                                                <label class="form-check-label" for="permiso-{{ permiso.id }}">
+                                                                    {{ permiso.descripcion }}
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Permisos de Visitante -->
+                                        <div class="mb-4">
+                                            <h6 class="text-secondary">
+                                                <i class="fas fa-eye me-1"></i>Permisos de Visitante
+                                            </h6>
+                                            <div class="row">
+                                                {% for permiso in permisos %}
+                                                    {% if 'visualizar_tasas' in permiso.codename or 'simulaciones_transacciones' in permiso.codename %}
+                                                        <div class="col-md-6 mb-2">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input permiso-checkbox" type="checkbox" 
+                                                                       name="permisos" value="{{ permiso.id }}" id="permiso-{{ permiso.id }}"
+                                                                       {% if permiso in rol.permisos.all %}checked{% endif %}>
+                                                                <label class="form-check-label" for="permiso-{{ permiso.id }}">
+                                                                    {{ permiso.descripcion }}
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Botones de acción -->
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{% url 'cuentas:gestionar_roles' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>Guardar Cambios
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información del rol actual -->
+                <div class="col-lg-4">
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Información del Rol
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Nombre:</strong> {{ rol.nombre_rol }}</p>
+                            <p><strong>Tipo:</strong> 
+                                {% if rol.es_sistema %}
+                                    Rol del Sistema
+                                {% else %}
+                                    Rol Personalizado
+                                {% endif %}
+                            </p>
+                            <p><strong>Usuarios asignados:</strong> {{ rol.usuarios.count }}</p>
+                            <p><strong>Permisos actuales:</strong> {{ rol.permisos.count }}</p>
+                            <p><strong>Creado:</strong> {{ rol.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Última modificación:</strong> {{ rol.fecha_actualizacion|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+
+                    {% if rol.usuarios.count > 0 %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-users me-2"></i>Usuarios con este Rol
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            {% for usuario in rol.usuarios.all|slice:":5" %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-user-circle text-muted me-2"></i>
+                                    <div>
+                                        <strong>{{ usuario.nombre_completo }}</strong><br>
+                                        <small class="text-muted">{{ usuario.email }}</small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            {% if rol.usuarios.count > 5 %}
+                                <small class="text-muted">Y {{ rol.usuarios.count|add:"-5" }} más...</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const seleccionarTodos = document.getElementById('seleccionar-todos');
+    const permisosCheckboxes = document.querySelectorAll('.permiso-checkbox:not([disabled])');
+    
+    // Actualizar estado inicial del checkbox "Seleccionar todos"
+    function actualizarSeleccionarTodos() {
+        const totalChecked = Array.from(permisosCheckboxes).filter(cb => cb.checked).length;
+        const total = permisosCheckboxes.length;
+        
+        seleccionarTodos.checked = totalChecked === total;
+        seleccionarTodos.indeterminate = totalChecked > 0 && totalChecked < total;
+    }
+    
+    // Llamar al inicio para establecer el estado correcto
+    actualizarSeleccionarTodos();
+    
+    // Funcionalidad para seleccionar/deseleccionar todos
+    seleccionarTodos.addEventListener('change', function() {
+        permisosCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+    
+    // Actualizar el estado del checkbox "Seleccionar todos"
+    permisosCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', actualizarSeleccionarTodos);
+    });
+});
+</script>
+{% endblock %}
