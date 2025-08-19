@@ -28,27 +28,30 @@ from transacciones.models import Transaccion
 from divisas.models import Moneda, TasaCambio, HistorialTasaCambio
 from .models import Reporte, MetricaPanel, PlantillaReporte
 from .forms import FormularioGeneracionReporte
+from cuentas.views import MixinPermisosAdmin
 
 logger = logging.getLogger(__name__)
 
 
-class VistaListaReportes(LoginRequiredMixin, ListView):
+class VistaListaReportes(LoginRequiredMixin, MixinPermisosAdmin, ListView):
     """Lista todos los reportes del usuario actual"""
     model = Reporte
     template_name = 'reportes/lista_reportes.html'
     context_object_name = 'reportes'
     paginate_by = 20
+    permiso_requerido = 'ver_reportes'
 
     def get_queryset(self):
         return Reporte.objects.filter(solicitado_por=self.request.user)
 
 
-class VistaCrearReporte(LoginRequiredMixin, CreateView):
+class VistaCrearReporte(LoginRequiredMixin, MixinPermisosAdmin, CreateView):
     """Crea un nuevo reporte"""
     model = Reporte
     form_class = FormularioGeneracionReporte
     template_name = 'reportes/crear_reporte.html'
     success_url = reverse_lazy('reportes:lista_reportes')
+    permiso_requerido = 'ver_reportes'
 
     def form_valid(self, formulario):
         formulario.instance.solicitado_por = self.request.user
@@ -82,18 +85,20 @@ class VistaCrearReporte(LoginRequiredMixin, CreateView):
         return context
 
 
-class VistaDetalleReporte(LoginRequiredMixin, DetailView):
+class VistaDetalleReporte(LoginRequiredMixin, MixinPermisosAdmin, DetailView):
     """Ve los detalles de un reporte"""
     model = Reporte
     template_name = 'reportes/detalle_reporte.html'
     context_object_name = 'reporte'
+    permiso_requerido = 'ver_reportes'
 
     def get_queryset(self):
         return Reporte.objects.filter(solicitado_por=self.request.user)
 
 
-class VistaDescargarReporte(LoginRequiredMixin, TemplateView):
+class VistaDescargarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """Descarga un reporte generado"""
+    permiso_requerido = 'ver_reportes'
 
     def get(self, solicitud, *args, **kwargs):
         id_reporte = kwargs.get('id_reporte')
@@ -142,8 +147,9 @@ class VistaDescargarReporte(LoginRequiredMixin, TemplateView):
         return tipos_contenido.get(tipo_formato, 'application/octet-stream')
 
 
-class APIVistaGenerarReporte(LoginRequiredMixin, TemplateView):
+class APIVistaGenerarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """Endpoint de API para la generación inmediata de reportes"""
+    permiso_requerido = 'ver_reportes'
 
     def post(self, solicitud, *args, **kwargs):
         try:
@@ -696,11 +702,12 @@ class APIVistaGenerarReporte(LoginRequiredMixin, TemplateView):
         return salida.getvalue()
 
 
-class VistaPanelAnaliticas(LoginRequiredMixin, TemplateView):
+class VistaPanelAnaliticas(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Panel de analíticas principal con métricas de negocio.
     """
     template_name = 'reportes/panel_analiticas.html'
+    permiso_requerido = 'ver_reportes'
     
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
@@ -741,11 +748,12 @@ class VistaPanelAnaliticas(LoginRequiredMixin, TemplateView):
         return contexto
 
 
-class VistaAnalisisGanancias(LoginRequiredMixin, TemplateView):
+class VistaAnalisisGanancias(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Análisis detallado y monitoreo de ganancias.
     """
     template_name = 'reportes/analisis_ganancias.html'
+    permiso_requerido = 'ver_reportes'
     
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
@@ -873,10 +881,11 @@ class VistaAnalisisGanancias(LoginRequiredMixin, TemplateView):
         return list(reversed(datos_tendencia))
 
 
-class APIVistaMetricasPanel(LoginRequiredMixin, TemplateView):
+class APIVistaMetricasPanel(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Endpoint de API para métricas del panel en tiempo real.
     """
+    permiso_requerido = 'ver_reportes'
     
     def get(self, solicitud, *args, **kwargs):
         try:

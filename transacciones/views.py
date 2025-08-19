@@ -16,12 +16,14 @@ from .models import Transaccion, SimulacionTransaccion, Factura
 from .forms import FormularioCancelarTransaccion, FormularioTransaccion, FormularioPagoStripe
 from .payments import ProcesadorPagos, crear_intento_pago_stripe
 from divisas.models import Moneda, TasaCambio
+from cuentas.views import MixinPermisosAdmin
 
-class VistaTransaccionCompra(LoginRequiredMixin, TemplateView):
+class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para crear transacciones de compra.
     """
     template_name = 'transacciones/transaccion_compra.html'
+    permiso_requerido = 'solicitar_cambio_compra'
     
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
@@ -140,11 +142,12 @@ class VistaTransaccionCompra(LoginRequiredMixin, TemplateView):
         contexto['formulario'] = formulario
         return self.render_to_response(contexto)
 
-class VistaTransaccionVenta(LoginRequiredMixin, TemplateView):
+class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para crear transacciones de venta.
     """
     template_name = 'transacciones/transaccion_venta.html'
+    permiso_requerido = 'solicitar_cambio_venta'
     
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
@@ -408,11 +411,12 @@ class VistaPDFFactura(LoginRequiredMixin, TemplateView):
         numero_factura = kwargs.get('numero_factura')
         return redirect('transacciones:detalle_factura', numero_factura=numero_factura)
 
-class VistaHistorialTransacciones(LoginRequiredMixin, TemplateView):
+class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Historial de transacciones con opciones avanzadas de filtrado y exportación.
     """
     template_name = 'transacciones/lista_transacciones.html'
+    permiso_requerido = 'consultar_transacciones'
     
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
