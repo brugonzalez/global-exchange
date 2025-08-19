@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Gestión de Roles de Usuarios - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Encabezado -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-user-tag me-2"></i>Gestión de Roles de Usuarios
+                    </h2>
+                    <p class="text-muted mb-0">Asigne y gestione los roles de cada usuario del sistema</p>
+                </div>
+                <a href="{% url 'cuentas:gestionar_roles' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver a Roles
+                </a>
+            </div>
+
+            <!-- Filtros de búsqueda -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="buscar" class="form-label">Buscar Usuario</label>
+                            <input type="text" class="form-control" id="buscar" name="buscar" 
+                                   value="{{ buscar }}" placeholder="Nombre, email o usuario...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i>Buscar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <a href="{% url 'cuentas:gestionar_roles_usuarios' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Limpiar
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Lista de usuarios -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Usuarios del Sistema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if usuarios %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Email</th>
+                                        <th>Roles Actuales</th>
+                                        <th>Estado</th>
+                                        <th>Último Acceso</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for usuario in usuarios %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user-circle text-muted me-2 fa-lg"></i>
+                                                <div>
+                                                    <strong>{{ usuario.nombre_completo|default:usuario.username }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ usuario.username }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {{ usuario.email }}
+                                            {% if not usuario.email_verificado %}
+                                                <i class="fas fa-exclamation-triangle text-warning ms-1" 
+                                                   title="Email no verificado"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if usuario.roles.all %}
+                                                {% for rol in usuario.roles.all %}
+                                                    <span class="badge 
+                                                        {% if rol.nombre_rol == 'Administrador' %}bg-danger
+                                                        {% elif rol.nombre_rol == 'Cajero' %}bg-success
+                                                        {% elif rol.nombre_rol == 'Usuario' %}bg-info
+                                                        {% else %}bg-secondary{% endif %} me-1">
+                                                        {{ rol.nombre_rol }}
+                                                    </span>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">Sin roles asignados</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if usuario.is_active %}
+                                                <span class="badge bg-success">Activo</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactivo</span>
+                                            {% endif %}
+                                            {% if usuario.is_superuser %}
+                                                <span class="badge bg-warning">Superuser</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if usuario.last_login %}
+                                                {{ usuario.last_login|date:"d/m/Y H:i" }}
+                                            {% else %}
+                                                <span class="text-muted">Nunca</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'cuentas:asignar_roles_usuario' usuario.id %}" 
+                                                   class="btn btn-outline-primary btn-sm"
+                                                   title="Gestionar roles">
+                                                    <i class="fas fa-user-tag"></i>
+                                                </a>
+                                                <button class="btn btn-outline-info btn-sm" 
+                                                        data-bs-toggle="collapse" 
+                                                        data-bs-target="#permisos-{{ usuario.id }}" 
+                                                        aria-expanded="false"
+                                                        title="Ver permisos">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Fila de permisos colapsable -->
+                                    <tr class="collapse" id="permisos-{{ usuario.id }}">
+                                        <td colspan="6">
+                                            <div class="bg-light p-3 rounded">
+                                                <h6>Permisos efectivos del usuario:</h6>
+                                                {% if usuario.obtener_permisos %}
+                                                    <div class="row">
+                                                        {% for permiso in usuario.obtener_permisos %}
+                                                            <div class="col-md-3 mb-1">
+                                                                <span class="badge bg-secondary">{{ permiso.descripcion }}</span>
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% else %}
+                                                    <p class="text-muted mb-0">Este usuario no tiene permisos asignados.</p>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Paginación -->
+                        {% if usuarios.has_other_pages %}
+                            <nav aria-label="Paginación de usuarios">
+                                <ul class="pagination justify-content-center">
+                                    {% if usuarios.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if buscar %}&buscar={{ buscar }}{% endif %}">Primera</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ usuarios.previous_page_number }}{% if buscar %}&buscar={{ buscar }}{% endif %}">Anterior</a>
+                                        </li>
+                                    {% endif %}
+
+                                    <li class="page-item active">
+                                        <span class="page-link">
+                                            Página {{ usuarios.number }} de {{ usuarios.paginator.num_pages }}
+                                        </span>
+                                    </li>
+
+                                    {% if usuarios.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ usuarios.next_page_number }}{% if buscar %}&buscar={{ buscar }}{% endif %}">Siguiente</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ usuarios.paginator.num_pages }}{% if buscar %}&buscar={{ buscar }}{% endif %}">Última</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                            <h5>No se encontraron usuarios</h5>
+                            {% if buscar %}
+                                <p class="text-muted">No se encontraron usuarios que coincidan con "{{ buscar }}".</p>
+                                <a href="{% url 'cuentas:gestionar_roles_usuarios' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-users me-1"></i>Ver Todos los Usuarios
+                                </a>
+                            {% else %}
+                                <p class="text-muted">No hay usuarios registrados en el sistema.</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Resumen de roles -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-pie me-2"></i>Resumen de Roles Disponibles
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for rol in roles_disponibles %}
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card border-0 bg-light">
+                                            <div class="card-body text-center py-3">
+                                                <h6 class="card-title mb-1">{{ rol.nombre_rol }}</h6>
+                                                <p class="card-text small text-muted">{{ rol.descripcion|truncatechars:50 }}</p>
+                                                <span class="badge bg-primary">{{ rol.usuarios.count }} usuarios</span>
+                                                <span class="badge bg-info">{{ rol.permisos.count }} permisos</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus en el campo de búsqueda
+    const buscarInput = document.getElementById('buscar');
+    if (buscarInput && !buscarInput.value) {
+        buscarInput.focus();
+    }
+    
+    // Confirmación antes de cambios importantes
+    const botonesGestion = document.querySelectorAll('[href*="asignar_roles_usuario"]');
+    botonesGestion.forEach(boton => {
+        boton.addEventListener('click', function(e) {
+            // Solo mostrar confirmación si el usuario tiene roles críticos
+            const fila = this.closest('tr');
+            const roles = fila.querySelector('td:nth-child(3)').textContent;
+            if (roles.includes('Administrador') || roles.includes('Superuser')) {
+                if (!confirm('Está a punto de modificar roles de un usuario con permisos administrativos. ¿Continuar?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

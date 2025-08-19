@@ -31,4 +31,14 @@ urlpatterns = [
     path('itoken/verificar-sensible/', views.VistaVerificarDosFactoresSensible.as_view(), name='itoken_verificar_sensible'),
     path('itoken/tokens-respaldo/', views.VistaTokensRespaldoDosFactores.as_view(), name='itoken_tokens_respaldo'),
     path('itoken/desactivar/', views.VistaDesactivarDosFactores.as_view(), name='itoken_desactivar'),
+    
+    # Gestión de Roles y Permisos (solo administradores)
+    path('admin/roles/', views.VistaGestionarRoles.as_view(), name='gestionar_roles'),
+    path('admin/roles/crear/', views.VistaCrearRol.as_view(), name='crear_rol'),
+    path('admin/roles/editar/<int:rol_id>/', views.VistaEditarRol.as_view(), name='editar_rol'),
+    path('admin/roles/eliminar/<int:rol_id>/', views.VistaEliminarRol.as_view(), name='eliminar_rol'),
+    
+    # Asignación de Roles a Usuarios
+    path('admin/usuarios-roles/', views.VistaGestionarRolesUsuarios.as_view(), name='gestionar_roles_usuarios'),
+    path('admin/usuarios/<int:usuario_id>/roles/', views.VistaAsignarRolesUsuario.as_view(), name='asignar_roles_usuario'),
 ]

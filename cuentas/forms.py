@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import authenticate
-from .models import Usuario
+from .models import Usuario, Rol, Permiso
 
 
 class FormularioLogin(forms.Form):
@@ -263,3 +263,71 @@ class FormularioRestablecimientoContrasena(forms.Form):
                 raise forms.ValidationError('Las contraseñas no coinciden.')
         
         return datos_limpios
+
+
+class FormularioRol(forms.ModelForm):
+    """
+    Formulario para crear y editar roles.
+    """
+    permisos = forms.ModelMultipleChoiceField(
+        queryset=Permiso.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={
+            'class': 'form-check-input'
+        }),
+        required=False,
+        label='Permisos'
+    )
+    
+    class Meta:
+        model = Rol
+        fields = ['nombre_rol', 'descripcion', 'permisos']
+        widgets = {
+            'nombre_rol': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del rol'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Descripción del rol',
+                'rows': 3
+            }),
+        }
+        labels = {
+            'nombre_rol': 'Nombre del Rol',
+            'descripcion': 'Descripción'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Organizar permisos por categorías para mejor presentación
+        self.fields['permisos'].queryset = Permiso.objects.all().order_by('descripcion')
+
+
+class FormularioAsignarRoles(forms.Form):
+    """
+    Formulario para asignar roles a un usuario.
+    """
+    roles = forms.ModelMultipleChoiceField(
+        queryset=Rol.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={
+            'class': 'form-check-input'
+        }),
+        required=False,
+        label='Roles'
+    )
+    
+    def __init__(self, usuario=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usuario = usuario
+        self.fields['roles'].queryset = Rol.objects.all().order_by('nombre_rol')
+        
+        # Si hay un usuario, preseleccionar sus roles actuales
+        if usuario:
+            self.fields['roles'].initial = usuario.roles.all()
+    
+    def save(self):
+        """Guarda los roles asignados al usuario."""
+        if self.usuario:
+            roles_seleccionados = self.cleaned_data['roles']
+            self.usuario.roles.set(roles_seleccionados)
+            return self.usuario
