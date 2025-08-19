@@ -139,7 +139,7 @@
                                             </h6>
                                             <div class="row">
                                                 {% for permiso in permisos %}
-                                                    {% if 'visualizar_clientes' in permiso.codename or 'seleccionar_cliente' in permiso.codename or 'solicitudes_cambio_compra' in permiso.codename or 'solicitudes_cambio_venta' in permiso.codename or 'consultar_transacciones' in permiso.codename or 'simulacion_cambios' in permiso.codename %}
+                                                    {% if 'visualizar_clientes' in permiso.codename or 'seleccionar_cliente' in permiso.codename or 'solicitar_cambio_compra' in permiso.codename or 'solicitar_cambio_venta' in permiso.codename or 'consultar_transacciones' in permiso.codename or 'simular_cambios' in permiso.codename %}
                                                         <div class="col-md-6 mb-2">
                                                             <div class="form-check">
                                                                 <input class="form-check-input permiso-checkbox" type="checkbox" 
@@ -162,7 +162,7 @@
                                             </h6>
                                             <div class="row">
                                                 {% for permiso in permisos %}
-                                                    {% if 'visualizar_tasas' in permiso.codename or 'simulaciones_transacciones' in permiso.codename %}
+                                                    {% if 'visualizar_tasas' in permiso.codename or 'simular_transacciones' in permiso.codename %}
                                                         <div class="col-md-6 mb-2">
                                                             <div class="form-check">
                                                                 <input class="form-check-input permiso-checkbox" type="checkbox" 

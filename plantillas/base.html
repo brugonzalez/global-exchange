@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -137,11 +136,13 @@
                                 </ul>
                             </li>
                         {% endif %}
+                        {% if user.es_administrador %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'reportes:lista_reportes' %}">
                                 <i class="fas fa-file-alt me-1"></i>Reportes
                             </a>
                         </li>
+                        {% endif %}
                         {% if user.is_staff %}
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
