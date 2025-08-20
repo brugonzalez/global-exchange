@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <h6 class="text-muted">Información Personal</h6>
                             <ul class="list-unstyled">
-                                <li><strong>Nombre:</strong> {{ user.full_name }}</li>
+                                <li><strong>Nombre:</strong> {{ user.nombre_completo }}</li>
                                 <li><strong>Usuario:</strong> {{ user.username }}</li>
                                 <li><strong>Email:</strong> {{ user.email }}</li>
                                 <li><strong>Número de Teléfono:</strong> {{ user.nro_telefono }}</li>
@@ -29,14 +29,13 @@
                             <ul class="list-unstyled">
                                 <li>
                                     <strong>Email verificado:</strong> 
-                                    {% if user.is_email_verified %}
+                                    {% if user.email_verificado %}
                                         <span class="badge bg-success">Sí</span>
                                     {% else %}
                                         <span class="badge bg-warning">No</span>
                                     {% endif %}
                                 </li>
                                 <li><strong>Último acceso:</strong> {{ user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</li>
-                                <li><strong>Intentos fallidos:</strong> {{ user.failed_login_attempts }}</li>
                             </ul>
                         </div>
                     </div>
