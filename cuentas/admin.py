@@ -42,16 +42,17 @@ class AdministradorRol(admin.ModelAdmin):
 class AdministradorUsuario(AdministradorUsuarioBase):
     """Configuración del admin para el modelo de Usuario personalizado"""
     list_display = ['username', 'email', 'nombre_completo', 'email_verificado', 
-                   'is_active', 'is_staff', 'fecha_creacion', 'mostrar_roles']
+                   'is_active', 'is_staff', 'fecha_creacion', 'mostrar_roles', 'nro_telefono']
     list_filter = ['is_active', 'is_staff', 'is_superuser', 'email_verificado', 
                   'fecha_creacion', 'roles']
     search_fields = ['username', 'email', 'nombre_completo']
     ordering = ['-fecha_creacion']
     filter_horizontal = ['roles', 'groups', 'user_permissions']
-    
+    readonly_fields = ['intentos_fallidos_login']
+
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Información Personal', {'fields': ('nombre_completo', 'email')}),
+        ('Información Personal', {'fields': ('nombre_completo', 'email', 'nro_telefono')}),
         ('Permisos', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
