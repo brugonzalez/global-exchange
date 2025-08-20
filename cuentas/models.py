@@ -10,6 +10,7 @@ class Usuario(AbstractUser):
     """
     email = models.EmailField(unique=True)
     nombre_completo = models.CharField(max_length=255)
+    nro_telefono = models.CharField(max_length=20, blank=True, null=True)
     email_verificado = models.BooleanField(default=False)
     token_verificacion_email = models.CharField(max_length=100, blank=True, null=True)
     intentos_fallidos_login = models.PositiveIntegerField(default=0)

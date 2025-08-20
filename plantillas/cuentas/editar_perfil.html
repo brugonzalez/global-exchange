@@ -33,6 +33,19 @@
                                     {% endif %}
                                 </div>
                                 
+                                <!-- Campo de Número de Teléfono -->
+                                <div class="mb-3">
+                                    <label for="id_nro_telefono" class="form-label">{{ form.nro_telefono.label }}</label>
+                                    {{ form.nro_telefono }}
+                                    {% if form.nro_telefono.errors %}
+                                        <div class="text-danger small">
+                                            {% for error in form.nro_telefono.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
                                 <!-- Información de solo lectura -->
                                 <div class="mb-3">
                                     <label class="form-label">Usuario</label>

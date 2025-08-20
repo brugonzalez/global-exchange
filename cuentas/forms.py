@@ -139,21 +139,27 @@ class FormularioPerfil(forms.ModelForm):
     """
     class Meta:
         model = Usuario
-        fields = ['nombre_completo']  # Solo permitir editar campos no críticos
+        fields = ['nombre_completo', 'nro_telefono']  # Solo permitir editar campos no críticos
         widgets = {
             'nombre_completo': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Nombre completo'
+            }),
+            'nro_telefono': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Número de teléfono'
             })
         }
         labels = {
-            'nombre_completo': 'Nombre Completo'
+            'nombre_completo': 'Nombre Completo',
+            'nro_telefono': 'Número de Teléfono'
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Hacer que el nombre completo sea requerido
         self.fields['nombre_completo'].required = True
+        self.fields['nro_telefono'].required = False
 
 
 class FormularioCambioContrasena(forms.Form):
