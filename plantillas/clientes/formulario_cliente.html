@@ -102,6 +102,36 @@
                             <div class="col-md-8">
                                 {{ formulario.nombre_empresa|as_crispy_field }}
                             </div>
+                    
+                    <!-- Preferencias Específicas del Cliente -->
+                    <div class="form-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-sliders-h me-2"></i>Preferencias Específicas
+                        </h5>
+                        {% if preferencias and preferencias.id %}
+                            <div class="mb-2">
+                                <small class="text-muted">Límite de Compra:</small>
+                                <div class="h6">${{ preferencias.limite_compra|floatformat:2 }}</div>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">Límite de Venta:</small>
+                                <div class="h6">${{ preferencias.limite_venta|floatformat:2 }}</div>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">Frecuencia Máxima (día):</small>
+                                <div class="h6">{{ preferencias.frecuencia_maxima }}</div>
+                            </div>
+                            <div class="mb-0">
+                                <small class="text-muted">Preferencia Tipo de Cambio:</small>
+                                <div class="h6">{{ preferencias.preferencia_tipo_cambio|default:'-' }}</div>
+                            </div>
+                            <a href="{% url 'clientes:editar_preferencias_cliente' form.instance.id preferencias.id %}" class="btn btn-outline-primary btn-sm mt-2">
+                                Editar Preferencias
+                            </a>
+                        {% else %}
+                            <div class="text-muted">No hay preferencias específicas configuradas para este cliente.</div>
+                        {% endif %}
+                    </div>
                             <div class="col-md-4">
                                 {{ formulario.representante_legal|as_crispy_field }}
                             </div>

@@ -327,6 +327,42 @@
                 </div>
             </div>
 
+            <!-- Preferencias Específicas del Cliente -->
+            <div class="card balance-card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-sliders-h me-2"></i>Preferencias Específicas
+                    </h6>
+                    {% if preferencias and preferencias.id %}
+                        <a href="{% url 'clientes:editar_preferencias_cliente' cliente.id preferencias.id %}" class="btn btn-sm btn-outline-primary">
+                            Editar Preferencias
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if preferencias %}
+                        <div class="mb-2">
+                            <small class="text-muted">Límite de Compra:</small>
+                            <div class="h6">${{ preferencias.limite_compra|floatformat:2 }}</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Límite de Venta:</small>
+                            <div class="h6">${{ preferencias.limite_venta|floatformat:2 }}</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Frecuencia Máxima (día):</small>
+                            <div class="h6">{{ preferencias.frecuencia_maxima }}</div>
+                        </div>
+                        <div class="mb-0">
+                            <small class="text-muted">Preferencia Tipo de Cambio:</small>
+                            <div class="h6">{{ preferencias.preferencia_tipo_cambio|default:'-' }}</div>
+                        </div>
+                    {% else %}
+                        <div class="text-muted">No hay preferencias específicas configuradas para este cliente.</div>
+                    {% endif %}
+                </div>
+            </div>
+
             <!-- Saldo de Cuenta -->
             {% if saldos_moneda %}
             <div class="card balance-card">

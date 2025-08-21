@@ -1,4 +1,16 @@
 from django import forms
+from .models import PreferenciaCliente
+
+class FormularioPreferenciaCliente(forms.ModelForm):
+    class Meta:
+        model = PreferenciaCliente
+        fields = ['limite_compra', 'limite_venta', 'frecuencia_maxima', 'preferencia_tipo_cambio']
+        widgets = {
+            'limite_compra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'limite_venta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'frecuencia_maxima': forms.NumberInput(attrs={'class': 'form-control'}),
+            'preferencia_tipo_cambio': forms.TextInput(attrs={'class': 'form-control'}),
+        }
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita

@@ -50,6 +50,27 @@ class CategoriaCliente(models.Model):
         return self.get_nombre_display()
 
 
+class PreferenciaCliente(models.Model):
+    """
+    Preferencias específicas para un cliente: límites y condiciones personalizadas.
+    """
+    cliente = models.OneToOneField('Cliente', on_delete=models.CASCADE, related_name='preferencias')
+    limite_compra = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), help_text="Límite máximo de compra")
+    limite_venta = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), help_text="Límite máximo de venta")
+    frecuencia_maxima = models.PositiveIntegerField(default=0, help_text="Frecuencia máxima de transacciones por día (0 = sin límite)")
+    preferencia_tipo_cambio = models.CharField(max_length=50, blank=True, help_text="Preferencia de tipo de cambio (ej: 'preferencial', 'mercado', etc.)")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'clientes_preferencia_cliente'
+        verbose_name = 'Preferencia de Cliente'
+        verbose_name_plural = 'Preferencias de Cliente'
+
+    def __str__(self):
+        return f"Preferencias de {self.cliente.obtener_nombre_completo()}"
+
+
 class Cliente(models.Model):
     """
     Modelo para clientes (personas físicas y jurídicas).

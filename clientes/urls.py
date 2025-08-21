@@ -21,6 +21,8 @@ urlpatterns = [
     path('<int:id_cliente>/favoritos/anadir/', views.VistaAnadirFavorito.as_view(), name='anadir_favorito'),
     path('<int:id_cliente>/favoritos/<int:id_favorito>/eliminar/', views.VistaEliminarFavorito.as_view(), name='eliminar_favorito'),
     
+    # Preferencias de cliente
+    path('<int:id_cliente>/preferencias/<int:id_preferencia>/editar/', views.VistaEditarPreferenciasCliente.as_view(), name='editar_preferencias_cliente'),
     # Saldos de cliente
     path('<int:id_cliente>/saldos/', views.VistaSaldosCliente.as_view(), name='saldos_cliente'),
-]
+]   

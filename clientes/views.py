@@ -1,6 +1,8 @@
+import builtins
+
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import get_user_model
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, FormView, View
@@ -14,6 +16,10 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_protect
 from django.middleware.csrf import get_token
 from django.conf import settings
+
+from .models import PreferenciaCliente
+from .forms import FormularioPreferenciaCliente
+
 
 from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita, SaldoCliente
 from .forms import (
@@ -120,22 +126,20 @@ class VistaDetalleCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
-        
         # Obtener usuarios asociados
         contexto['cliente_usuarios'] = ClienteUsuario.objects.filter(
             cliente=self.object
         ).select_related('usuario').order_by('-fecha_asignacion')
-        
         # Obtener monedas favoritas
         contexto['monedas_favoritas'] = MonedaFavorita.objects.filter(
             cliente=self.object
         ).select_related('moneda').order_by('orden', 'fecha_creacion')
-        
         # Obtener saldos de moneda
         contexto['saldos_moneda'] = SaldoCliente.objects.filter(
             cliente=self.object
         ).select_related('moneda').order_by('moneda__codigo')
-        
+        # Obtener preferencias
+        contexto['preferencias'] = getattr(self.object, 'preferencias', None)
         return contexto
 
 
@@ -159,8 +163,23 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
         contexto = super().get_context_data(**kwargs)
         contexto['titulo'] = f'Editar Cliente: {self.object.obtener_nombre_completo()}'
         contexto['texto_submit'] = 'Actualizar Cliente'
-        # Add formulario for template compatibility
         contexto['formulario'] = contexto.get('form')
+        # Obtener o crear preferencias
+        preferencias = getattr(self.object, 'preferencias', None)
+        if not preferencias:
+            preferencias = PreferenciaCliente.objects.create(
+                cliente=self.object,
+                limite_compra=0,
+                limite_venta=0,
+                frecuencia_maxima=0,
+                preferencia_tipo_cambio=''
+            )
+        contexto['preferencias'] = preferencias
+        # Agregar el formulario de preferencias al contexto
+        if self.request.method == 'POST':
+            contexto['formulario_preferencias'] = FormularioPreferenciaCliente(self.request.POST, instance=preferencias)
+        else:
+            contexto['formulario_preferencias'] = FormularioPreferenciaCliente(instance=preferencias)
         return contexto
 
 
@@ -238,6 +257,26 @@ class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormVie
         contexto['cliente'] = self.cliente
         # Asegurar que el token CSRF siempre esté disponible
         contexto['csrf_token'] = get_token(self.request)
+        return contexto
+class VistaEditarPreferenciasCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
+    model = PreferenciaCliente
+    form_class = FormularioPreferenciaCliente
+    template_name = 'clientes/formulario_preferencia_cliente.html'
+    pk_url_kwarg = 'id_preferencia'
+
+    def get_success_url(self):
+        return reverse('clientes:detalle_cliente', kwargs={'id_cliente': self.object.cliente.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Preferencias del cliente actualizadas exitosamente.')
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        contexto['titulo'] = f'Editar Preferencias de {self.object.cliente.obtener_nombre_completo()}'
+        contexto['texto_submit'] = 'Guardar Preferencias'
+        contexto['formulario'] = contexto.get('form')
+        contexto['redirect_url'] = reverse('clientes:detalle_cliente', kwargs={'id_cliente': self.object.cliente.pk})
         return contexto
 
 

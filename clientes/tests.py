@@ -1,3 +1,5 @@
+from .models import PreferenciaCliente
+
 from django.test import TestCase, RequestFactory
 from django.contrib.auth import get_user_model
 from django.template import Template, Context
@@ -10,6 +12,35 @@ from .models import Cliente as ModeloCliente, CategoriaCliente, ClienteUsuario
 Usuario = get_user_model()
 
 
+class PreferenciaClienteTestCase(TestCase):
+    def setUp(self):
+        self.categoria = CategoriaCliente.objects.create(nombre='RETAIL')
+        self.usuario = Usuario.objects.create_user(
+            username='admin',  # agrega esto
+            email='admin@admin.com',
+            password='admin'
+        )
+        self.cliente = ModeloCliente.objects.create(
+            tipo_cliente='FISICA',
+            estado='ACTIVO',
+            categoria=self.categoria,
+            nombre='Test',
+            apellido='User',
+            numero_identificacion='123',
+            email='test@user.com',
+        )
+        self.preferencias = PreferenciaCliente.objects.create(
+            cliente=self.cliente,
+            limite_compra=1000,
+            limite_venta=500,
+            frecuencia_maxima=2,
+            preferencia_tipo_cambio='preferencial',
+        )
+
+    def test_preferencias_cliente_guardado(self):
+        self.assertEqual(self.cliente.preferencias.limite_compra, 1000)
+        self.assertEqual(self.cliente.preferencias.frecuencia_maxima, 2)
+        self.assertEqual(self.cliente.preferencias.preferencia_tipo_cambio, 'preferencial')
 class PruebaCasoTokenCSRF(TestCase):
     """Prueba el manejo del token CSRF en las plantillas"""
     
