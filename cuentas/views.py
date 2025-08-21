@@ -1,10 +1,10 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.views.generic import TemplateView, FormView
+from django.views.generic import TemplateView, FormView, View
 from django.urls import reverse_lazy
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
@@ -14,8 +14,10 @@ from django.conf import settings
 import uuid
 
 from .models import Usuario, VerificacionEmail, RestablecimientoContrasena, RegistroAuditoria, Rol, Permiso
-from .forms import FormularioLogin, FormularioRegistro, FormularioPerfil, FormularioCambioContrasena
+from .forms import FormularioLogin, FormularioRegistro, FormularioPerfil, FormularioCambioContrasena, FormularioSolicitudDesbloqueoCuenta, FormularioVerificacionCodigoDesbloqueo
 from clientes.models import Cliente
+from django.utils import timezone
+
 
 
 class VistaLogin(FormView):
@@ -77,8 +79,15 @@ class VistaLogin(FormView):
             # Manejar login fallido
             try:
                 # Buscar por nombre de usuario
-                usuario = Usuario.objects.get(username=nombre_usuario)
+                usuario = Usuario.objects.get(email=nombre_usuario)
                 usuario.incrementar_intentos_fallidos()
+
+                if usuario.esta_cuenta_bloqueada():
+                    # Pasamos un flag para mostrar el botón de desbloqueo
+                    return self.render_to_response(self.get_context_data(
+                        formulario=formulario,
+                        cuenta_bloqueada=True
+                    ))
                 
                 if usuario.esta_cuenta_bloqueada():
                     messages.error(self.request, 'Su cuenta ha sido bloqueada debido a múltiples intentos fallidos.')
@@ -1074,3 +1083,98 @@ class VistaAsignarRolesUsuario(LoginRequiredMixin, MixinPermisosAdmin, TemplateV
             contexto['formulario'] = formulario
             messages.error(request, 'Error al asignar roles. Verifique los datos.')
             return render(request, self.template_name, contexto)
+
+
+Usuario = get_user_model()
+
+# Modelo temporal para guardar el código OTP de desbloqueo (puedes crear un modelo real)
+# Aquí solo se simula con un diccionario para ejemplo
+CODIGOS_DESBLOQUEO = {}
+
+class VistaSolicitudDesbloqueoCuenta(FormView):
+    template_name = 'cuentas/solicitud_desbloqueo.html'
+    form_class = FormularioSolicitudDesbloqueoCuenta
+    success_url = reverse_lazy('cuentas:verificar_codigo_desbloqueo')
+
+    def form_valid(self, form):
+        email = form.cleaned_data['email']
+        try:
+            usuario = Usuario.objects.get(email=email)
+            if not usuario.esta_cuenta_bloqueada():
+                messages.info(self.request, 'Tu cuenta no está bloqueada.')
+                return redirect('cuentas:iniciar_sesion')
+            # Generar código OTP simple
+            codigo = str(uuid.uuid4())[:8]
+            # Guardar código temporalmente
+            CODIGOS_DESBLOQUEO[email] = {
+                'codigo': codigo,
+                'expira': timezone.now() + timezone.timedelta(minutes=1)
+            }
+
+            # Enviar correo
+            #self.enviar_email_desbloqueo(usuario, codigo)
+
+            #de momento imprimimos en la consola el codigo
+            print(f"Código OTP para {email}: {codigo}")
+
+            messages.success(self.request, f'Se envió un código de desbloqueo a {email}.')
+        except Usuario.DoesNotExist:
+            messages.info(self.request, 'Si el correo existe, recibirá instrucciones.')
+        return super().form_valid(form)
+
+    def enviar_email_desbloqueo(self, usuario, codigo):
+        """Envía el email de restablecimiento de contraseña"""
+        enlace_restablecimiento = self.request.build_absolute_uri(
+            f'/cuentas/contrasena/restablecer/{codigo}/'
+        )
+
+        asunto = 'Desbloqueo de cuenta - Global Exchange'
+        mensaje = f'''
+        Hola {usuario.nombre_completo},
+
+        Ha desbloquear su cuenta en Global Exchange.
+
+        Para desbloquear su cuenta ingrese el siguiente codigo
+        {codigo}, o haz clic en el siguiente enlace.
+        {enlace_restablecimiento}
+
+        Este enlace expirará en 1 hora por motivos de seguridad.
+
+        Si no solicitó este cambio, ignore este mensaje.
+
+        Equipo de Global Exchange
+        '''
+
+        send_mail(
+            asunto,
+            mensaje,
+            settings.DEFAULT_FROM_EMAIL,
+            [usuario.email],
+            fail_silently=True
+        )
+
+class VistaVerificarCodigoDesbloqueo(FormView):
+    template_name = 'cuentas/verificar_codigo_desbloqueo.html'
+    form_class = FormularioVerificacionCodigoDesbloqueo
+    success_url = reverse_lazy('cuentas:iniciar_sesion')
+
+    def form_valid(self, form):
+        email = form.cleaned_data['email']
+        codigo = form.cleaned_data['codigo']
+        registro = CODIGOS_DESBLOQUEO.get(email)
+        if not registro or registro['expira'] < timezone.now():
+            messages.error(self.request, 'El código ha expirado o es inválido.')
+            return super().form_invalid(form)
+        if registro['codigo'] != codigo:
+            messages.error(self.request, 'Código incorrecto.')
+            return super().form_invalid(form)
+        try:
+            usuario = Usuario.objects.get(email=email)
+            usuario.restablecer_intentos_fallidos()
+            usuario.save()
+            # Eliminar el código usado
+            del CODIGOS_DESBLOQUEO[email]
+            messages.success(self.request, '¡Cuenta desbloqueada exitosamente! Ahora puede iniciar sesión.')
+        except Usuario.DoesNotExist:
+            messages.error(self.request, 'Usuario no encontrado.')
+        return super().form_valid(form)
