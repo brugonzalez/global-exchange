@@ -1237,3 +1237,17 @@ class EditarUsuario(LoginRequiredMixin, MixinPermisosAdmin, UpdateView):
         # Mostrar error si el formulario es inválido
         messages.error(self.request, "Por favor, corrige los errores en el formulario.")
         return super().form_invalid(form)
+
+class CambiarEstadoUsuarioView(LoginRequiredMixin, MixinPermisosAdmin, View):
+    def post(self, request, usuario_id):
+        Usuario = get_user_model()
+        usuario = get_object_or_404(Usuario, id=usuario_id)
+
+        if usuario.is_active:
+            usuario.bloquear(ejecutor=request.user)
+            messages.success(request, f"Usuario {usuario.email} bloqueado correctamente.")
+        else:
+            usuario.desbloquear(ejecutor=request.user)
+            messages.success(request, f"Usuario {usuario.email} desbloqueado correctamente.")
+
+        return redirect('cuentas:editar_usuario', usuario_id=usuario.id)

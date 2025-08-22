@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import VistaSolicitudDesbloqueoCuenta, VistaVerificarCodigoDesbloqueo
+from .views import VistaSolicitudDesbloqueoCuenta, VistaVerificarCodigoDesbloqueo, CambiarEstadoUsuarioView
 
 app_name = 'cuentas'
 
@@ -45,5 +45,5 @@ urlpatterns = [
     path("admin/usuarios/<int:usuario_id>/editar/", views.EditarUsuario.as_view(), name="editar_usuario"),
     path('desbloqueo/', VistaSolicitudDesbloqueoCuenta.as_view(), name='solicitud_desbloqueo'),
     path('desbloqueo/verificar/', VistaVerificarCodigoDesbloqueo.as_view(), name='verificar_codigo_desbloqueo'),
-    
+    path('admin/usuarios/<int:usuario_id>/cambiar_estado/', CambiarEstadoUsuarioView.as_view(), name='cambiar_estado_usuario'),
 ]

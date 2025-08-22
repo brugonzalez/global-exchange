@@ -65,6 +65,16 @@
                                     <span class="badge bg-danger">Inactivo</span>
                                 {% endif %}
                             </p>
+
+                            <!-- Botón bloquear/desbloquear -->
+                            <form action="{% url 'cuentas:cambiar_estado_usuario' usuario_objetivo.id %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                {% if usuario_objetivo.is_active %}
+                                    <button type="submit" class="btn btn-warning btn-sm ms-2">Bloquear</button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-success btn-sm ms-2">Desbloquear</button>
+                                {% endif %}
+                            </form>
                         </div>
                     </div>
                 </div>

@@ -3,6 +3,8 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 
+from global_exchange import settings
+
 
 class Usuario(AbstractUser):
     """
@@ -55,7 +57,8 @@ class Usuario(AbstractUser):
         """Restablece los intentos de inicio de sesión fallidos."""
         self.intentos_fallidos_login = 0
         self.cuenta_bloqueada_hasta = None
-        self.save(update_fields=['intentos_fallidos_login', 'cuenta_bloqueada_hasta'])
+        self.is_active = True
+        self.save(update_fields=['intentos_fallidos_login', 'cuenta_bloqueada_hasta', 'is_active'])
 
     def incrementar_intentos_fallidos(self):
         """Incrementa los intentos de inicio de sesión fallidos y bloquea la cuenta si es necesario."""
@@ -66,7 +69,8 @@ class Usuario(AbstractUser):
         self.intentos_fallidos_login += 1
         if self.intentos_fallidos_login >= max_intentos:
             self.cuenta_bloqueada_hasta = timezone.now() + timedelta(seconds=duracion_bloqueo)
-        self.save(update_fields=['intentos_fallidos_login', 'cuenta_bloqueada_hasta'])
+            self.is_active = False
+        self.save(update_fields=['intentos_fallidos_login', 'cuenta_bloqueada_hasta', 'is_active'])
 
     def puede_operar_transacciones(self):
         """Verifica si el usuario puede realizar operaciones de compra/venta."""
@@ -146,6 +150,47 @@ class Usuario(AbstractUser):
     def es_visitante(self):
         """Verifica si el usuario tiene rol de visitante."""
         return self.tiene_rol('Visitante')
+
+    def bloquear(self, ejecutor):
+        """Bloquea la cuenta y registra en auditoría"""
+        duracion_bloqueo = getattr(settings, 'DURACION_BLOQUEO_CUENTA', 1800)  # 30 minutos
+        if self.is_active:
+            self.is_active = False
+            self.cuenta_bloqueada_hasta = timezone.now() + timedelta(seconds=duracion_bloqueo)
+            self.save(update_fields=['is_active', 'cuenta_bloqueada_hasta'])
+
+            RegistroAuditoria.objects.create(
+                usuario=ejecutor,
+                accion='USER_BLOCKED',
+                descripcion=f'Bloqueó al usuario: {self.email}',
+                direccion_ip='N/A',  # si se pasa desde la vista, se puede usar request.META.get('REMOTE_ADDR')
+                agente_usuario='N/A',
+                datos_adicionales={
+                    'usuario_id': self.id,
+                    'estado_anterior': True,
+                    'estado_nuevo': False
+                }
+            )
+
+    def desbloquear(self, ejecutor):
+        """Desbloquea la cuenta y registra en auditoría"""
+        if not self.is_active:
+            self.is_active = True
+            self.cuenta_bloqueada_hasta = None
+            self.save(update_fields=['is_active', 'cuenta_bloqueada_hasta'])
+
+            RegistroAuditoria.objects.create(
+                usuario=ejecutor,
+                accion='USER_UNBLOCKED',
+                descripcion=f'Desbloqueó al usuario: {self.email}',
+                direccion_ip='N/A',
+                agente_usuario='N/A',
+                datos_adicionales={
+                    'usuario_id': self.id,
+                    'estado_anterior': False,
+                    'estado_nuevo': True
+                }
+            )
 
 
 class VerificacionEmail(models.Model):
