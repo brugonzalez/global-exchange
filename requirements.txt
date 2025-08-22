@@ -20,3 +20,10 @@ qrcode==7.4.2
 
 # Integraciones de pago
 stripe==12.4.0
+
+# Documentación
+sphinx==7.3.7
+myst-parser==2.0
+sphinx-rtd-theme==2.0
+sphinx-design==0.6
+sphinx-copybutton==0.5

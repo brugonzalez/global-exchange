@@ -1,3 +1,10 @@
+"""
+Módulo de gestión de clientes para Global Exchange.
+
+Contiene los modelos y funciones relacionados con la administración de clientes,
+incluyendo datos personales, preferencias y relaciones con cuentas.
+"""
+
 from django.db import models
 from django.core.validators import RegexValidator
 from decimal import Decimal
@@ -73,7 +80,13 @@ class PreferenciaCliente(models.Model):
 
 class Cliente(models.Model):
     """
-    Modelo para clientes (personas físicas y jurídicas).
+    Modelo que representa a un cliente de la casa de cambio.
+
+    Atributos:
+        nombre (str): Nombre completo del cliente.
+        email (str): Correo electrónico del cliente.
+        fecha_registro (date): Fecha en que el cliente se registró.
+        tipo (str): Tipo de cliente (Minorista, Corporativo, VIP).
     """
     TIPOS_CLIENTE = [
         ('FISICA', 'Persona Física'),
@@ -200,7 +213,7 @@ class Cliente(models.Model):
 
 class ClienteUsuario(models.Model):
     """
-    Modelo intermedio para la relación Cliente-Usuario.
+    Modelo intermedio para la relación muchos a muchos entre Cliente y Usuario.
     """
     ROLES = [
         ('PROPIETARIO', 'Propietario'),
@@ -235,13 +248,15 @@ class ClienteUsuario(models.Model):
         return f"{self.usuario.nombre_completo} - {self.cliente.obtener_nombre_completo()} ({self.get_rol_display()})"
 
     def puede_realizar_transacciones(self):
-        """Verifica si esta asociación usuario-cliente permite transacciones."""
+        """Verifica si esta asociación usuario-cliente permite transacciones.
+        Retorna: bool"""
         return self.esta_activo and self.rol in ['PROPIETARIO', 'AUTORIZADO']
 
 
 class MonedaFavorita(models.Model):
     """
     Modelo para las monedas favoritas de un cliente.
+    Atributos:
     """
     cliente = models.ForeignKey(
         Cliente, 
