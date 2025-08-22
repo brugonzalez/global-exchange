@@ -1,8 +1,21 @@
+"""
+Formularios relacionados con la gestión de clientes.
+
+Incluye:
+- Preferencias de clientes
+- Creación y edición de clientes
+- Asignación de usuarios a clientes
+- Búsqueda y filtrado de clientes
+- Monedas favoritas
+- Categorías de clientes
+"""
 from django import forms
 from .models import PreferenciaCliente
 
 class FormularioPreferenciaCliente(forms.ModelForm):
+    """Formulario para la gestión de preferencias de clientes."""
     class Meta:
+        """Metadatos del formulario."""
         model = PreferenciaCliente
         fields = ['limite_compra', 'limite_venta', 'frecuencia_maxima', 'preferencia_tipo_cambio']
         widgets = {
@@ -22,6 +35,13 @@ Usuario = get_user_model()
 class FormularioCliente(forms.ModelForm):
     """
     Formulario para crear y editar clientes.
+
+    Este formulario valida de manera diferente según el tipo de cliente:
+
+    - ``FISICA``: requiere nombre y apellido, y limpia campos de empresa.
+    - ``JURIDICA``: requiere nombre de empresa y representante legal, y limpia nombre/apellido.
+
+    Además agrega un comportamiento dinámico para alternar campos en la interfaz.
     """
     class Meta:
         model = Cliente
@@ -45,6 +65,7 @@ class FormularioCliente(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Inicializa el formulario y aplica reglas dinámicas a los campos."""
         super().__init__(*args, **kwargs)
         
         # Hacer campos requeridos según el tipo de cliente
@@ -55,6 +76,7 @@ class FormularioCliente(forms.ModelForm):
         self.fields['tipo_cliente'].widget.attrs['onchange'] = 'alternarCamposPorTipoCliente()'
 
     def clean(self):
+        """Valida los campos según el tipo de cliente y limpia los no aplicables."""
         datos_limpios = super().clean()
         tipo_cliente = datos_limpios.get('tipo_cliente')
         
@@ -96,6 +118,7 @@ class FormularioCliente(forms.ModelForm):
 class FormularioClienteUsuario(forms.ModelForm):
     """
     Formulario para gestionar las asociaciones usuario-cliente.
+    Permite asignar un usuario a un cliente con un rol específico y permisos opcionales.
     """
     usuario = forms.ModelChoiceField(
         queryset=Usuario.objects.filter(is_active=True),
@@ -137,7 +160,7 @@ class FormularioClienteUsuario(forms.ModelForm):
             ).exclude(id__in=usuarios_existentes)
 
     def clean_permisos(self):
-        """Valida el campo de permisos JSON."""
+        """Valida que el campo de permisos contenga JSON válido."""
         permisos = self.cleaned_data.get('permisos', '').strip()
         if permisos:
             try:
@@ -152,7 +175,15 @@ class FormularioClienteUsuario(forms.ModelForm):
 
 class FormularioBusquedaCliente(forms.Form):
     """
-    Formulario para buscar y filtrar clientes.
+    Formulario para búsqueda y filtrado de clientes.
+
+    Este formulario no crea ni edita registros, solo sirve como filtro en vistas
+    de listado. Incluye los siguientes criterios opcionales:
+
+    - ``busqueda``: texto libre que puede coincidir con nombre, empresa, email o identificación.
+    - ``tipo_cliente``: restringe la búsqueda por tipo de cliente (FISICA/JURIDICA).
+    - ``estado``: filtra por estado actual del cliente.
+    - ``categoria``: limita la búsqueda a una categoría específica.
     """
     busqueda = forms.CharField(
         max_length=100,
@@ -185,7 +216,17 @@ class FormularioBusquedaCliente(forms.Form):
 
 class FormularioAnadirMonedaFavorita(forms.ModelForm):
     """
-    Formulario para añadir monedas favoritas a un cliente.
+    Formulario para asociar monedas favoritas a un cliente.
+
+    Este formulario permite seleccionar una moneda activa y asignarle un orden
+    de preferencia dentro de la lista de monedas favoritas del cliente.
+
+    - Evita que se dupliquen monedas ya asociadas al cliente.
+    - Requiere un valor de orden numérico (entero ≥ 0).
+
+    Args:
+        cliente (Cliente, opcional): instancia de cliente para filtrar las monedas
+            disponibles. Si no se proporciona, mostrará todas las monedas activas.
     """
     class Meta:
         model = MonedaFavorita
@@ -196,6 +237,10 @@ class FormularioAnadirMonedaFavorita(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        Inicializa el formulario y excluye del queryset las monedas
+        que ya fueron marcadas como favoritas por el cliente.
+        """
         self.cliente = kwargs.pop('cliente', None)
         super().__init__(*args, **kwargs)
         
@@ -209,7 +254,10 @@ class FormularioAnadirMonedaFavorita(forms.ModelForm):
 
 class FormularioAsignarUsuarioACliente(forms.Form):
     """
-    Formulario para asignar un usuario a un cliente desde la interfaz de administración.
+    Formulario para asignar un usuario a un cliente con un rol específico y permisos opcionales.
+    Args:
+        cliente (Cliente, opcional): instancia de cliente para filtrar los usuarios
+            disponibles. Si no se proporciona, mostrará todos los usuarios.
     """
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.filter(estado='ACTIVO'),
@@ -234,7 +282,7 @@ class FormularioAsignarUsuarioACliente(forms.Form):
     )
 
     def clean_permisos(self):
-        """Valida el campo de permisos JSON."""
+        """Valida que el campo de permisos contenga JSON válido."""
         permisos = self.cleaned_data.get('permisos')
         if permisos:
             try:

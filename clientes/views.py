@@ -52,6 +52,9 @@ class VistaListaClientes(LoginRequiredMixin, MixinStaffRequerido, ListView):
     paginate_by = 20
 
     def get_queryset(self):
+        """
+        Obtiene el queryset de clientes con información relacionada.
+        """
         queryset = Cliente.objects.select_related('categoria').annotate(
             conteo_usuarios=Count('usuarios')
         ).order_by('-fecha_creacion')
@@ -85,6 +88,9 @@ class VistaListaClientes(LoginRequiredMixin, MixinStaffRequerido, ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega información adicional al contexto de la vista.
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['formulario_busqueda'] = FormularioBusquedaCliente(self.request.GET)
         contexto['total_clientes'] = Cliente.objects.count()
@@ -102,11 +108,17 @@ class VistaCrearCliente(LoginRequiredMixin, MixinStaffRequerido, CreateView):
     success_url = reverse_lazy('clientes:lista_clientes')
 
     def form_valid(self, formulario):
+        """
+        Se llama cuando el formulario es válido.
+        """
         formulario.instance.creado_por = self.request.user
         messages.success(self.request, f'Cliente {formulario.instance.obtener_nombre_completo()} creado exitosamente.')
         return super().form_valid(formulario)
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega información adicional al contexto de la vista.
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['titulo'] = 'Crear Cliente'
         contexto['texto_submit'] = 'Crear Cliente'
@@ -130,6 +142,9 @@ class VistaDetalleCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
     pk_url_kwarg = 'id_cliente'
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega información adicional al contexto de la vista.
+        """
         contexto = super().get_context_data(**kwargs)
         # Obtener usuarios asociados
         contexto['cliente_usuarios'] = ClienteUsuario.objects.filter(
@@ -158,13 +173,22 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
     pk_url_kwarg = 'id_cliente'
 
     def get_success_url(self):
+        """
+        Obtiene la URL de éxito después de actualizar el cliente.
+        """
         return reverse('clientes:detalle_cliente', kwargs={'id_cliente': self.object.pk})
 
     def form_valid(self, formulario):
+        """
+        Se llama cuando el formulario es válido.
+        """
         messages.success(self.request, f'Cliente {formulario.instance.obtener_nombre_completo()} actualizado exitosamente.')
         return super().form_valid(formulario)
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega información adicional al contexto de la vista.
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['titulo'] = f'Editar Cliente: {self.object.obtener_nombre_completo()}'
         contexto['texto_submit'] = 'Actualizar Cliente'
@@ -203,6 +227,9 @@ class VistaGestionarUsuariosCliente(LoginRequiredMixin, MixinStaffRequerido, Det
     pk_url_kwarg = 'id_cliente'
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega información adicional al contexto de la vista.
+        """
         contexto = super().get_context_data(**kwargs)
         
         # Obtener las asociaciones cliente-usuario actuales
@@ -227,15 +254,24 @@ class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormVie
     template_name = 'clientes/anadir_usuario_cliente.html'
 
     def dispatch(self, solicitud, *args, **kwargs):
+        """
+        Se llama al despachar la solicitud.
+        """
         self.cliente = get_object_or_404(Cliente, pk=kwargs['id_cliente'])
         return super().dispatch(solicitud, *args, **kwargs)
 
     def get_form_kwargs(self):
+        """
+        Obtiene los argumentos del formulario.
+        """
         kwargs = super().get_form_kwargs()
         kwargs['cliente'] = self.cliente
         return kwargs
 
     def form_valid(self, formulario):
+        """
+        Se llama cuando el formulario es válido.
+        """
         try:
             cliente_usuario = formulario.save(commit=False)
             cliente_usuario.cliente = self.cliente
@@ -258,6 +294,9 @@ class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormVie
             return self.form_invalid(formulario)
 
     def form_invalid(self, formulario):
+        """
+        Se llama cuando el formulario no es válido.
+        """
         # Asegurar que el token CSRF esté disponible para el reintento
         get_token(self.request)
         return super().form_invalid(formulario)
