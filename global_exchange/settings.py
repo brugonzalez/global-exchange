@@ -74,7 +74,7 @@ ROOT_URLCONF = 'global_exchange.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [DIRECTORIO_BASE / 'plantillas'],
+        'DIRS': [DIRECTORIO_BASE / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

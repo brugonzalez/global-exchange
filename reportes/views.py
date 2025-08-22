@@ -96,7 +96,7 @@ class VistaDetalleReporte(LoginRequiredMixin, MixinPermisosAdmin, DetailView):
         return Reporte.objects.filter(solicitado_por=self.request.user)
 
 
-class VistaDescargarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+class VistaDescargarReporte(LoginRequiredMixin, TemplateView):
     """Descarga un reporte generado"""
     permiso_requerido = 'ver_reportes'
 
@@ -104,10 +104,11 @@ class VistaDescargarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateView
         id_reporte = kwargs.get('id_reporte')
         reporte = get_object_or_404(
             Reporte, 
-            id=id_reporte, 
-            solicitado_por=solicitud.user
+            id=id_reporte
+            , solicitado_por=solicitud.user
         )
-
+        # if reporte.solicitado_por != solicitud.user:
+        #     raise Http404("No tienes permiso para acceder a este reporte")
         if not reporte.puede_descargar():
             messages.error(solicitud, 'El reporte no está disponible para descarga.')
             return redirect('reportes:detalle_reporte', pk=reporte.id)

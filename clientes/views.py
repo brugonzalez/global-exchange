@@ -105,7 +105,12 @@ class VistaCrearCliente(LoginRequiredMixin, MixinStaffRequerido, CreateView):
         contexto['titulo'] = 'Crear Cliente'
         contexto['texto_submit'] = 'Crear Cliente'
         # Agregar Formulario para la compatibilidad de la plantilla
-        contexto['formulario'] = contexto.get('form')
+        #contexto['formulario'] = contexto.get('form')
+        if 'form' in contexto:
+            contexto['formulario'] = contexto['form']
+        else:
+            # Si no hay 'form', crear uno vacío o manejar el caso
+            contexto['formulario'] = self.get_form()
         return contexto
 
 
@@ -160,7 +165,12 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
         contexto['titulo'] = f'Editar Cliente: {self.object.obtener_nombre_completo()}'
         contexto['texto_submit'] = 'Actualizar Cliente'
         # Add formulario for template compatibility
-        contexto['formulario'] = contexto.get('form')
+        #contexto['formulario'] = contexto.get('form')
+        if 'form' in contexto:
+            contexto['formulario'] = contexto['form']
+        else:
+            # Si no hay 'form', crear uno vacío o manejar el caso
+            contexto['formulario'] = self.get_form()
         return contexto
 
 
@@ -226,7 +236,7 @@ class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormVie
             )
             # Regenerar token CSRF para el reintento
             get_token(self.request)
-            return self.form_invalid(formulario)
+            return super().form_invalid(formulario)
 
     def form_invalid(self, formulario):
         # Asegurar que el token CSRF esté disponible para el reintento

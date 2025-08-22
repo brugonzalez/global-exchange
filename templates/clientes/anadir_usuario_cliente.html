@@ -79,7 +79,7 @@
                     
                     <!-- Selección de Usuario -->
                     <div class="mb-4">
-                        {{ formulario.usuario|as_crispy_field }}
+                        {{ form.usuario|as_crispy_field }}
                         
                         <div class="user-preview" id="vistaPreviaUsuario" style="display: none;">
                             <i class="fas fa-user fa-2x mb-2 text-muted"></i>
@@ -90,7 +90,7 @@
 
                     <!-- Selección de Rol -->
                     <div class="mb-4">
-                        {{ formulario.rol|as_crispy_field }}
+                        {{ form.rol|as_crispy_field }}
                         
                         <!-- Descripciones de Roles -->
                         <div class="row mt-3">
@@ -145,8 +145,8 @@
                     <!-- Estado Activo -->
                     <div class="mb-4">
                         <div class="form-check">
-                            {{ formulario.esta_activo }}
-                            <label class="form-check-label" for="{{ formulario.esta_activo.id_for_label }}">
+                            {{ form.esta_activo }}
+                            <label class="form-check-label" for="{{ form.esta_activo.id_for_label }}">
                                 <strong>Usuario activo</strong>
                                 <br>
                                 <small class="text-muted">
@@ -159,7 +159,7 @@
 
                     <!-- Permisos (Avanzado) -->
                     <div class="mb-4">
-                        {{ formulario.permisos|as_crispy_field }}
+                        {{ form.permisos|as_crispy_field }}
                         
                         <div class="permissions-help">
                             <h6><i class="fas fa-info-circle me-2"></i>Ayuda para Permisos</h6>
