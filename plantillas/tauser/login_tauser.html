@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}TAUSER- Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h3>
+                            <i class="fas fa-sign-in-alt text-primary me-2"></i>
+                            Acceda al Tauser
+                        </h3>
+                        <p class="text-muted">Ingrese los datos de su cuenta de Global Exchange</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Usuario o Email
+                            </label>
+                                <div class="text-danger small mt-1">
+                                    <input class="form-control" type="email" name="email" placeholder="Usuario o Email" required>
+                                </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Contraseña:
+                            </label>
+
+                                <div class="text-danger small mt-1">
+                                    <input class="form-control" type="password" name="password" placeholder="Contraseña" required>
+                                </div>
+
+                        </div>
+
+                        {% if formulario.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ formulario.non_field_errors.0 }}
+                            </div>
+                        {% endif %}
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                Acceder
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

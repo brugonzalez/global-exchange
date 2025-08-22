@@ -132,6 +132,7 @@ python manage.py createsuperuser
    
    c. En el archivo `settings.py`, asegúrese de que la sección de la base de datos de PostgreSQL esté descomentada para que lea estas variables de su archivo `.env`.
 
+<<<<<<< HEAD
 ## 📚 Generar o Actualizar la Documentación
 
 Para crear o actualizar la documentación en HTML con Sphinx:
@@ -153,6 +154,77 @@ sphinx-build -b html docs docs/source docs/build/html
 La documentación actualizada estará en `docs/_build/html/index.html`.
 
 
+=======
+   d. **Configurar/crear servicio Gunicorn** en el archivo `/etc/systemd/system/gunicorn.service`:
+   ```
+   [Unit]
+   Description=gunicorn daemon
+   After=network.target
+
+   [Service]
+   User=tu_usuario
+   Group=www-data
+   WorkingDirectory=/ruta/a/tu/proyecto
+   Environment=DB_NAME=nombre_bd
+   Environment=DB_USER=usuario_bd
+   Environment=DB_PASSWORD=contraseña_bd
+   Environment=DB_HOST=localhost
+   ExecStart=/ruta/a/venv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/tmp/gunicorn.sock mi_proyecto.wsgi:application
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+   e. **Correr Gunicorn**:
+   ```bash
+   gunicorn -c gunicorn.conf.py global_exchange.wsgi
+   ```
+   **Si estas en venv**
+   ```bash
+   python -m gunicorn -c gunicorn.conf.py global_exchange.wsgi
+   ```
+
+   f. **Gestionar el servicio**
+   ```bash
+   # Recargar configuración
+   sudo systemctl daemon-reload
+
+   # Iniciar servicio
+   sudo systemctl start gunicorn
+
+   # Habilitar inicio automático
+   sudo systemctl enable gunicorn
+
+   # Ver estado
+   sudo systemctl status gunicorn
+   ```
+
+   g. **Instalar Nginx**
+   ```bash
+   pip install nginx
+   ```
+
+   h. **Configurar Nginx como proxy inverso** en /etc/nginx/sites-available/tu_sitio
+   ```
+   server {
+      listen 80;
+      server_name tu_dominio.com;
+
+      location / {
+         proxy_pass http://unix:/tmp/gunicorn.sock;
+         proxy_set_header Host $host;
+         proxy_set_header X-Real-IP $remote_addr;
+      }
+
+      location /static/ {
+         alias /ruta/a/tu/proyecto/static/;
+      }
+
+      location /media/ {
+         alias /ruta/a/tu/proyecto/media/;
+      }
+   }
+   ```
+>>>>>>> 841e575953b55a5ac61610485b300e2545b4d422
 ## 📝 Licencia
 
 Este proyecto es para fines académicos.
