@@ -1,12 +1,12 @@
 from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate, get_user_model
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.views.generic import TemplateView, FormView, View, ListView, UpdateView
 from django.urls import reverse_lazy
-from django.http import JsonResponse
+from django.http import JsonResponse, request
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
@@ -16,7 +16,8 @@ import uuid
 from clientes.views import MixinStaffRequerido
 from .models import Usuario, VerificacionEmail, RestablecimientoContrasena, RegistroAuditoria, Rol, Permiso
 from .forms import FormularioLogin, FormularioRegistro, FormularioPerfil, FormularioCambioContrasena, \
-    FormularioSolicitudDesbloqueoCuenta, FormularioVerificacionCodigoDesbloqueo, EditarUsuarioForm
+    FormularioSolicitudDesbloqueoCuenta, FormularioVerificacionCodigoDesbloqueo, EditarUsuarioForm, \
+    FormularioRegistroUsuario
 from clientes.models import Cliente
 from django.utils import timezone
 
@@ -118,35 +119,35 @@ class VistaRegistro(FormView):
     template_name = 'cuentas/registro.html'
     form_class = FormularioRegistro
     success_url = reverse_lazy('cuentas:iniciar_sesion')
-    
+
     def form_valid(self, formulario):
         # Crear usuario
         usuario = formulario.save(commit=False)
         usuario.email_verificado = False
         usuario.save()
-        
+
         # Generar token de verificación
         token = str(uuid.uuid4())
         VerificacionEmail.objects.create(
             usuario=usuario,
             token=token
         )
-        
+
         # Enviar email de verificación
         self.enviar_email_verificacion(usuario, token)
-        
+
         messages.success(
-            self.request, 
+            self.request,
             'Registro exitoso. Por favor, verifique su email para activar su cuenta.'
         )
         return super().form_valid(formulario)
-    
+
     def enviar_email_verificacion(self, usuario, token):
         """Envía el correo de verificación de email"""
         enlace_verificacion = self.request.build_absolute_uri(
             f'/cuentas/verificar-email/{token}/'
         )
-        
+
         asunto = 'Verifique su dirección de email - Global Exchange'
         mensaje = f'''
         Bienvenido a Global Exchange
@@ -156,7 +157,7 @@ class VistaRegistro(FormView):
         
         Este enlace expirará en 24 horas.
         '''
-        
+
         send_mail(
             asunto,
             mensaje,
@@ -171,27 +172,27 @@ class VistaVerificarEmail(TemplateView):
     Vista de verificación de email
     """
     template_name = 'cuentas/verificar_email.html'
-    
+
     def get(self, solicitud, token, *args, **kwargs):
         try:
             verificacion = VerificacionEmail.objects.get(token=token, utilizado=False)
-            
+
             if verificacion.ha_expirado():
                 messages.error(solicitud, 'El enlace de verificación ha expirado.')
                 return render(solicitud, self.template_name, {'success': False})
-            
+
             # Verificar al usuario
             usuario = verificacion.usuario
             usuario.email_verificado = True
             usuario.save()
-            
+
             # Marcar verificación como utilizada
             verificacion.utilizado = True
             verificacion.save()
-            
+
             messages.success(solicitud, 'Email verificado correctamente. Ya puede iniciar sesión.')
             return render(solicitud, self.template_name, {'success': True})
-            
+
         except VerificacionEmail.DoesNotExist:
             messages.error(solicitud, 'Enlace de verificación inválido.')
             return render(solicitud, self.template_name, {'success': False})
@@ -1251,3 +1252,67 @@ class CambiarEstadoUsuarioView(LoginRequiredMixin, MixinPermisosAdmin, View):
             messages.success(request, f"Usuario {usuario.email} desbloqueado correctamente.")
 
         return redirect('cuentas:editar_usuario', usuario_id=usuario.id)
+
+class VistaRegistroUsuario(FormView):
+    """
+    Vista de registro de usuario por el administrador
+    """
+    template_name = 'cuentas/crear_usuario.html'
+    form_class = FormularioRegistroUsuario
+    success_url = reverse_lazy('cuentas:gestionar_usuarios')
+    roles = Rol.objects.all()
+
+    def form_valid(self, formulario):
+        # Crear usuario
+        usuario = formulario.save(commit=False)
+        usuario.email_verificado = False
+
+        # asignar rol si se seleccionó
+        rol = formulario.cleaned_data.get("rol")
+        usuario.rol = rol
+
+        usuario.save()
+
+        # Generar token de verificación
+        token = str(uuid.uuid4())
+        VerificacionEmail.objects.create(
+            usuario=usuario,
+            token=token
+        )
+
+        # Asignar rol de Usuario
+        rol_usuario = Rol.objects.get(nombre_rol='Usuario')
+        usuario.roles.set([rol_usuario])  # Use set() to ensure only this role
+
+        # Enviar email de verificación
+        #self.enviar_email_verificacion(usuario, token)
+
+        messages.success(
+            self.request,
+            'Registro exitoso. Por favor, verifique su email para activar su cuenta.'
+        )
+        return super().form_valid(formulario)
+
+    def enviar_email_verificacion(self, usuario, token):
+        """Envía el correo de verificación de email"""
+        enlace_verificacion = self.request.build_absolute_uri(
+            f'/cuentas/verificar-email/{token}/'
+        )
+
+        asunto = 'Verifique su dirección de email - Global Exchange'
+        mensaje = f'''
+        Bienvenido a Global Exchange
+
+        Para completar su registro, por favor verifique su dirección de email visitando el siguiente enlace:
+        {enlace_verificacion}
+
+        Este enlace expirará en 24 horas.
+        '''
+
+        send_mail(
+            asunto,
+            mensaje,
+            settings.DEFAULT_FROM_EMAIL,
+            [usuario.email],
+            fail_silently=True
+        )

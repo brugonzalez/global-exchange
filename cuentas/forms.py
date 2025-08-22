@@ -368,9 +368,6 @@ class FormularioVerificacionCodigoDesbloqueo(forms.Form):
         })
     )
 
-
-
-
 class EditarUsuarioForm(forms.ModelForm):
     Usuario = get_user_model()
     class Meta:
@@ -384,3 +381,60 @@ class EditarUsuarioForm(forms.ModelForm):
             'nombre_completo': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
         }
+
+class FormularioRegistroUsuario(UserCreationForm):
+    """
+    Formulario de registro de usuario.
+    """
+    full_name = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Nombre completo'
+        }),
+        label='Nombre Completo'
+    )
+
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'email@ejemplo.com'
+        }),
+        label='Dirección de Email'
+    )
+
+    username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Nombre de usuario'
+        }),
+        label='Nombre de Usuario'
+    )
+
+    password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Contraseña'
+        }),
+        label='Contraseña'
+    )
+
+    password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirmar contraseña'
+        }),
+        label='Confirmar Contraseña'
+    )
+
+    rol = forms.ModelChoiceField(
+        queryset=Rol.objects.all(),
+        required=False,
+        label="Rol",
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+
+    class Meta:
+        model = Usuario  # tu modelo de usuario custom
+        fields = ["full_name", "email", "username", "password1", "password2", "rol"]

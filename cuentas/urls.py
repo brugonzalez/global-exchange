@@ -46,4 +46,5 @@ urlpatterns = [
     path('desbloqueo/', VistaSolicitudDesbloqueoCuenta.as_view(), name='solicitud_desbloqueo'),
     path('desbloqueo/verificar/', VistaVerificarCodigoDesbloqueo.as_view(), name='verificar_codigo_desbloqueo'),
     path('admin/usuarios/<int:usuario_id>/cambiar_estado/', CambiarEstadoUsuarioView.as_view(), name='cambiar_estado_usuario'),
+    path('usuarios/crear/', views.VistaRegistroUsuario.as_view(), name='crear_usuario'),
 ]
