@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'transacciones.apps.ConfiguracionTransacciones',
     'reportes.apps.ConfiguracionReportes',
     'notificaciones.apps.ConfiguracionNotificaciones',
+    'tauser.apps.TauserConfig',
 ]
 
 MIDDLEWARE = [
