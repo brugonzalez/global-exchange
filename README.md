@@ -147,7 +147,7 @@ Para crear o actualizar la documentación en HTML con Sphinx:
 sphinx-apidoc -o docs/source/api . -f -e -d 2
 
 # Generar la documentación HTML
-sphinx-build -b html docs docs/_build/html
+sphinx-build -b html docs docs/source docs/build/html
 ```
 
 La documentación actualizada estará en `docs/_build/html/index.html`.

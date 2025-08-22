@@ -1,3 +1,19 @@
+"""
+URLs de la aplicación de cuentas.
+
+Este módulo define las rutas principales relacionadas con:
+
+- Autenticación (login, logout, registro, verificación de email).
+- Gestión de contraseña (restablecer, cambiar).
+- Perfil de usuario (ver y editar).
+- Selección de cliente activo.
+- Configuración de 2FA (iToken).
+- Administración de roles y permisos.
+- Asignación de roles a usuarios.
+- Desbloqueo y gestión de estado de usuarios.
+
+Cada ruta está asociada a una vista basada en clase (CBV) o función de la app ``cuentas.views``.
+"""
 from django.urls import path
 from . import views
 from .views import VistaSolicitudDesbloqueoCuenta, VistaVerificarCodigoDesbloqueo, CambiarEstadoUsuarioView

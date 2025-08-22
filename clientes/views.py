@@ -307,6 +307,8 @@ class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormVie
         # Asegurar que el token CSRF siempre esté disponible
         contexto['csrf_token'] = get_token(self.request)
         return contexto
+    
+    
 class VistaEditarPreferenciasCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
     model = PreferenciaCliente
     form_class = FormularioPreferenciaCliente

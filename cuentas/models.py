@@ -1,3 +1,25 @@
+"""
+Modelos de la app de cuentas.
+
+Este módulo define el modelo de usuario personalizado y entidades relacionadas
+para verificación de email, recuperación de contraseña, configuración de 2FA,
+roles, permisos y registro de auditoría.
+
+Clases principales
+------------------
+- :class:`Usuario`: Extiende ``AbstractUser`` y usa el email como identificador.
+- :class:`VerificacionEmail`: Tokens de verificación de correo.
+- :class:`RestablecimientoContrasena`: Tokens de restablecimiento de contraseña.
+- :class:`ConfiguracionDosFactoresUsuario`: Preferencias y recuperación de 2FA.
+- :class:`Permiso`: Permisos de negocio (no confundir con los de Django).
+- :class:`Rol`: Agrupa permisos de negocio y se asigna a usuarios.
+- :class:`RegistroAuditoria`: Bitácora de eventos relevantes de seguridad.
+
+Notas
+-----
+- Este módulo asume que ``settings.AUTH_USER_MODEL`` apunta a :class:`Usuario`.
+- El campo ``USERNAME_FIELD`` es ``email`` (login por email).
+"""
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -7,9 +29,29 @@ from global_exchange import settings
 
 
 class Usuario(AbstractUser):
+    """Modelo de usuario personalizado.
+
+    Extiende :class:`django.contrib.auth.models.AbstractUser` y utiliza
+    el email como identificador principal (``USERNAME_FIELD = 'email'``).
+    Incluye campos para 2FA, bloqueo de cuenta y relación con clientes.
+
+    Atributos destacados
+    --------------------
+    email : EmailField
+        Identificador único para autenticación.
+    nombre_completo : CharField
+        Nombre completo mostrado en UI y reportes.
+    autenticacion_dos_factores_activa : BooleanField
+        Indica si el usuario tiene 2FA habilitado.
+    roles : ManyToManyField[:class:`Rol`]
+        Conjunto de roles asignados al usuario.
+
+    Meta:
+        db_table = 'cuentas_usuario'
+        verbose_name = 'Usuario'
+        verbose_name_plural = 'Usuarios'
     """
-    Modelo de Usuario personalizado que extiende el AbstractUser de Django.
-    """
+        
     email = models.EmailField(unique=True)
     nombre_completo = models.CharField(max_length=255)
     nro_telefono = models.CharField(max_length=20, blank=True, null=True)
@@ -45,23 +87,47 @@ class Usuario(AbstractUser):
         verbose_name_plural = 'Usuarios'
 
     def __str__(self):
+        """Representación legible del usuario.
+
+        Returns:
+            str: ``"<nombre_completo> (<email>)"``.
+        """
         return f"{self.nombre_completo} ({self.email})"
 
     def esta_cuenta_bloqueada(self):
-        """Verifica si la cuenta está actualmente bloqueada."""
+        """Indica si la cuenta está actualmente bloqueada.
+
+        Returns:
+            bool: ``True`` si ``cuenta_bloqueada_hasta`` es futura; de lo contrario ``False``.
+        """
         if self.cuenta_bloqueada_hasta:
             return timezone.now() < self.cuenta_bloqueada_hasta
         return False
 
     def restablecer_intentos_fallidos(self):
-        """Restablece los intentos de inicio de sesión fallidos."""
+        """Restablece el contador de intentos fallidos y desbloquea la cuenta.
+
+        Efectos:
+            - ``intentos_fallidos_login = 0``
+            - ``cuenta_bloqueada_hasta = None``
+            - ``is_active = True``
+        """
         self.intentos_fallidos_login = 0
         self.cuenta_bloqueada_hasta = None
         self.is_active = True
         self.save(update_fields=['intentos_fallidos_login', 'cuenta_bloqueada_hasta', 'is_active'])
 
     def incrementar_intentos_fallidos(self):
-        """Incrementa los intentos de inicio de sesión fallidos y bloquea la cuenta si es necesario."""
+        """Aumenta intentos fallidos y bloquea la cuenta si supera el umbral.
+
+        Lee de ``settings``:
+            - ``INTENTOS_MAX_BLOQUEO_CUENTA`` (por defecto 5)
+            - ``DURACION_BLOQUEO_CUENTA`` en segundos (por defecto 1800)
+
+        Efectos:
+            - Incrementa ``intentos_fallidos_login``.
+            - Si supera el máximo, define ``cuenta_bloqueada_hasta`` y pone ``is_active = False``.
+        """
         from django.conf import settings
         max_intentos = getattr(settings, 'INTENTOS_MAX_BLOQUEO_CUENTA', 5)
         duracion_bloqueo = getattr(settings, 'DURACION_BLOQUEO_CUENTA', 1800)  # 30 minutos
@@ -73,15 +139,25 @@ class Usuario(AbstractUser):
         self.save(update_fields=['intentos_fallidos_login', 'cuenta_bloqueada_hasta', 'is_active'])
 
     def puede_operar_transacciones(self):
-        """Verifica si el usuario puede realizar operaciones de compra/venta."""
+        """Indica si el usuario tiene clientes asociados para operar.
+
+        Returns:
+            bool: ``True`` si el usuario está asociado a uno o más clientes.
+        """
         return self.clientes.exists()
 
     def obtener_clientes_disponibles(self):
-        """Obtiene todos los clientes asociados a este usuario."""
+        """Obtiene todos los clientes asociados a este usuario.
+        Returns:
+            QuerySet: Clientes asociados al usuario.
+        """
         return self.clientes.all()
 
     def requiere_2fa(self, tipo_operacion='normal'):
-        """Verifica si se requiere 2FA para operaciones específicas."""
+        """Verifica si se requiere 2FA para operaciones específicas.
+        Returns:
+            bool: ``True`` si se requiere 2FA, de lo contrario ``False``.
+        """
         if not self.autenticacion_dos_factores_activa:
             return False
         
@@ -92,7 +168,10 @@ class Usuario(AbstractUser):
         return False
 
     def generar_tokens_respaldo(self):
-        """Genera tokens de respaldo para la recuperación de 2FA."""
+        """Genera tokens de respaldo para la recuperación de 2FA.
+        Returns:
+            list[str]: Lista de tokens de respaldo generados.
+        """
         import secrets
         import string
         
@@ -106,7 +185,14 @@ class Usuario(AbstractUser):
         return tokens
 
     def usar_token_respaldo(self, token):
-        """Usa un token de respaldo para omitir la 2FA."""
+        """Consume un token de respaldo válido para omitir 2FA una vez.
+
+        Args:
+            token (str): Token a validar y consumir.
+
+        Returns:
+            bool: ``True`` si el token existía y fue removido; ``False`` en caso contrario.
+        """
         if token in self.tokens_respaldo:
             self.tokens_respaldo.remove(token)
             self.save(update_fields=['tokens_respaldo'])
@@ -114,45 +200,76 @@ class Usuario(AbstractUser):
         return False
 
     def obtener_roles(self):
-        """Obtiene todos los roles asignados a este usuario."""
+        """Obtiene todos los roles asignados a este usuario.
+        Returns:
+            QuerySet[Rol]: Roles asignados al usuario.
+        """
         return self.roles.all()
 
     def obtener_permisos(self):
-        """Obtiene todos los permisos del usuario basados en sus roles."""
+        """Obtiene todos los permisos del usuario basados en sus roles.
+        Returns:
+            list[Permiso]: Permisos asignados al usuario.
+        """
         permisos = set()
         for rol in self.roles.all():
             permisos.update(rol.obtener_permisos())
         return list(permisos)
 
     def tiene_permiso(self, codename_permiso):
-        """Verifica si el usuario tiene un permiso específico."""
+        """Verifica si el usuario tiene un permiso específico.
+        Returns:
+            bool: ``True`` si el usuario tiene el permiso, ``False`` en caso contrario.
+        """
         return any(
             permiso.codename == codename_permiso 
             for permiso in self.obtener_permisos()
         )
 
     def tiene_rol(self, nombre_rol):
-        """Verifica si el usuario tiene un rol específico."""
+        """Verifica si el usuario tiene un rol específico.
+        Args:
+            nombre_rol (str): Nombre del rol a verificar.
+        Returns:
+            bool: ``True`` si el usuario tiene el rol, ``False`` en caso contrario.
+        """
         return self.roles.filter(nombre_rol=nombre_rol).exists()
 
     def es_administrador(self):
-        """Verifica si el usuario tiene rol de administrador."""
+        """Verifica si el usuario tiene rol de administrador.
+        Returns:
+            bool: ``True`` si el usuario tiene rol de administrador, ``False`` en caso contrario.
+        """
         return self.tiene_rol('Administrador') or self.is_superuser
 
     def es_cajero(self):
-        """Verifica si el usuario tiene rol de cajero."""
+        """Verifica si el usuario tiene rol de cajero.
+        Returns:
+            bool: ``True`` si el usuario tiene rol de cajero, ``False`` en caso contrario.
+        """
         return self.tiene_rol('Cajero')
 
     def es_usuario_regular(self):
-        """Verifica si el usuario tiene rol de usuario regular."""
+        """Verifica si el usuario tiene rol de usuario regular.
+        Returns:
+            bool: ``True`` si el usuario tiene rol de usuario regular, ``False`` en caso contrario.
+        """
         return self.tiene_rol('Usuario')
 
     def es_visitante(self):
-        """Verifica si el usuario tiene rol de visitante."""
+        """Verifica si el usuario tiene rol de visitante.
+        Returns:
+            bool: ``True`` si el usuario tiene rol de visitante, ``False`` en caso contrario.
+        """
         return self.tiene_rol('Visitante')
 
     def bloquear(self, ejecutor):
-        """Bloquea la cuenta y registra en auditoría"""
+        """Bloquea la cuenta y registra en auditoría
+        Args:
+            ejecutor (Usuario): El usuario que ejecuta la acción de bloqueo.
+        Returns:
+            None
+        """
         duracion_bloqueo = getattr(settings, 'DURACION_BLOQUEO_CUENTA', 1800)  # 30 minutos
         if self.is_active:
             self.is_active = False
@@ -173,7 +290,12 @@ class Usuario(AbstractUser):
             )
 
     def desbloquear(self, ejecutor):
-        """Desbloquea la cuenta y registra en auditoría"""
+        """Desbloquea la cuenta y registra en auditoría
+        Args:
+            ejecutor (Usuario): El usuario que ejecuta la acción de desbloqueo.
+        Returns:
+            None
+        """
         if not self.is_active:
             self.is_active = True
             self.cuenta_bloqueada_hasta = None
@@ -194,8 +316,14 @@ class Usuario(AbstractUser):
 
 
 class VerificacionEmail(models.Model):
-    """
-    Modelo para manejar los tokens de verificación de email.
+    """Tokens de verificación de correo electrónico.
+
+    Cada registro asocia un token único a un usuario para confirmar su email.
+
+    Meta:
+        db_table = 'cuentas_verificacion_email'
+        verbose_name = 'Verificación de Email'
+        verbose_name_plural = 'Verificaciones de Email'
     """
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
     token = models.CharField(max_length=100, unique=True)
@@ -208,13 +336,17 @@ class VerificacionEmail(models.Model):
         verbose_name_plural = 'Verificaciones de Email'
 
     def ha_expirado(self):
-        """Verifica si el token de verificación ha expirado (24 horas)."""
+        """Verifica si el token de verificación ha expirado (24 horas).
+        Returns:
+            bool: ``True`` si el token ha expirado, ``False`` en caso contrario.
+        """
         return timezone.now() > self.fecha_creacion + timedelta(hours=24)
 
 
 class RestablecimientoContrasena(models.Model):
     """
     Modelo para manejar los tokens de restablecimiento de contraseña.
+    Cada registro asocia un token único a un usuario para recuperación de acceso.
     """
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
     token = models.CharField(max_length=100, unique=True)
@@ -227,13 +359,23 @@ class RestablecimientoContrasena(models.Model):
         verbose_name_plural = 'Recuperaciones de Contraseña'
 
     def ha_expirado(self):
-        """Verifica si el token de restablecimiento ha expirado (1 hora)."""
+        """Verifica si el token de restablecimiento ha expirado (1 hora).
+        Returns:
+            bool: ``True`` si el token ha expirado, ``False`` en caso contrario.
+        """
         return timezone.now() > self.fecha_creacion + timedelta(hours=1)
 
 
 class ConfiguracionDosFactoresUsuario(models.Model):
-    """
-    Modelo para almacenar la configuración 2FA específica del usuario.
+    """Preferencias y opciones de recuperación de 2FA por usuario.
+
+    Contiene banderas para exigir 2FA en escenarios sensibles y datos
+    de contacto alternativos para recuperación.
+
+    Meta:
+        db_table = 'cuentas_usuario_configuracion_2fa'
+        verbose_name = 'Configuración 2FA'
+        verbose_name_plural = 'Configuraciones 2FA'
     """
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='configuracion_2fa')
     
@@ -266,7 +408,7 @@ class ConfiguracionDosFactoresUsuario(models.Model):
 
 class Permiso(models.Model):
     """
-    Modelo para permisos del sistema.
+    Modelo para permisos del negocio.
     """
     codename = models.CharField(max_length=100, unique=True)
     descripcion = models.CharField(max_length=255)
@@ -286,6 +428,9 @@ class Permiso(models.Model):
 class Rol(models.Model):
     """
     Modelo para roles del sistema.
+    Rol del sistema (agrupa permisos de negocio).
+
+    Un rol se compone de uno o más :class:`Permiso` y se asigna a uno o más :class:`Usuario`.
     """
     nombre_rol = models.CharField(max_length=50, unique=True)
     descripcion = models.TextField(blank=True)
@@ -304,13 +449,23 @@ class Rol(models.Model):
         return self.nombre_rol
 
     def obtener_permisos(self):
-        """Obtiene todos los permisos asociados a este rol."""
+        """Obtiene todos los permisos asociados a este rol.
+        Returns:
+            QuerySet[Permiso]: Conjunto de permisos asociados al rol.
+        """
         return self.permisos.all()
 
 
 class RegistroAuditoria(models.Model):
     """
     Modelo para almacenar registros de auditoría para seguridad y seguimiento.
+    Guarda quién, qué, cuándo y desde dónde se ejecutó una acción relevante.
+
+    Choices
+    -------
+    TIPOS_ACCION :
+        Lista de códigos de acción (p.ej. ``LOGIN``, ``PASSWORD_CHANGE``,
+        ``USER_BLOCKED``) y sus descripciones legibles
     """
     TIPOS_ACCION = [
         ('LOGIN', 'Inicio de Sesión'),
@@ -350,5 +505,10 @@ class RegistroAuditoria(models.Model):
         ordering = ['-marca_de_tiempo']
 
     def __str__(self):
+        """
+        Representa la información del registro de auditoría como una cadena.
+        Returns:
+            str: Información del registro de auditoría.
+        """
         nombre_usuario = self.usuario.username if self.usuario else 'Usuario Anónimo'
         return f"{nombre_usuario} - {self.get_accion_display()} - {self.marca_de_tiempo}"

@@ -7,6 +7,20 @@ from .models import Usuario, Rol
 def asignar_rol_usuario_por_defecto(sender, instance, created, **kwargs):
     """
     Asigna automáticamente el rol 'Usuario' a los nuevos usuarios creados.
+    
+    Este signal escucha el evento :func:`django.db.models.signals.post_save` 
+    del modelo :class:`Usuario` y, cuando se crea un nuevo usuario, intenta
+    asignarle el rol básico de la aplicación.
+
+    Args:
+        sender (Model): Modelo que dispara la señal (:class:`Usuario`).
+        instance (Usuario): Instancia de usuario recién guardada.
+        created (bool): ``True`` si el usuario fue creado, ``False`` si se actualizó.
+        **kwargs: Argumentos adicionales provistos por la señal.
+
+    Notas:
+        - Si el rol ``Usuario`` no existe (p. ej., durante migraciones iniciales),
+          no se realiza ninguna acción.
     """
     if created:
         try:
