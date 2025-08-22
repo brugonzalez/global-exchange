@@ -1,10 +1,6 @@
 from django.urls import path
 from . import views
-
-from .views import (
-    VistaSolicitudDesbloqueoCuenta,
-    VistaVerificarCodigoDesbloqueo,
-)
+from .views import VistaSolicitudDesbloqueoCuenta, VistaVerificarCodigoDesbloqueo
 
 app_name = 'cuentas'
 
@@ -44,8 +40,10 @@ urlpatterns = [
     path('admin/roles/eliminar/<int:rol_id>/', views.VistaEliminarRol.as_view(), name='eliminar_rol'),
     
     # Asignación de Roles a Usuarios
-    path('admin/usuarios-roles/', views.VistaGestionarRolesUsuarios.as_view(), name='gestionar_roles_usuarios'),
+    path('admin/usuarios-roles/', views.VistaGestionarUsuarios.as_view(), name='gestionar_usuarios'),
     path('admin/usuarios/<int:usuario_id>/roles/', views.VistaAsignarRolesUsuario.as_view(), name='asignar_roles_usuario'),
+    path("admin/usuarios/<int:usuario_id>/editar/", views.EditarUsuario.as_view(), name="editar_usuario"),
     path('desbloqueo/', VistaSolicitudDesbloqueoCuenta.as_view(), name='solicitud_desbloqueo'),
     path('desbloqueo/verificar/', VistaVerificarCodigoDesbloqueo.as_view(), name='verificar_codigo_desbloqueo'),
+    
 ]

@@ -40,7 +40,7 @@
                         <div class="col-md-3">
                             <label class="form-label">&nbsp;</label>
                             <div class="d-grid">
-                                <a href="{% url 'cuentas:gestionar_roles_usuarios' %}" class="btn btn-outline-secondary">
+                                <a href="{% url 'cuentas:gestionar_usuarios' %}" class="btn btn-outline-secondary">
                                     <i class="fas fa-times me-1"></i>Limpiar
                                 </a>
                             </div>
@@ -136,6 +136,11 @@
                                                         title="Ver permisos">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
+                                                <a href="{% url 'cuentas:editar_usuario' usuario.id %}"
+                                                   class="btn btn-outline-primary btn-sm"
+                                                   title="Editar Usuario">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
                                             </div>
                                         </td>
                                     </tr>
@@ -200,7 +205,7 @@
                             <h5>No se encontraron usuarios</h5>
                             {% if buscar %}
                                 <p class="text-muted">No se encontraron usuarios que coincidan con "{{ buscar }}".</p>
-                                <a href="{% url 'cuentas:gestionar_roles_usuarios' %}" class="btn btn-outline-primary">
+                                <a href="{% url 'cuentas:gestionar_usuarios' %}" class="btn btn-outline-primary">
                                     <i class="fas fa-users me-1"></i>Ver Todos los Usuarios
                                 </a>
                             {% else %}

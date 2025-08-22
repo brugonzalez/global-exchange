@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from .models import Usuario, Rol, Permiso
 
 
@@ -367,3 +367,20 @@ class FormularioVerificacionCodigoDesbloqueo(forms.Form):
             'required': True
         })
     )
+
+
+
+
+class EditarUsuarioForm(forms.ModelForm):
+    Usuario = get_user_model()
+    class Meta:
+        model = Usuario
+        fields = ['nombre_completo', 'email']
+        labels = {
+            'nombre_completo': 'Nombre Completo',
+            'email': 'Correo Electrónico',
+        }
+        widgets = {
+            'nombre_completo': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+        }

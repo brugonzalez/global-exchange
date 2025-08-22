@@ -1,10 +1,10 @@
-
+from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.views.generic import TemplateView, FormView, View
+from django.views.generic import TemplateView, FormView, View, ListView, UpdateView
 from django.urls import reverse_lazy
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
@@ -13,8 +13,10 @@ from django.core.mail import send_mail
 from django.conf import settings
 import uuid
 
+from clientes.views import MixinStaffRequerido
 from .models import Usuario, VerificacionEmail, RestablecimientoContrasena, RegistroAuditoria, Rol, Permiso
-from .forms import FormularioLogin, FormularioRegistro, FormularioPerfil, FormularioCambioContrasena, FormularioSolicitudDesbloqueoCuenta, FormularioVerificacionCodigoDesbloqueo
+from .forms import FormularioLogin, FormularioRegistro, FormularioPerfil, FormularioCambioContrasena, \
+    FormularioSolicitudDesbloqueoCuenta, FormularioVerificacionCodigoDesbloqueo, EditarUsuarioForm
 from clientes.models import Cliente
 from django.utils import timezone
 
@@ -992,11 +994,11 @@ class VistaEliminarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
         return redirect('cuentas:gestionar_roles')
 
 
-class VistaGestionarRolesUsuarios(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+class VistaGestionarUsuarios(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
-    Vista para gestionar roles de usuarios.
+    Vista para gestionar usuarios.
     """
-    template_name = 'cuentas/gestionar_roles_usuarios.html'
+    template_name = 'cuentas/gestionar_usuarios.html'
     permiso_requerido = 'asignar_roles'
     
     def get_context_data(self, **kwargs):
@@ -1034,12 +1036,12 @@ class VistaAsignarRolesUsuario(LoginRequiredMixin, MixinPermisosAdmin, TemplateV
     """
     template_name = 'cuentas/asignar_roles_usuario.html'
     permiso_requerido = 'asignar_roles'
-    
+
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         usuario_id = kwargs.get('usuario_id')
         usuario = get_object_or_404(Usuario, id=usuario_id)
-        
+
         from .forms import FormularioAsignarRoles
         contexto.update({
             'usuario_objetivo': usuario,
@@ -1048,19 +1050,19 @@ class VistaAsignarRolesUsuario(LoginRequiredMixin, MixinPermisosAdmin, TemplateV
             'permisos_actuales': usuario.obtener_permisos()
         })
         return contexto
-    
+
     def post(self, request, *args, **kwargs):
         usuario_id = kwargs.get('usuario_id')
         usuario = get_object_or_404(Usuario, id=usuario_id)
-        
+
         from .forms import FormularioAsignarRoles
         formulario = FormularioAsignarRoles(usuario=usuario, data=request.POST)
-        
+
         if formulario.is_valid():
             roles_anteriores = list(usuario.roles.all())
             usuario_actualizado = formulario.save()
             roles_nuevos = list(usuario.roles.all())
-            
+
             # Registrar en auditoría
             RegistroAuditoria.objects.create(
                 usuario=request.user,
@@ -1075,9 +1077,9 @@ class VistaAsignarRolesUsuario(LoginRequiredMixin, MixinPermisosAdmin, TemplateV
                     'roles_nuevos': [r.nombre_rol for r in roles_nuevos]
                 }
             )
-            
+
             messages.success(request, f'Roles actualizados para {usuario.nombre_completo}.')
-            return redirect('cuentas:gestionar_roles_usuarios')
+            return redirect('cuentas:gestionar_usuarios')
         else:
             contexto = self.get_context_data(**kwargs)
             contexto['formulario'] = formulario
@@ -1178,3 +1180,60 @@ class VistaVerificarCodigoDesbloqueo(FormView):
         except Usuario.DoesNotExist:
             messages.error(self.request, 'Usuario no encontrado.')
         return super().form_valid(form)
+
+class EditarUsuario(LoginRequiredMixin, MixinPermisosAdmin, UpdateView):
+    """
+    Vista para editar a un usuario específico.
+    """
+    model = get_user_model()  # Modelo de usuario
+    form_class = EditarUsuarioForm  # Formulario que definimos
+    template_name = 'cuentas/editar_usuario.html'  # Template
+    pk_url_kwarg = 'usuario_id'  # Nombre del parámetro en la URL
+    success_url = reverse_lazy('cuentas:gestionar_usuarios')  # A dónde redirige al guardar
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['usuario_objetivo'] = self.object  # Le damos el nombre que quieres en el template
+        return context
+
+    def form_valid(self, form):
+        usuario = self.object  # Usuario antes de guardar
+        datos_anteriores = {
+            'nombre_completo': usuario.nombre_completo,
+            'email': usuario.email,
+            # agregar más campos si quieres auditar
+        }
+
+        # Guardar cambios
+        response = super().form_valid(form)
+        usuario_actualizado = self.object
+
+        # Detectar cambios en los campos del formulario
+        cambios_campos = {}
+        for field, valor_anterior in datos_anteriores.items():
+            valor_nuevo = getattr(usuario_actualizado, field)
+            if valor_anterior != valor_nuevo:
+                cambios_campos[field] = {'anterior': valor_anterior, 'nuevo': valor_nuevo}
+
+        # Registrar en auditoría
+        RegistroAuditoria.objects.create(
+            usuario=self.request.user,
+            accion='USER_UPDATED',
+            descripcion=f'Modificó usuario: {usuario.email}',
+            direccion_ip=self.request.META.get('REMOTE_ADDR'),
+            agente_usuario=self.request.META.get('HTTP_USER_AGENT'),
+            datos_adicionales={
+                'usuario_id': usuario.id,
+                'usuario_email': usuario.email,
+                'campos_cambiados': cambios_campos,
+            }
+        )
+
+        # Mensaje de éxito
+        messages.success(self.request, "Usuario actualizado correctamente")
+        return response
+
+    def form_invalid(self, form):
+        # Mostrar error si el formulario es inválido
+        messages.error(self.request, "Por favor, corrige los errores en el formulario.")
+        return super().form_invalid(form)
