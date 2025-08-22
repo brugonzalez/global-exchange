@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from decimal import Decimal
-from .models import Moneda, TasaCambio
+from divisas.models import Moneda, TasaCambio
 
 Usuario = get_user_model()
 
@@ -44,7 +44,7 @@ class PruebaActualizacionTasaCambio(TestCase):
         
         self.cliente_test = Client()
         
-    def prueba_problema_restriccion_actualizacion_doble_tasa(self):
+    def test_problema_restriccion_actualizacion_doble_tasa(self):
         """Prueba que actualizar una tasa dos veces causa un error de restricción UNIQUE"""
         # Forzar inicio de sesión como usuario de personal (evita la autenticación)
         self.cliente_test.force_login(self.usuario_staff)
@@ -105,7 +105,7 @@ class PruebaActualizacionTasaCambio(TestCase):
             self.assertEqual(tasa_activa.tasa_compra, Decimal('0.86'))
             self.assertEqual(tasa_activa.tasa_venta, Decimal('0.88'))
 
-    def prueba_problema_restriccion_actualizacion_triple_tasa(self):
+    def test_problema_restriccion_actualizacion_triple_tasa(self):
         """Prueba que actualizar una tasa múltiples veces para provocar el error de restricción"""
         # Forzar inicio de sesión como usuario de personal
         self.cliente_test.force_login(self.usuario_staff)

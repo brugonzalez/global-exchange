@@ -4,10 +4,9 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
 from datetime import timedelta
-from .models import Reporte
+from reportes.models import Reporte
 
 Usuario = get_user_model()
-
 
 class PruebaDescargaReporte(TestCase):
     """Prueba para la funcionalidad de descarga de reportes - corrigiendo el error 404"""

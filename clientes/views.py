@@ -111,7 +111,12 @@ class VistaCrearCliente(LoginRequiredMixin, MixinStaffRequerido, CreateView):
         contexto['titulo'] = 'Crear Cliente'
         contexto['texto_submit'] = 'Crear Cliente'
         # Agregar Formulario para la compatibilidad de la plantilla
-        contexto['formulario'] = contexto.get('form')
+        #contexto['formulario'] = contexto.get('form')
+        if 'form' in contexto:
+            contexto['formulario'] = contexto['form']
+        else:
+            # Si no hay 'form', crear uno vacío o manejar el caso
+            contexto['formulario'] = self.get_form()
         return contexto
 
 
@@ -163,7 +168,12 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
         contexto = super().get_context_data(**kwargs)
         contexto['titulo'] = f'Editar Cliente: {self.object.obtener_nombre_completo()}'
         contexto['texto_submit'] = 'Actualizar Cliente'
-        contexto['formulario'] = contexto.get('form')
+        #contexto['formulario'] = contexto.get('form')
+        if 'form' in contexto:
+            contexto['formulario'] = contexto['form']
+        else:
+            # Si no hay 'form', crear uno vacío o manejar el caso
+            contexto['formulario'] = self.get_form()
         # Obtener o crear preferencias
         preferencias = getattr(self.object, 'preferencias', None)
         if not preferencias:
@@ -275,7 +285,12 @@ class VistaEditarPreferenciasCliente(LoginRequiredMixin, MixinStaffRequerido, Up
         contexto = super().get_context_data(**kwargs)
         contexto['titulo'] = f'Editar Preferencias de {self.object.cliente.obtener_nombre_completo()}'
         contexto['texto_submit'] = 'Guardar Preferencias'
-        contexto['formulario'] = contexto.get('form')
+        #contexto['formulario'] = contexto.get('form')
+        if 'form' in contexto:
+            contexto['formulario'] = contexto['form']
+        else:
+            # Si no hay 'form', crear uno vacío o manejar el caso
+            contexto['formulario'] = self.get_form()
         contexto['redirect_url'] = reverse('clientes:detalle_cliente', kwargs={'id_cliente': self.object.cliente.pk})
         return contexto
 
