@@ -24,6 +24,7 @@ urlpatterns = [
     path('currencies/', lambda request: HttpResponseRedirect('/divisas/')),
     
     path('', lambda solicitud: redirect('divisas:panel_de_control')),  # Redirigir al panel de control
+    path('tauser/', include('tauser.urls')),
 ]
 
 # Servir archivos de medios en desarrollo

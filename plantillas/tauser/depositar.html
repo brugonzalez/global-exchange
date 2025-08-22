@@ -1,0 +1,7 @@
+<h2>Depositar dinero</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Depositar</button>
+    <a href="{% url 'tauser_dashboard' %}">Volver</a>
+</form>
