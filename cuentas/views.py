@@ -395,7 +395,12 @@ class VistaRestablecimientoContrasena(FormView):
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         contexto['usuario'] = self.registro_restablecimiento.usuario
-        contexto['formulario'] = contexto['form']
+        if 'form' in contexto:
+            contexto['formulario'] = contexto['form']
+        else:
+            # Si no hay 'form', crear uno vacío o manejar el caso
+            contexto['formulario'] = self.get_form()#contexto['formulario'] = contexto['form']
+        
         return contexto
     
     def form_valid(self, formulario):

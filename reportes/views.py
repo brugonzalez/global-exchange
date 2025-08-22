@@ -96,7 +96,7 @@ class VistaDetalleReporte(LoginRequiredMixin, MixinPermisosAdmin, DetailView):
         return Reporte.objects.filter(solicitado_por=self.request.user)
 
 
-class VistaDescargarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+class VistaDescargarReporte(LoginRequiredMixin, TemplateView):
     """Descarga un reporte generado"""
     permiso_requerido = 'ver_reportes'
 
