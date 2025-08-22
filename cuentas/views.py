@@ -1316,3 +1316,15 @@ class VistaRegistroUsuario(FormView):
             [usuario.email],
             fail_silently=True
         )
+
+def eliminar_usuario(request, usuario_id):
+    usuario = get_object_or_404(Usuario, id=usuario_id)
+
+    # Evitar que se borre a sí mismo
+    if usuario == request.user:
+        messages.error(request, "No puedes eliminar tu propia cuenta.")
+        return redirect('cuentas:gestionar_usuarios')
+
+    usuario.delete()
+    messages.success(request, f"Usuario {usuario.email} eliminado correctamente.")
+    return redirect('cuentas:gestionar_usuarios')
