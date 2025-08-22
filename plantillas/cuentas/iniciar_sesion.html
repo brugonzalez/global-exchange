@@ -69,6 +69,13 @@
                                     Regístrese aquí
                                 </a>
                             </p>
+
+                            {% if cuenta_bloqueada %}
+                                <p class="mb-2">Su cuenta está bloqueada.</p>
+                                <a href="{% url 'cuentas:solicitud_desbloqueo' %}" class="btn btn-warning">
+                                    Desbloquear cuenta
+                                </a>
+                            {% endif %}
                         </div>
                     </form>
                 </div>

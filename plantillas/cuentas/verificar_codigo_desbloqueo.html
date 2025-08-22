@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Desbloqueo de Cuenta - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h3>
+                            <i class="fas fa-key text-warning me-2"></i>
+                            Desbloqueo de Cuenta
+                        </h3>
+                        <p class="text-muted">Ingrese su email para recibir un código para desbloquear su cuenta</p>
+                    </div>
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {{ form.as_p }}
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Solicitar desbloqueo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tarjeta de Información -->
+            <div class="card mt-3 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        Información de Seguridad
+                    </h6>
+                    <p class="card-text small mb-2">
+                        • El enlace de código vencerá en 30 segundos.<br>
+                        • Revise su carpeta de spam si no recibe el email.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

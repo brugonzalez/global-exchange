@@ -1,6 +1,11 @@
 from django.urls import path
 from . import views
 
+from .views import (
+    VistaSolicitudDesbloqueoCuenta,
+    VistaVerificarCodigoDesbloqueo,
+)
+
 app_name = 'cuentas'
 
 urlpatterns = [
@@ -41,4 +46,6 @@ urlpatterns = [
     # Asignación de Roles a Usuarios
     path('admin/usuarios-roles/', views.VistaGestionarRolesUsuarios.as_view(), name='gestionar_roles_usuarios'),
     path('admin/usuarios/<int:usuario_id>/roles/', views.VistaAsignarRolesUsuario.as_view(), name='asignar_roles_usuario'),
+    path('desbloqueo/', VistaSolicitudDesbloqueoCuenta.as_view(), name='solicitud_desbloqueo'),
+    path('desbloqueo/verificar/', VistaVerificarCodigoDesbloqueo.as_view(), name='verificar_codigo_desbloqueo'),
 ]

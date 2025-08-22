@@ -337,3 +337,33 @@ class FormularioAsignarRoles(forms.Form):
             roles_seleccionados = self.cleaned_data['roles']
             self.usuario.roles.set(roles_seleccionados)
             return self.usuario
+
+
+class FormularioSolicitudDesbloqueoCuenta(forms.Form):
+    email = forms.EmailField(
+        label="Correo electrónico asociado",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ingrese su correo electrónico',
+            'required': True
+        })
+    )
+
+class FormularioVerificacionCodigoDesbloqueo(forms.Form):
+    email = forms.EmailField(
+        label="Correo electrónico",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Correo electrónico',
+            'required': True
+        })
+    )
+    codigo = forms.CharField(
+        label="Código de verificación",
+        max_length=8,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ingrese el código recibido',
+            'required': True
+        })
+    )
