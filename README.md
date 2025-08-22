@@ -132,29 +132,6 @@ python manage.py createsuperuser
    
    c. En el archivo `settings.py`, asegúrese de que la sección de la base de datos de PostgreSQL esté descomentada para que lea estas variables de su archivo `.env`.
 
-<<<<<<< HEAD
-## 📚 Generar o Actualizar la Documentación
-
-Para crear o actualizar la documentación en HTML con Sphinx:
-
-```bash
-# Limpiar API vieja
-   # Windows
-   Remove-Item -Recurse -Force docs\source\api\* -ErrorAction Ignore
-   # Linux
-   rm -rf docs/source/api/*
-
-# Actualizar los archivos de documentación de la API
-sphinx-apidoc -o docs/source/api . -f -e -d 2
-
-# Generar la documentación HTML
-sphinx-build -b html docs docs/source docs/build/html
-```
-
-La documentación actualizada estará en `docs/_build/html/index.html`.
-
-
-=======
    d. **Configurar/crear servicio Gunicorn** en el archivo `/etc/systemd/system/gunicorn.service`:
    ```
    [Unit]
@@ -224,7 +201,28 @@ La documentación actualizada estará en `docs/_build/html/index.html`.
       }
    }
    ```
->>>>>>> 841e575953b55a5ac61610485b300e2545b4d422
+   
+## 📚 Generar o Actualizar la Documentación
+
+Para crear o actualizar la documentación en HTML con Sphinx:
+
+```bash
+# Limpiar API vieja (si aplica)
+   # Windows
+   Remove-Item -Recurse -Force docs\source\api\* -ErrorAction Ignore
+   # Linux
+   rm -rf docs/source/api/*
+
+# Actualizar los archivos de documentación de la API
+sphinx-apidoc -o docs/source/api . -f -e -d 2
+
+# Generar la documentación HTML
+sphinx-build -b html docs docs/source docs/build/html
+```
+
+La documentación actualizada estará en `docs/_build/html/index.html`.
+
+
 ## 📝 Licencia
 
 Este proyecto es para fines académicos.
