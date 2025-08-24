@@ -53,8 +53,8 @@
                 <p class="mb-0">Asocie y gestione usuarios que pueden operar en nombre de este cliente</p>
             </div>
             <div class="col-md-4 text-end">
-                <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="btn btn-light me-2">
-                    <i class="fas fa-arrow-left me-1"></i>Volver al Cliente
+                <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-light me-2">
+                    <i class="fas fa-arrow-left me-1"></i>Volver
                 </a>
                 <a href="{% url 'clientes:anadir_usuario_cliente' cliente.id %}" class="btn btn-warning">
                     <i class="fas fa-plus me-1"></i>Asociar Usuario
@@ -150,87 +150,6 @@
 
         <!-- Barra Lateral de Usuarios Disponibles -->
         <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-user-plus me-2"></i>
-                        Usuarios Disponibles
-                    </h6>
-                </div>
-                <div class="card-body">
-                    {% if usuarios_disponibles %}
-                        <p class="text-muted small mb-3">
-                            Usuarios que pueden ser asociados a este cliente:
-                        </p>
-                        
-                        <div class="available-users-list" style="max-height: 400px; overflow-y: auto;">
-                            {% for usuario in usuarios_disponibles|slice:":10" %}
-                            <div class="card available-user-card mb-2" 
-                                 onclick="mostrarDialogoAsignacion('{{ usuario.id }}', '{{ usuario.nombre_completo }}', '{{ usuario.email }}')">
-                                <div class="card-body p-3">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong class="small">{{ usuario.nombre_completo }}</strong>
-                                            <br>
-                                            <small class="text-muted">{{ usuario.email }}</small>
-                                        </div>
-                                        <i class="fas fa-plus text-primary"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        
-                        {% if usuarios_disponibles|length > 10 %}
-                        <div class="text-center mt-3">
-                            <small class="text-muted">
-                                Y {{ usuarios_disponibles|length|add:"-10" }} usuarios más...
-                            </small>
-                        </div>
-                        {% endif %}
-                        
-                        <div class="text-center mt-3">
-                            <a href="{% url 'clientes:anadir_usuario_cliente' cliente.id %}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-list me-1"></i>Ver Todos
-                            </a>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-users-slash fa-2x text-muted mb-2"></i>
-                            <p class="text-muted small">No hay usuarios disponibles para asociar</p>
-                            <small class="text-muted">
-                                Todos los usuarios activos ya están asociados a este cliente.
-                            </small>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Acciones Rápidas -->
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-bolt me-2"></i>
-                        Acciones Rápidas
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'clientes:anadir_usuario_cliente' cliente.id %}" class="btn btn-success btn-sm">
-                            <i class="fas fa-plus me-1"></i>Asociar Usuario
-                        </a>
-                        <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-eye me-1"></i>Ver Cliente
-                        </a>
-                        <a href="{% url 'clientes:gestionar_favoritos' cliente.id %}" class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-star me-1"></i>Gestionar Favoritas
-                        </a>
-                        <a href="{% url 'clientes:saldos_cliente' cliente.id %}" class="btn btn-outline-warning btn-sm">
-                            <i class="fas fa-wallet me-1"></i>Ver Saldos
-                        </a>
-                    </div>
-                </div>
-            </div>
 
             <!-- Información del Cliente -->
             <div class="card mt-3">

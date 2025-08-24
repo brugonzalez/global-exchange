@@ -82,7 +82,6 @@ class Command(BaseCommand):
             {'codigo': 'ARS', 'nombre': 'Peso Argentino', 'simbolo': '$', 'tipo': 'FIAT'},
             {'codigo': 'CLP', 'nombre': 'Peso Chileno', 'simbolo': '$', 'tipo': 'FIAT'},
             {'codigo': 'UYU', 'nombre': 'Peso Uruguayo', 'simbolo': '$', 'tipo': 'FIAT'},
-            {'codigo': 'GEX', 'nombre': 'Global Exchange Coin', 'simbolo': 'GEX', 'tipo': 'DIGITAL', 'empresa': True},
         ]
         
         for dato_moneda in datos_monedas:
@@ -108,7 +107,6 @@ class Command(BaseCommand):
             {'moneda': 'ARS', 'compra': Decimal('7.40'), 'venta': Decimal('7.60')},       # ARS a PYG
             {'moneda': 'CLP', 'compra': Decimal('8.00'), 'venta': Decimal('8.20')},       # CLP a PYG
             {'moneda': 'UYU', 'compra': Decimal('180.00'), 'venta': Decimal('185.00')},   # UYU a PYG
-            {'moneda': 'GEX', 'compra': Decimal('750.00'), 'venta': Decimal('780.00')},   # GEX a PYG
         ]
         
         for dato_tasa in datos_tasas:
