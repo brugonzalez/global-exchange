@@ -132,6 +132,12 @@ class FormularioRegistro(UserCreationForm):
             usuario.save()
         return usuario
 
+    def clean_password1(self):
+        password = self.cleaned_data.get("password1")
+        if password and len(password) < 3:
+            raise forms.ValidationError("La contraseña debe tener al menos 3 caracteres.")
+        return password
+
 
 class FormularioPerfil(forms.ModelForm):
     """
