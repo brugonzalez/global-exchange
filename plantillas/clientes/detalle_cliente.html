@@ -275,34 +275,6 @@
 
         <!-- Barra Lateral -->
         <div class="col-lg-4">
-            <!-- Acciones Rápidas -->
-            <div class="card quick-actions mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-bolt me-2"></i>Acciones Rápidas
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="btn btn-outline-warning">
-                            <i class="fas fa-edit me-2"></i>Editar Información
-                        </a>
-                        <a href="{% url 'clientes:gestionar_usuarios_cliente' cliente.id %}" class="btn btn-outline-success">
-                            <i class="fas fa-users me-2"></i>Gestionar Usuarios
-                        </a>
-                        <a href="{% url 'clientes:gestionar_favoritos' cliente.id %}" class="btn btn-outline-info">
-                            <i class="fas fa-star me-2"></i>Gestionar Favoritas
-                        </a>
-                        <a href="{% url 'clientes:saldos_cliente' cliente.id %}" class="btn btn-outline-primary">
-                            <i class="fas fa-wallet me-2"></i>Ver Saldos
-                        </a>
-                        <hr>
-                        <a href="/admin/clientes/cliente/{{ cliente.id }}/change/" class="btn btn-outline-secondary" target="_blank">
-                            <i class="fas fa-cogs me-2"></i>Panel de Admin
-                        </a>
-                    </div>
-                </div>
-            </div>
 
             <!-- Límites de Categoría -->
             <div class="card balance-card mb-4">

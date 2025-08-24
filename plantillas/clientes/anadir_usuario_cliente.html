@@ -84,63 +84,9 @@
                         <div class="user-preview" id="vistaPreviaUsuario" style="display: none;">
                             <i class="fas fa-user fa-2x mb-2 text-muted"></i>
                             <h6 id="nombreUsuarioSeleccionado">Usuario seleccionado</h6>
-                            <p class="text-muted mb-0" id="emailUsuarioSeleccionado">email@ejemplo.com</p>
                         </div>
                     </div>
 
-                    <!-- Selección de Rol -->
-                    <div class="mb-4">
-                        {{ form.rol|as_crispy_field }}
-                        
-                        <!-- Descripciones de Roles -->
-                        <div class="row mt-3">
-                            <div class="col-md-4">
-                                <div class="card border-primary">
-                                    <div class="card-header bg-primary text-white text-center">
-                                        <i class="fas fa-crown me-1"></i>Propietario
-                                    </div>
-                                    <div class="card-body small">
-                                        <ul class="mb-0">
-                                            <li>Acceso completo</li>
-                                            <li>Puede realizar transacciones</li>
-                                            <li>Puede ver saldos</li>
-                                            <li>Permisos administrativos</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-success">
-                                    <div class="card-header bg-success text-white text-center">
-                                        <i class="fas fa-check me-1"></i>Autorizado
-                                    </div>
-                                    <div class="card-body small">
-                                        <ul class="mb-0">
-                                            <li>Puede realizar transacciones</li>
-                                            <li>Puede ver saldos</li>
-                                            <li>Acceso a operaciones</li>
-                                            <li>Sin permisos admin</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-secondary">
-                                    <div class="card-header bg-secondary text-white text-center">
-                                        <i class="fas fa-eye me-1"></i>Solo Consulta
-                                    </div>
-                                    <div class="card-body small">
-                                        <ul class="mb-0">
-                                            <li>Solo puede consultar</li>
-                                            <li>Ver tasas de cambio</li>
-                                            <li>Ver saldos</li>
-                                            <li>Sin transacciones</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Estado Activo -->
                     <div class="mb-4">
@@ -154,37 +100,6 @@
                                     Si no está marcado, la asociación estará inactiva.
                                 </small>
                             </label>
-                        </div>
-                    </div>
-
-                    <!-- Permisos (Avanzado) -->
-                    <div class="mb-4">
-                        {{ form.permisos|as_crispy_field }}
-                        
-                        <div class="permissions-help">
-                            <h6><i class="fas fa-info-circle me-2"></i>Ayuda para Permisos</h6>
-                            <p class="mb-2 small">
-                                Los permisos deben especificarse en formato JSON. Ejemplos:
-                            </p>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <strong class="small">Permisos básicos:</strong>
-                                    <pre class="small bg-light p-2 rounded mt-1">{
-  "puede_ver_reportes": true,
-  "puede_exportar_datos": false
-}</pre>
-                                </div>
-                                <div class="col-md-6">
-                                    <strong class="small">Límites específicos:</strong>
-                                    <pre class="small bg-light p-2 rounded mt-1">{
-  "limite_diario": 5000,
-  "monedas": ["USD", "EUR"]
-}</pre>
-                                </div>
-                            </div>
-                            <p class="mb-0 small text-muted">
-                                Deje en blanco para usar los permisos predeterminados del rol seleccionado.
-                            </p>
                         </div>
                     </div>
 
@@ -249,8 +164,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectorUsuario = document.getElementById('id_usuario');
     const vistaPreviaUsuario = document.getElementById('vistaPreviaUsuario');
     const nombreUsuarioSeleccionado = document.getElementById('nombreUsuarioSeleccionado');
-    const emailUsuarioSeleccionado = document.getElementById('emailUsuarioSeleccionado');
-    const selectorRol = document.getElementById('id_rol');
+    //const emailUsuarioSeleccionado = document.getElementById('emailUsuarioSeleccionado');
+    //const selectorRol = document.getElementById('id_rol');
     const botonEnviar = document.getElementById('botonEnviar');
     const formulario = document.getElementById('formularioAsignarUsuario');
 
@@ -281,11 +196,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const opcionSeleccionada = this.options[this.selectedIndex];
         
         if (this.value) {
-            const nombreUsuario = opcionSeleccionada.text.split(' - ')[0]; // Extraer la parte del nombre
-            const emailUsuario = opcionSeleccionada.text.split(' - ')[1] || 'Email no disponible';
+            const nombreUsuario = opcionSeleccionada.text.split(' ( ')[0]; // Extraer la parte del nombre
+            //const emailUsuario = opcionSeleccionada.text.split(' - ')[1] || 'Email no disponible';
             
             nombreUsuarioSeleccionado.textContent = nombreUsuario;
-            emailUsuarioSeleccionado.textContent = emailUsuario;
+            //emailUsuarioSeleccionado.textContent = emailUsuario;
             vistaPreviaUsuario.style.display = 'block';
             vistaPreviaUsuario.classList.add('selected');
         } else {
@@ -297,15 +212,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Actualizar la ayuda basada en el rol
-    selectorRol.addEventListener('change', actualizarBotonEnviar);
+    //selectorRol.addEventListener('change', actualizarBotonEnviar);
 
     function actualizarBotonEnviar() {
         const hayUsuario = selectorUsuario.value !== '';
-        const hayRol = selectorRol.value !== '';
+        //const hayRol = selectorRol.value !== '';
         
-        botonEnviar.disabled = !hayUsuario || !hayRol;
+        botonEnviar.disabled = !hayUsuario;
         
-        if (hayUsuario && hayRol) {
+        if (hayUsuario) {
             botonEnviar.innerHTML = '<i class="fas fa-user-plus me-1"></i>Asociar Usuario';
             botonEnviar.classList.remove('btn-secondary');
             botonEnviar.classList.add('btn-success');
@@ -319,9 +234,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validación del formulario
     formulario.addEventListener('submit', function(e) {
         const usuario = selectorUsuario.value;
-        const rol = selectorRol.value;
+        //const rol = selectorRol.value;
         
-        if (!usuario || !rol) {
+        if (!usuario) {
             e.preventDefault();
             alert('Por favor seleccione un usuario y un rol antes de continuar.');
             return;
@@ -353,9 +268,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Diálogo de confirmación
         const nombreUsuario = selectorUsuario.options[selectorUsuario.selectedIndex].text.split(' - ')[0];
-        const nombreRol = selectorRol.options[selectorRol.selectedIndex].text;
+        //const nombreRol = selectorRol.options[selectorRol.selectedIndex].text;
         
-        if (!confirm(`¿Está seguro de asociar a "${nombreUsuario}" con el rol "${nombreRol}" al cliente "{{ cliente.obtener_nombre_completo }}"?`)) {
+        if (!confirm(`¿Está seguro de asociar a "${nombreUsuario}" al cliente "{{ cliente.obtener_nombre_completo }}"?`)) {
             e.preventDefault();
         }
     });
@@ -364,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarBotonEnviar();
     
     // Autocompletar algunos permisos de ejemplo basados en el rol
-    selectorRol.addEventListener('change', function() {
+    /*selectorRol.addEventListener('change', function() {
         const textareaPermisos = document.getElementById('id_permisos');
         
         // Solo autocompletar si está vacío
@@ -398,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 textareaPermisos.placeholder = JSON.stringify(permisosEjemplo, null, 2);
             }
         }
-    });
+    });*/
 
     // Verificación periódica del token CSRF (cada 5 minutos)
     setInterval(verificarTokenCSRF, 300000);

@@ -1,3 +1,6 @@
+import threading
+from smtplib import SMTPException
+
 from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate, get_user_model
@@ -9,7 +12,7 @@ from django.urls import reverse_lazy
 from django.http import JsonResponse, request
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.core.mail import send_mail
+from django.core.mail import send_mail, BadHeaderError
 from django.conf import settings
 import uuid
 
@@ -157,14 +160,21 @@ class VistaRegistro(FormView):
         
         Este enlace expirará en 24 horas.
         '''
+        try:
+            send_mail(
+                asunto,
+                mensaje,
+                settings.DEFAULT_FROM_EMAIL,
+                [usuario.email],
+                fail_silently=True
+            )
 
-        send_mail(
-            asunto,
-            mensaje,
-            settings.DEFAULT_FROM_EMAIL,
-            [usuario.email],
-            fail_silently=True
-        )
+        except BadHeaderError:
+            print("Encabezado de email inválido.")
+        except SMTPException as e:
+            print("Error de SMTP:", e)
+        except Exception as e:
+            print("Otro error:", e)
 
 
 class VistaVerificarEmail(TemplateView):
@@ -1290,7 +1300,7 @@ class VistaRegistroUsuario(FormView):
         usuario.roles.set([rol_usuario])  # Use set() to ensure only this role
 
         # Enviar email de verificación
-        #self.enviar_email_verificacion(usuario, token)
+        self.enviar_email_verificacion(usuario, token)
 
         messages.success(
             self.request,

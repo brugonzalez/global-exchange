@@ -138,7 +138,7 @@ class FormularioClienteUsuario(forms.ModelForm):
     
     class Meta:
         model = ClienteUsuario
-        fields = ['usuario', 'rol', 'esta_activo', 'permisos']
+        fields = ['usuario', 'esta_activo', 'permisos']
         widgets = {
             'rol': forms.Select(attrs={'class': 'form-control'}),
             'esta_activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
