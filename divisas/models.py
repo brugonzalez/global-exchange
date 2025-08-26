@@ -64,12 +64,11 @@ class Moneda(models.Model):
             Moneda.objects.exclude(pk=self.pk).update(es_moneda_base=False)
         super().save(*args, **kwargs)
 
-    def obtener_tasa_actual(self, cliente):
+    def obtener_tasa_actual(self, categoria):
         """
         Obtiene la tasa de cambio más reciente para esta moneda y la categoría del cliente.
         """
-        categoria = cliente.categoria_cliente  # Ajusta esto según tu modelo de usuario/cliente
-        return self.tasas_cambio_origen.filter(
+        return self.tasas_cambio.filter(
             esta_activa=True,
             categoria_cliente=categoria
         ).order_by('-fecha_actualizacion').first()

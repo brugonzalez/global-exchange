@@ -115,12 +115,12 @@
                                         <div class="col-6">
                                             <div class="border-end">
                                                 <strong class="text-success">Compra</strong>
-                                                <div class="h5 tasa-compra">{{ tasa.tasa_compra|floatformat:4 }}</div>
+                                                <div class="h5 tasa-compra">{{ tasa.tasa_compra|floatformat:tasa.moneda.lugares_decimales }}</div>
                                             </div>
                                         </div>
                                         <div class="col-6">
                                             <strong class="text-danger">Venta</strong>
-                                            <div class="h5 tasa-venta">{{ tasa.tasa_venta|floatformat:4 }}</div>
+                                            <div class="h5 tasa-venta">{{ tasa.tasa_venta|floatformat:tasa.moneda.lugares_decimales }}</div>
                                         </div>
                                     </div>
                                     

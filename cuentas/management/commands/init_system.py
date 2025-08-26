@@ -132,7 +132,7 @@ class Command(BaseCommand):
                     'simbolo': dato_moneda['simbolo'],
                     'es_moneda_base': False,
                     'esta_activa': True,
-                    'lugares_decimales': 8,
+                    'lugares_decimales': 2,
                     'comision_compra': Decimal('100.00'),
                     'comision_venta': Decimal('200.00')
                 }
