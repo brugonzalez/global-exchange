@@ -135,43 +135,49 @@ class PrecioBase(models.Model):
         return f"{self.moneda.codigo}/{self.moneda_base.codigo} - Precio base: {self.precio_base}"
 
     def save(self, *args, **kwargs):
-        """Calcula el diferencial y maneja la lógica de la tasa activa."""
+        """Guarda el precio base y crea/actualiza automáticamente las tasas de cambio para todas las categorías de cliente si está activa."""
         from django.db import transaction
-        
-        # Usar transacción para asegurar atomicidad y prevenir violaciones de la restricción unique
+        super_save = super().save
         with transaction.atomic():
-            # Si se está estableciendo esta como activa, desactivar otras tasas para el mismo par
+            # Lógica de exclusividad de precio base activo
             if self.esta_activa:
-                # Primero, manejar el caso donde estamos actualizando un registro existente
                 if self.pk:
-                    # Establecer temporalmente esta instancia como inactiva para evitar problemas de restricción
                     esta_activa_actual = self.esta_activa
                     self.esta_activa = False
-                    super().save(update_fields=['esta_activa'], *args, **kwargs)
-                    
-                    # Ahora desactivar otras tasas activas para el mismo par
+                    super_save(update_fields=['esta_activa'], *args, **kwargs)
                     PrecioBase.objects.filter(
                         moneda=self.moneda,
                         moneda_base=self.moneda_base,
                         esta_activa=True
                     ).exclude(pk=self.pk).update(esta_activa=False)
-                    
-                    # Restaurar el estado activo y guardar todos los campos
                     self.esta_activa = esta_activa_actual
-                    super().save(*args, **kwargs)
+                    super_save(*args, **kwargs)
                 else:
-                    # Para nuevas instancias, desactivar primero otras tasas
                     PrecioBase.objects.filter(
                         moneda=self.moneda,
                         moneda_base=self.moneda_base,
                         esta_activa=True
                     ).update(esta_activa=False)
-                    
-                    # Luego guardar la nueva instancia
-                    super().save(*args, **kwargs)
+                    super_save(*args, **kwargs)
             else:
-                # Si no está activa, simplemente guardar normalmente
-                super().save(*args, **kwargs)
+                super_save(*args, **kwargs)
+
+            # Crear/actualizar tasas de cambio automáticamente si está activa
+            if self.esta_activa:
+                categorias = CategoriaCliente.objects.all()
+                for categoria in categorias:
+                    from divisas.models import TasaCambio
+                    TasaCambio.objects.update_or_create(
+                        moneda=self.moneda,
+                        moneda_base=self.moneda_base,
+                        precio_base=self,
+                        categoria_cliente=categoria,
+                        defaults={
+                            'tasa_compra': self.precio_base + self.moneda.comision_compra - (categoria.margen_tasa_preferencial * self.moneda.comision_compra),
+                            'tasa_venta': self.precio_base + self.moneda.comision_venta - (categoria.margen_tasa_preferencial * self.moneda.comision_venta),
+                            'esta_activa': True,
+                        }
+                    )
 
 class TasaCambio(models.Model):
     """

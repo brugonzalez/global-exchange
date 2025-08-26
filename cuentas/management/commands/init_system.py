@@ -18,11 +18,11 @@ class Command(BaseCommand):
         self.stdout.write('Inicializando sistema Global Exchange completo...')
         
         with transaction.atomic():
-            # Crear monedas y tasas de cambio
-            self.crear_monedas_y_tasas()
-            
             # Crear categorías de clientes
             self.crear_categorias_clientes()
+
+            # Crear monedas y tasas de cambio
+            self.crear_monedas_y_tasas()
             
             # Crear métodos de pago
             self.crear_metodos_pago()
@@ -78,7 +78,7 @@ class Command(BaseCommand):
                 'nombre': 'VIP',
                 'limite_diario': Decimal('1000000.00'),
                 'limite_mensual': Decimal('10000000.00'),
-                'margen': Decimal('0.1000'),  # 0%
+                'margen': Decimal('0.1000'),  # 10%
                 'prioridad': 1
             }
         ]
@@ -163,29 +163,6 @@ class Command(BaseCommand):
             if creado:
                 self.stdout.write(f'  ✓ Precio base creado: {precio_base}')
 
-        # Crear tasas de cambio para cada categoría de cliente
-        categorias = list(CategoriaCliente.objects.all())
-        if not categorias:
-            self.stdout.write(self.style.WARNING('No hay categorías de cliente. Ejecute crear_categorias_clientes primero.'))
-            return
-
-        for dato_precio in datos_precios_base:
-            moneda = Moneda.objects.get(codigo=dato_precio['moneda'])
-            precio_base = PrecioBase.objects.get(moneda=moneda, moneda_base=guarani_paraguayo, esta_activa=True)
-            for categoria in categorias:
-                tasa, creado = TasaCambio.objects.get_or_create(
-                    moneda=moneda,
-                    moneda_base=guarani_paraguayo,
-                    precio_base=precio_base,
-                    categoria_cliente=categoria,
-                    esta_activa=True,
-                    defaults={
-                        'tasa_compra': dato_precio['precio_base'] + moneda.comision_compra - (categoria.margen_tasa_preferencial * moneda.comision_compra),
-                        'tasa_venta': dato_precio['precio_base'] + moneda.comision_venta - (categoria.margen_tasa_preferencial * moneda.comision_venta),
-                    }
-                )
-                if creado:
-                    self.stdout.write(f'  ✓ Tasa de cambio creada: {tasa}')
 
 
     def crear_metodos_pago(self):
