@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.db.models import Q
 from decimal import Decimal
 import requests
+from clientes.models import CategoriaCliente
 
 from .models import Moneda, TasaCambio, HistorialTasaCambio, MetodoPago, AlertaTasa
 from transacciones.models import SimulacionTransaccion
@@ -26,8 +27,14 @@ class VistaPanelControl(TemplateView):
         monedas = Moneda.objects.filter(esta_activa=True).order_by('codigo')
         datos_tasas = []
         
+        
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
+            categoria = self.request.user.ultimo_cliente_seleccionado.categoria
+        else:
+            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+
         for moneda in monedas:
-            tasa = moneda.obtener_tasa_actual()
+            tasa = moneda.obtener_tasa_actual(categoria)
             if tasa:
                 datos_tasas.append({
                     'moneda': moneda,
@@ -62,9 +69,14 @@ class VistaTasasCambio(ListView):
         # Obtener monedas activas y sus tasas actuales (igual que en el panel de control)
         monedas = Moneda.objects.filter(esta_activa=True).order_by('codigo')
         datos_tasas = []
-        
+
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
+            categoria = self.request.user.ultimo_cliente_seleccionado.categoria
+        else:
+            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+
         for moneda in monedas:
-            tasa = moneda.obtener_tasa_actual()
+            tasa = moneda.obtener_tasa_actual(categoria)
             if tasa:
                 datos_tasas.append({
                     'moneda': moneda,
@@ -269,12 +281,19 @@ class APIVistaTasasActuales(TemplateView):
     """
     
     def get(self, solicitud, *args, **kwargs):
+        from clientes.models import CategoriaCliente
+        # Determinar la categoría a usar
+        if solicitud.user.is_authenticated and hasattr(solicitud.user, 'ultimo_cliente_seleccionado') and solicitud.user.ultimo_cliente_seleccionado:
+            categoria = solicitud.user.ultimo_cliente_seleccionado.categoria
+        else:
+            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+
         codigo_moneda = solicitud.GET.get('currency')
-        
+
         if codigo_moneda:
             moneda = get_object_or_404(Moneda, codigo=codigo_moneda, esta_activa=True)
-            tasa = moneda.obtener_tasa_actual()
-            
+            tasa = moneda.obtener_tasa_actual(categoria)
+
             if tasa:
                 return JsonResponse({
                     'moneda': moneda.codigo,
@@ -282,6 +301,7 @@ class APIVistaTasasActuales(TemplateView):
                     'tasa_compra': float(tasa.tasa_compra),
                     'tasa_venta': float(tasa.tasa_venta),
                     'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
+                    'lugares_decimales': tasa.moneda.lugares_decimales
                 })
             else:
                 return JsonResponse({'error': 'No se encontró tasa'}, status=404)
@@ -289,9 +309,9 @@ class APIVistaTasasActuales(TemplateView):
             # Devolver todas las tasas
             tasas = []
             monedas = Moneda.objects.filter(esta_activa=True)
-            
+
             for moneda in monedas:
-                tasa = moneda.obtener_tasa_actual()
+                tasa = moneda.obtener_tasa_actual(categoria)
                 if tasa:
                     tasas.append({
                         'moneda': moneda.codigo,
@@ -299,8 +319,9 @@ class APIVistaTasasActuales(TemplateView):
                         'tasa_compra': float(tasa.tasa_compra),
                         'tasa_venta': float(tasa.tasa_venta),
                         'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
+                        'lugares_decimales': tasa.moneda.lugares_decimales
                     })
-            
+
             return JsonResponse({'tasas': tasas})
 
 
@@ -834,7 +855,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         # Obtener datos de las tasas actuales
         datos_tasas = []
         for moneda in monedas:
-            tasa_actual = moneda.obtener_tasa_actual()
+            tasa_actual = moneda.obtener_precio_base()
             
             # Obtener historial reciente para esta moneda (últimos 7 días)
             from datetime import timedelta

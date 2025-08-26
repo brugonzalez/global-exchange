@@ -4,7 +4,7 @@ from cuentas.models import Rol, Permiso
 from django.db import transaction
 from decimal import Decimal
 
-from divisas.models import Moneda, TasaCambio, MetodoPago
+from divisas.models import Moneda, PrecioBase, TasaCambio, MetodoPago
 from clientes.models import CategoriaCliente
 from notificaciones.models import PlantillaNotificacion
 
@@ -18,11 +18,11 @@ class Command(BaseCommand):
         self.stdout.write('Inicializando sistema Global Exchange completo...')
         
         with transaction.atomic():
-            # Crear monedas y tasas de cambio
-            self.crear_monedas_y_tasas()
-            
             # Crear categorías de clientes
             self.crear_categorias_clientes()
+
+            # Crear monedas y tasas de cambio
+            self.crear_monedas_y_tasas()
             
             # Crear métodos de pago
             self.crear_metodos_pago()
@@ -55,76 +55,6 @@ class Command(BaseCommand):
         self.stdout.write('   - ... hasta usuario6@globalexchange.com / Contraseña: usuario6')
         self.stdout.write(self.style.WARNING('\nNOTA: El sistema usa EMAIL como usuario para login, no el username.'))
 
-    def crear_monedas_y_tasas(self):
-        """Crea las monedas y tasas de cambio iniciales."""
-        self.stdout.write('Creando monedas y tasas de cambio...')
-        
-        # Crear moneda base - PYG (Guaraní Paraguayo)
-        guarani_paraguayo, creado = Moneda.objects.get_or_create(
-            codigo='PYG',
-            defaults={
-                'nombre': 'Guaraní Paraguayo',
-                'simbolo': '₲',
-                'tipo_moneda': 'FIAT',
-                'es_moneda_base': True,
-                'esta_activa': True,
-                'lugares_decimales': 2
-            }
-        )
-        if creado:
-            self.stdout.write(f'  ✓ Moneda base creada: {guarani_paraguayo}')
-        
-        # Crear otras monedas
-        datos_monedas = [
-            {'codigo': 'USD', 'nombre': 'Dólar Estadounidense', 'simbolo': '$', 'tipo': 'FIAT'},
-            {'codigo': 'EUR', 'nombre': 'Euro', 'simbolo': '€', 'tipo': 'FIAT'},
-            {'codigo': 'BRL', 'nombre': 'Real Brasileño', 'simbolo': 'R$', 'tipo': 'FIAT'},
-            {'codigo': 'ARS', 'nombre': 'Peso Argentino', 'simbolo': '$', 'tipo': 'FIAT'},
-            {'codigo': 'CLP', 'nombre': 'Peso Chileno', 'simbolo': '$', 'tipo': 'FIAT'},
-            {'codigo': 'UYU', 'nombre': 'Peso Uruguayo', 'simbolo': '$', 'tipo': 'FIAT'},
-        ]
-        
-        for dato_moneda in datos_monedas:
-            moneda, creado = Moneda.objects.get_or_create(
-                codigo=dato_moneda['codigo'],
-                defaults={
-                    'nombre': dato_moneda['nombre'],
-                    'simbolo': dato_moneda['simbolo'],
-                    'tipo_moneda': dato_moneda['tipo'],
-                    'es_moneda_empresa': dato_moneda.get('empresa', False),
-                    'esta_activa': True,
-                    'lugares_decimales': 8 if dato_moneda['tipo'] == 'DIGITAL' else 2
-                }
-            )
-            if creado:
-                self.stdout.write(f'  ✓ Moneda creada: {moneda}')
-
-        # Crear tasas de cambio iniciales (usando PYG como moneda base)
-        datos_tasas = [
-            {'moneda': 'USD', 'compra': Decimal('7300.00'), 'venta': Decimal('7500.00')},  # USD a PYG
-            {'moneda': 'EUR', 'compra': Decimal('7800.00'), 'venta': Decimal('8000.00')},  # EUR a PYG  
-            {'moneda': 'BRL', 'compra': Decimal('1350.00'), 'venta': Decimal('1400.00')},  # BRL a PYG
-            {'moneda': 'ARS', 'compra': Decimal('7.40'), 'venta': Decimal('7.60')},       # ARS a PYG
-            {'moneda': 'CLP', 'compra': Decimal('8.00'), 'venta': Decimal('8.20')},       # CLP a PYG
-            {'moneda': 'UYU', 'compra': Decimal('180.00'), 'venta': Decimal('185.00')},   # UYU a PYG
-        ]
-        
-        for dato_tasa in datos_tasas:
-            moneda = Moneda.objects.get(codigo=dato_tasa['moneda'])
-            
-            tasa, creado = TasaCambio.objects.get_or_create(
-                moneda=moneda,
-                moneda_base=guarani_paraguayo,
-                esta_activa=True,
-                defaults={
-                    'tasa_compra': dato_tasa['compra'],
-                    'tasa_venta': dato_tasa['venta'],
-                    'fuente': 'MANUAL'
-                }
-            )
-            if creado:
-                self.stdout.write(f'  ✓ Tasa de cambio creada: {tasa}')
-
     def crear_categorias_clientes(self):
         """Crea las categorías de clientes predefinidas."""
         self.stdout.write('Creando categorías de clientes...')
@@ -134,21 +64,21 @@ class Command(BaseCommand):
                 'nombre': 'RETAIL',
                 'limite_diario': Decimal('50000.00'),
                 'limite_mensual': Decimal('500000.00'),
-                'margen': Decimal('0.0200'),  # 2%
+                'margen': Decimal('0.0000'),  # 0%
                 'prioridad': 3
             },
             {
                 'nombre': 'CORPORATE',
                 'limite_diario': Decimal('500000.00'),
                 'limite_mensual': Decimal('5000000.00'),
-                'margen': Decimal('0.0150'),  # 1.5%
+                'margen': Decimal('0.0500'),  # 5%
                 'prioridad': 2
             },
             {
                 'nombre': 'VIP',
                 'limite_diario': Decimal('1000000.00'),
                 'limite_mensual': Decimal('10000000.00'),
-                'margen': Decimal('0.0100'),  # 1%
+                'margen': Decimal('0.1000'),  # 10%
                 'prioridad': 1
             }
         ]
@@ -165,6 +95,75 @@ class Command(BaseCommand):
             )
             if creado:
                 self.stdout.write(f'  ✓ Categoría de cliente creada: {categoria}')
+
+    def crear_monedas_y_tasas(self):
+        """Crea las monedas y tasas de cambio iniciales."""
+        self.stdout.write('Creando monedas y tasas de cambio...')
+
+        # Crear moneda base - PYG (Guaraní Paraguayo)
+        guarani_paraguayo, creado = Moneda.objects.get_or_create(
+            codigo='PYG',
+            defaults={
+                'nombre': 'Guaraní Paraguayo',
+                'simbolo': '₲',
+                'es_moneda_base': True,
+                'esta_activa': True,
+                'lugares_decimales': 2
+            }
+        )
+        if creado:
+            self.stdout.write(f'  ✓ Moneda base creada: {guarani_paraguayo}')
+
+        # Crear otras monedas
+        datos_monedas = [
+            {'codigo': 'USD', 'nombre': 'Dólar Estadounidense', 'simbolo': '$'},
+            {'codigo': 'EUR', 'nombre': 'Euro', 'simbolo': '€'},
+            {'codigo': 'BRL', 'nombre': 'Real Brasileño', 'simbolo': 'R$'},
+            {'codigo': 'ARS', 'nombre': 'Peso Argentino', 'simbolo': '$'},
+            {'codigo': 'CLP', 'nombre': 'Peso Chileno', 'simbolo': '$'},
+            {'codigo': 'UYU', 'nombre': 'Peso Uruguayo', 'simbolo': '$'},
+        ]
+
+        for dato_moneda in datos_monedas:
+            moneda, creado = Moneda.objects.get_or_create(
+                codigo=dato_moneda['codigo'],
+                defaults={
+                    'nombre': dato_moneda['nombre'],
+                    'simbolo': dato_moneda['simbolo'],
+                    'es_moneda_base': False,
+                    'esta_activa': True,
+                    'lugares_decimales': 2,
+                    'comision_compra': Decimal('100.00'),
+                    'comision_venta': Decimal('200.00')
+                }
+            )
+            if creado:
+                self.stdout.write(f'  ✓ Moneda creada: {moneda}')
+
+        # Crear precios base (PrecioBase) para cada moneda respecto a PYG
+        datos_precios_base = [
+            {'moneda': 'USD', 'precio_base': Decimal('7300.00')},  # USD a PYG
+            {'moneda': 'EUR', 'precio_base': Decimal('7800.00')},  # EUR a PYG
+            {'moneda': 'BRL', 'precio_base': Decimal('1350.00')},  # BRL a PYG
+            {'moneda': 'ARS', 'precio_base': Decimal('7.40')},     # ARS a PYG
+            {'moneda': 'CLP', 'precio_base': Decimal('8.00')},     # CLP a PYG
+            {'moneda': 'UYU', 'precio_base': Decimal('180.00')},   # UYU a PYG
+        ]
+
+        for dato_precio in datos_precios_base:
+            moneda = Moneda.objects.get(codigo=dato_precio['moneda'])
+            precio_base, creado = PrecioBase.objects.get_or_create(
+                moneda=moneda,
+                moneda_base=guarani_paraguayo,
+                esta_activa=True,
+                defaults={
+                    'precio_base': dato_precio['precio_base']
+                }
+            )
+            if creado:
+                self.stdout.write(f'  ✓ Precio base creado: {precio_base}')
+
+
 
     def crear_metodos_pago(self):
         """Crea los métodos de pago disponibles."""

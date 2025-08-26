@@ -163,8 +163,8 @@ class FormularioMoneda(forms.ModelForm):
     """
     class Meta:
         model = Moneda
-        fields = ['codigo', 'nombre', 'simbolo', 'tipo_moneda', 'esta_activa', 
-                 'es_moneda_base', 'es_moneda_empresa', 'lugares_decimales']
+        fields = ['codigo', 'nombre', 'simbolo', 'esta_activa', 
+                 'es_moneda_base', 'lugares_decimales']
         widgets = {
             'codigo': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -180,16 +180,10 @@ class FormularioMoneda(forms.ModelForm):
                 'placeholder': '$, €, ₲, etc.',
                 'maxlength': '10'
             }),
-            'tipo_moneda': forms.Select(attrs={
-                'class': 'form-control'
-            }),
             'esta_activa': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
             'es_moneda_base': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            }),
-            'es_moneda_empresa': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
             'lugares_decimales': forms.NumberInput(attrs={
@@ -202,10 +196,8 @@ class FormularioMoneda(forms.ModelForm):
             'codigo': 'Código',
             'nombre': 'Nombre',
             'simbolo': 'Símbolo',
-            'tipo_moneda': 'Tipo de Moneda',
             'esta_activa': 'Activa',
             'es_moneda_base': 'Moneda Base',
-            'es_moneda_empresa': 'Moneda de la Empresa',
             'lugares_decimales': 'Decimales'
         }
     
