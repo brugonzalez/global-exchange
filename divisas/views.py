@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.db.models import Q
 from decimal import Decimal
 import requests
+from clientes.models import CategoriaCliente
 
 from .models import Moneda, TasaCambio, HistorialTasaCambio, MetodoPago, AlertaTasa
 from transacciones.models import SimulacionTransaccion
@@ -26,7 +27,7 @@ class VistaPanelControl(TemplateView):
         monedas = Moneda.objects.filter(esta_activa=True).order_by('codigo')
         datos_tasas = []
         
-        from clientes.models import CategoriaCliente
+        
         if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
             categoria = self.request.user.ultimo_cliente_seleccionado.categoria
         else:
@@ -68,9 +69,14 @@ class VistaTasasCambio(ListView):
         # Obtener monedas activas y sus tasas actuales (igual que en el panel de control)
         monedas = Moneda.objects.filter(esta_activa=True).order_by('codigo')
         datos_tasas = []
-        
+
+        if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
+            categoria = self.request.user.ultimo_cliente_seleccionado.categoria
+        else:
+            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+
         for moneda in monedas:
-            tasa = moneda.obtener_tasa_actual()
+            tasa = moneda.obtener_tasa_actual(categoria)
             if tasa:
                 datos_tasas.append({
                     'moneda': moneda,
@@ -849,7 +855,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         # Obtener datos de las tasas actuales
         datos_tasas = []
         for moneda in monedas:
-            tasa_actual = moneda.obtener_tasa_actual()
+            tasa_actual = moneda.obtener_precio_base()
             
             # Obtener historial reciente para esta moneda (últimos 7 días)
             from datetime import timedelta

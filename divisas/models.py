@@ -84,6 +84,11 @@ class Moneda(models.Model):
         tasa = self.obtener_tasa_actual()
         return tasa.tasa_venta if tasa else None
 
+    def obtener_precio_base(self):
+        """Obtiene el precio base actual."""
+        precio_base = self.precio_base.filter(esta_activa=True).first()
+        return precio_base.precio_base if precio_base else None
+
 
 class PrecioBase(models.Model):
     """
