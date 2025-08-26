@@ -7,26 +7,25 @@ from .models import (
 
 @admin.register(Moneda)
 class AdminMoneda(admin.ModelAdmin):
-    list_display = ['codigo', 'nombre', 'tipo_moneda', 'esta_activa', 
-                   'es_moneda_base', 'es_moneda_empresa']
-    list_filter = ['tipo_moneda', 'esta_activa', 'es_moneda_base', 'es_moneda_empresa']
+    list_display = ['codigo', 'nombre', 'esta_activa', 
+                   'es_moneda_base']
+    list_filter = [ 'esta_activa', 'es_moneda_base']
     search_fields = ['codigo', 'nombre']
     ordering = ['codigo']
 
 
 @admin.register(TasaCambio)
 class AdminTasaCambio(admin.ModelAdmin):
-    list_display = ['moneda', 'moneda_base', 'tasa_compra', 'tasa_venta', 
-                   'diferencial', 'fuente', 'esta_activa', 'fecha_actualizacion']
-    list_filter = ['fuente', 'esta_activa', 'fecha_actualizacion']
+    list_display = ['moneda', 'moneda_base', 'tasa_compra', 'tasa_venta' 
+                   , 'esta_activa', 'fecha_actualizacion']
+    list_filter = [ 'esta_activa', 'fecha_actualizacion']
     search_fields = ['moneda__codigo', 'moneda_base__codigo']
     ordering = ['-fecha_actualizacion']
-    readonly_fields = ['diferencial']
 
 
 @admin.register(HistorialTasaCambio)
 class AdminHistorialTasaCambio(admin.ModelAdmin):
-    list_display = ['moneda', 'moneda_base', 'tasa_compra', 'tasa_venta', 'marca_de_tiempo', 'volumen']
+    list_display = ['moneda', 'moneda_base', 'tasa_compra', 'tasa_venta', 'marca_de_tiempo']
     list_filter = ['moneda', 'marca_de_tiempo']
     search_fields = ['moneda__codigo', 'moneda_base__codigo']
     ordering = ['-marca_de_tiempo']

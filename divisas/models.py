@@ -1,6 +1,8 @@
 from django.db import models
 from decimal import Decimal
 from django.utils import timezone
+from clientes.models import CategoriaCliente
+from cuentas.models import Usuario
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,11 +12,6 @@ class Moneda(models.Model):
     """
     Modelo para las monedas soportadas por el sistema.
     """
-    TIPOS_MONEDA = [
-        ('FIAT', 'Moneda Fiat'),
-        ('DIGITAL', 'Moneda Digital'),
-        ('CRYPTO', 'Criptomoneda'),
-    ]
 
     codigo = models.CharField(
         max_length=10, 
@@ -23,23 +20,27 @@ class Moneda(models.Model):
     )
     nombre = models.CharField(max_length=100)
     simbolo = models.CharField(max_length=10)
-    tipo_moneda = models.CharField(
-        max_length=20, 
-        choices=TIPOS_MONEDA, 
-        default='FIAT'
-    )
+
     esta_activa = models.BooleanField(default=True)
     es_moneda_base = models.BooleanField(
         default=False,
         help_text="Moneda base para cálculos (solo una puede ser base)"
     )
-    
-    # Para la moneda digital de la empresa
-    es_moneda_empresa = models.BooleanField(
-        default=False,
-        help_text="Moneda digital propia de la empresa"
+
+    # configuracion de comision
+    comision_compra = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.00'),
+        help_text="Comisión aplicada en la compra de la moneda"
     )
-    
+    comision_venta = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.00'),
+        help_text="Comisión aplicada en la venta de la moneda"
+    )
+
     # Configuración de visualización
     lugares_decimales = models.PositiveIntegerField(default=2)
     icono = models.ImageField(upload_to='iconos_moneda/', blank=True, null=True)
@@ -63,9 +64,15 @@ class Moneda(models.Model):
             Moneda.objects.exclude(pk=self.pk).update(es_moneda_base=False)
         super().save(*args, **kwargs)
 
-    def obtener_tasa_actual(self):
-        """Obtiene la tasa de cambio más reciente para esta moneda."""
-        return self.tasas_cambio.filter(esta_activa=True).order_by('-fecha_actualizacion').first()
+    def obtener_tasa_actual(self, cliente):
+        """
+        Obtiene la tasa de cambio más reciente para esta moneda y la categoría del cliente.
+        """
+        categoria = cliente.categoria_cliente  # Ajusta esto según tu modelo de usuario/cliente
+        return self.tasas_cambio_origen.filter(
+            esta_activa=True,
+            categoria_cliente=categoria
+        ).order_by('-fecha_actualizacion').first()
 
     def obtener_tasa_compra(self):
         """Obtiene la tasa de compra actual."""
@@ -78,58 +85,37 @@ class Moneda(models.Model):
         return tasa.tasa_venta if tasa else None
 
 
-class TasaCambio(models.Model):
+class PrecioBase(models.Model):
     """
-    Modelo para las tasas de cambio.
+    Modelo para los precios base de las monedas.
     """
-    FUENTES = [
-        ('API', 'API Externa'),
-        ('MANUAL', 'Ingreso Manual'),
-        ('CALCULADO', 'Calculado'),
-    ]
 
     moneda = models.ForeignKey(
         Moneda, 
         on_delete=models.CASCADE, 
-        related_name='tasas_cambio'
+        related_name='precio_base'
     )
     moneda_base = models.ForeignKey(
         Moneda, 
         on_delete=models.CASCADE, 
-        related_name='tasas_cambio_base'
+        related_name='precio_base_base'
     )
     
     # Tasas
-    tasa_compra = models.DecimalField(
-        max_digits=20, 
+    precio_base = models.DecimalField(
+        max_digits=20,
         decimal_places=8,
-        help_text="Tasa de compra (precio al que compramos la moneda)"
+        help_text="Precio base de la moneda en la moneda base"
     )
-    tasa_venta = models.DecimalField(
-        max_digits=20, 
-        decimal_places=8,
-        help_text="Tasa de venta (precio al que vendemos la moneda)"
-    )
-    diferencial = models.DecimalField(
-        max_digits=10, 
-        decimal_places=4,
-        help_text="Diferencial entre compra y venta"
-    )
-    
+
     # Fuente y validación
-    fuente = models.CharField(max_length=20, choices=FUENTES, default='API')
     esta_activa = models.BooleanField(default=True)
     
     # Marcas de tiempo
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    valida_hasta = models.DateTimeField(
-        blank=True, 
-        null=True,
-        help_text="Fecha hasta la cual es válida esta tasa"
-    )
-    
-    # Usuario que actualizó (para tasas manuales)
+
+    # Usuario que actualizó 
     actualizado_por = models.ForeignKey(
         'cuentas.Usuario',
         on_delete=models.SET_NULL,
@@ -139,29 +125,18 @@ class TasaCambio(models.Model):
     )
 
     class Meta:
-        db_table = 'divisas_tasa_cambio'
-        verbose_name = 'Tasa de Cambio'
-        verbose_name_plural = 'Tasas de Cambio'
+        db_table = 'divisas_precios_base'
+        verbose_name = 'Precio Base'
+        verbose_name_plural = 'Precios Base'
         ordering = ['-fecha_actualizacion']
         unique_together = ['moneda', 'moneda_base', 'esta_activa']
 
     def __str__(self):
-        return f"{self.moneda.codigo}/{self.moneda_base.codigo} - Compra: {self.tasa_compra} - Venta: {self.tasa_venta}"
+        return f"{self.moneda.codigo}/{self.moneda_base.codigo} - Precio base: {self.precio_base}"
 
     def save(self, *args, **kwargs):
         """Calcula el diferencial y maneja la lógica de la tasa activa."""
         from django.db import transaction
-        from decimal import InvalidOperation
-        
-        # Calcular diferencial con manejo de errores
-        try:
-            if self.tasa_compra is not None and self.tasa_venta is not None:
-                self.diferencial = self.tasa_venta - self.tasa_compra
-            else:
-                self.diferencial = Decimal('0')
-        except (InvalidOperation, TypeError, ValueError) as e:
-            logger.warning(f"Error al calcular diferencial para tasa de cambio {self.moneda.codigo}/{self.moneda_base.codigo}: {e}")
-            self.diferencial = Decimal('0')
         
         # Usar transacción para asegurar atomicidad y prevenir violaciones de la restricción unique
         with transaction.atomic():
@@ -175,7 +150,7 @@ class TasaCambio(models.Model):
                     super().save(update_fields=['esta_activa'], *args, **kwargs)
                     
                     # Ahora desactivar otras tasas activas para el mismo par
-                    TasaCambio.objects.filter(
+                    PrecioBase.objects.filter(
                         moneda=self.moneda,
                         moneda_base=self.moneda_base,
                         esta_activa=True
@@ -186,7 +161,7 @@ class TasaCambio(models.Model):
                     super().save(*args, **kwargs)
                 else:
                     # Para nuevas instancias, desactivar primero otras tasas
-                    TasaCambio.objects.filter(
+                    PrecioBase.objects.filter(
                         moneda=self.moneda,
                         moneda_base=self.moneda_base,
                         esta_activa=True
@@ -198,56 +173,122 @@ class TasaCambio(models.Model):
                 # Si no está activa, simplemente guardar normalmente
                 super().save(*args, **kwargs)
 
-    def es_valida(self):
-        """Verifica si la tasa todavía es válida."""
-        if self.valida_hasta:
-            return timezone.now() <= self.valida_hasta
-        return True
+class TasaCambio(models.Model):
+    """
+    Modelo para las tasas de cambio.
+    """
+    moneda = models.ForeignKey(
+        Moneda,
+        on_delete=models.CASCADE,
+        related_name='tasas_cambio'
+    )
+    moneda_base = models.ForeignKey(
+        Moneda,
+        on_delete=models.CASCADE,
+        related_name='tasas_cambio_base'
+    )
+    precio_base = models.ForeignKey(
+        PrecioBase,
+        on_delete=models.CASCADE,
+        related_name='tasas_cambio_relacionadas'
+    )
+    categoria_cliente = models.ForeignKey(
+        CategoriaCliente,
+        on_delete=models.CASCADE,
+        related_name='tasas_cambio_categoria'
+    )
 
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    esta_activa = models.BooleanField(default=True)
+    
+    tasa_compra = models.DecimalField(
+        max_digits=20, 
+        decimal_places=8, 
+        default=Decimal('0.00'), 
+        help_text="Tasa de compra"
+    )
+    tasa_venta = models.DecimalField(
+        max_digits=20, 
+        decimal_places=8, 
+        default=Decimal('0.00'), 
+        help_text="Tasa de venta"
+    )
 
+    class Meta:
+        db_table = 'divisas_tasas_cambio'
+        verbose_name = 'Tasa de Cambio'
+        verbose_name_plural = 'Tasas de Cambio'
+        unique_together = ['moneda', 'moneda_base', 'categoria_cliente', 'esta_activa']
+
+    def __str__(self):
+        return f"{self.moneda.codigo}/{self.moneda_base.codigo} - Tasa de Cambio: {self.tasa_compra}/{self.tasa_venta}"
+    
 class HistorialTasaCambio(models.Model):
     """
-    Modelo para almacenar tasas de cambio históricas para gráficos y análisis.
+    Modelo para almacenar las tasas de cambio históricas para gráficos y análisis.
     """
     moneda = models.ForeignKey(
         Moneda, 
         on_delete=models.CASCADE, 
-        related_name='historial_tasa'
+        related_name='historial_tasa_cambio'
     )
     moneda_base = models.ForeignKey(
         Moneda, 
         on_delete=models.CASCADE, 
-        related_name='historial_tasa_base'
+        related_name='historial_tasa_cambio_base'
     )
-    
+    categoria_cliente = models.ForeignKey(
+        CategoriaCliente,
+        on_delete=models.CASCADE,
+        related_name='historial_tasa_cambio'
+    )
+
     # Valores de la tasa
-    tasa_compra = models.DecimalField(max_digits=20, decimal_places=8)
-    tasa_venta = models.DecimalField(max_digits=20, decimal_places=8)
+    tasa_compra = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.00'),
+        help_text="Tasa de compra en la fecha de la marca de tiempo"
+    )
+    tasa_venta = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.00'),
+        help_text="Tasa de venta en la fecha de la marca de tiempo"
+    )
+
     
+    comision_compra = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.00'),
+        help_text="Comisión de compra en la fecha de la marca de tiempo"
+    )
+    comision_venta = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.00'),
+        help_text="Comisión de venta en la fecha de la marca de tiempo"
+    )
+
     # Marcas de tiempo
     marca_de_tiempo = models.DateTimeField(default=timezone.now)
     
-    # Datos adicionales para análisis
-    volumen = models.DecimalField(
-        max_digits=20, 
-        decimal_places=8, 
-        default=Decimal('0.00'),
-        help_text="Volumen de transacciones en este período"
-    )
-    
     class Meta:
-        db_table = 'divisas_historial_tasa_cambio'
-        verbose_name = 'Historial de Tasa'
-        verbose_name_plural = 'Historial de Tasas'
+        db_table = 'divisas_historial_tasas_cambio'
+        verbose_name = 'Historial de Tasa de Cambio'
+        verbose_name_plural = 'Historial de Tasas de Cambio'
         ordering = ['-marca_de_tiempo']
         indexes = [
             models.Index(fields=['moneda', 'marca_de_tiempo']),
             models.Index(fields=['marca_de_tiempo']),
+            models.Index(fields=['categoria_cliente', 'marca_de_tiempo']),
         ]
 
     def __str__(self):
         return f"{self.moneda.codigo}/{self.moneda_base.codigo} - {self.marca_de_tiempo}"
-
 
 class MetodoPago(models.Model):
     """
