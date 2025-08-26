@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.utils import timezone
 from clientes.models import CategoriaCliente
 from cuentas.models import Usuario
+from django.db import transaction
 import logging
 
 logger = logging.getLogger(__name__)
@@ -135,7 +136,7 @@ class PrecioBase(models.Model):
 
     def save(self, *args, **kwargs):
         """Guarda el precio base y crea/actualiza automáticamente las tasas de cambio para todas las categorías de cliente si está activa."""
-        from django.db import transaction
+        
         super_save = super().save
         with transaction.atomic():
             # Lógica de exclusividad de precio base activo
@@ -229,7 +230,24 @@ class TasaCambio(models.Model):
 
     def __str__(self):
         return f"{self.moneda.codigo}/{self.moneda_base.codigo} - Tasa de Cambio: {self.tasa_compra}/{self.tasa_venta}"
-    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Crear/actualizar historial de tasas de cambio
+        with transaction.atomic():
+            HistorialTasaCambio.objects.update_or_create(
+                moneda=self.moneda,
+                moneda_base=self.moneda_base,
+                categoria_cliente=self.categoria_cliente,
+                defaults={
+                    'precio_base': self.precio_base.precio_base,
+                    'tasa_compra': self.tasa_compra,
+                    'tasa_venta': self.tasa_venta,
+                    'comision_compra': self.moneda.comision_compra,
+                    'comision_venta': self.moneda.comision_venta,
+                    'marca_de_tiempo': timezone.now()
+                }
+            )
+
 class HistorialTasaCambio(models.Model):
     """
     Modelo para almacenar las tasas de cambio históricas para gráficos y análisis.
@@ -250,6 +268,11 @@ class HistorialTasaCambio(models.Model):
         related_name='historial_tasa_cambio'
     )
 
+    precio_base = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        help_text="Precio base de la moneda en la moneda base en el momento histórico"
+    )
     # Valores de la tasa
     tasa_compra = models.DecimalField(
         max_digits=20,
