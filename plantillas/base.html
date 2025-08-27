@@ -122,6 +122,9 @@
                             <i class="fas fa-chart-line me-1"></i>Tasas de Cambio
                         </a>
                     </li>
+                                        <li class="nav-item">
+                        <a href="{% url 'tauser_login' %}" class="nav-link">Ir a Tauser</a>
+                    </li>
                     {% if user.is_authenticated %}
                         {% if user.puede_operar_transacciones %}
                             <li class="nav-item dropdown">
@@ -151,10 +154,10 @@
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" href="{% url 'divisas:gestionar_tasas' %}">Gestionar Tasas</a></li>
                                     <li><a class="dropdown-item" href="{% url 'clientes:lista_clientes' %}">Gestionar Clientes</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'cuentas:gestionar_usuarios' %}">Gestionar Usuarios</a></li>
                                     <li><a class="dropdown-item" href="{% url 'reportes:panel_analiticas' %}">Panel Analítico</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="{% url 'cuentas:gestionar_roles' %}">Gestión de Roles</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'cuentas:gestionar_roles_usuarios' %}">Asignar Roles a Usuarios</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="/admin/">Panel de Admin</a></li>
                                 </ul>
@@ -262,13 +265,13 @@
     <!-- JavaScript Personalizado -->
     <script src="{% static 'js/global-exchange.js' %}"></script>
     
-    <!-- Establecer URLs de API y modo debug para JavaScript -->
-    <script>
-        document.querySelector('body').setAttribute('data-rates-api', '{% url "divisas:api_tasas" %}');
-        {% if debug %}
-        document.querySelector('body').setAttribute('data-debug', 'true');
-        {% endif %}
-    </script>
+  <!-- Establecer URLs de API y modo debug para JavaScript -->
+<script>
+document.querySelector('body').setAttribute('data-rates-api', '{% url "divisas:api_tasas" %}');
+{% if debug %}
+document.querySelector('body').setAttribute('data-debug', 'true');
+{% endif %}
+</script>
     
     {% block extra_js %}{% endblock %}
 </body>
