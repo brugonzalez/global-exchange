@@ -92,25 +92,33 @@
 
                                 {% if info_tasa.moneda.es_moneda_base %}
                                     <span class="badge bg-primary ms-2">Base</span>
-                                {% else %}
-                                    <span class="me-3 text-info" style="width: 200px;">
+                                    {% else %}
+                                    <span class="me-3 text-info precio-base-wrap" style="width: 200px;">
                                         Precio Base:
-                                        <span class="badge bg-info">{{ info_tasa.precio_actual|floatformat:0|intcomma }} PYG</span>
+                                        <span class="badge bg-info precio-base-badge">
+                                        {{ info_tasa.precio_actual|floatformat:0|intcomma }} PYG
+                                        </span>
                                     </span>
 
-                                    <small class="text-muted">
-                                            <i class="fas fa-clock me-1"></i>
-                                            Actualizado: {{ info_tasa.fecha_actualizacion|date:"d/m/Y H:i"   }}
-                                            <br>
-                                            <small class="text-muted">
-                                                <i class="fas fa-user me-1"></i>
-                                                Fuente: 
-                                                {% if info_tasa.actualizado_por %}
-                                                    por {{ info_tasa.actualizado_por.nombre_completo|default:info_tasa.actualizado_por.username }}
-                                                {% endif %}
-                                            </small>
+                                    <small class="text-muted meta-actualizacion">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Actualizado:
+                                        <span class="fecha-actualizacion">
+                                        {{ info_tasa.fecha_actualizacion|date:"d/m/Y H:i" }}
+                                        </span>
+                                        <br>
+                                        <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        Fuente:
+                                        <span class="fuente-actualizacion">
+                                            {% if info_tasa.actualizado_por %}
+                                            por {{ info_tasa.actualizado_por.nombre_completo|default:info_tasa.actualizado_por.username }}
+                                            {% endif %}
+                                        </span>
+                                        </small>
                                     </small>
                                 {% endif %}
+
                             </button>
                         </h2>
                         <div id="collapse-{{ info_tasa.moneda.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ info_tasa.moneda.id }}" data-bs-parent="#accordionDivisas">
@@ -230,7 +238,7 @@
                                                     <th class="text-end">Venta</th>
                                                 </tr>
                                             </thead>
-                                            <tbody class="table-group-divider">
+                                            <tbody class="table-group-divider js-tasas-body" data-moneda-id="{{ info_tasa.moneda.id }}">
                                                 {% for tasa in info_tasa.tasas_actuales %}
                                                 <tr>
                                                     <td class="text-nowrap">
@@ -346,11 +354,47 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then((data) => {
             if (data.success) {
-            mostrarAlerta('success', data.message || 'Precio base actualizado correctamente');
-            setTimeout(() => window.location.reload(), 600);
-            } else {
-            mostrarAlerta('error', (data.message || data.error) || 'Error al actualizar el precio base');
+                mostrarAlerta('success', data.message || 'Precio base actualizado correctamente');
+
+                // 1) Tomamos el acordeón correspondiente a ESTE formulario
+                const item = formulario.closest('.accordion-item');
+
+                // 2) Actualizamos el badge del precio base en el header
+                const badge = item.querySelector('.precio-base-badge');
+                if (badge && data.precio_base_html) {
+                badge.textContent = data.precio_base_html;
+                }
+
+                // 3) Actualizamos fecha y fuente
+                const fecha = item.querySelector('.fecha-actualizacion');
+                if (fecha && data.fecha_actualizacion_str) {
+                fecha.textContent = data.fecha_actualizacion_str;
+                }
+
+                // 👉 actualizar tbody de la tabla de tasas
+                const tbody = item.querySelector('.js-tasas-body');
+                if (tbody && data.tasas_tbody_html) {
+                tbody.innerHTML = data.tasas_tbody_html;
+                }
+                
+                // 4) Normalizamos el valor del input (por si el server lo ajustó)
+                const input = formulario.querySelector('input[name="precio_base"]');
+                if (input && data.precio_base_raw != null) {
+                input.value = Math.trunc(data.precio_base_raw);
+                }
+
+                // 5) Actualizamos el reloj del dashboard
+                const reloj = document.getElementById('horaUltimaActualizacion');
+                if (reloj) {
+                const ahora = new Date();
+                reloj.textContent = ahora.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+                }
+
+                return;
             }
+
+            // Error de negocio
+            mostrarAlerta('error', (data.message || data.error) || 'Error al actualizar el precio base');
         })
         .catch((err) => {
             console.error(err);
@@ -360,53 +404,8 @@ document.addEventListener('DOMContentLoaded', function() {
             botonEnviar.disabled = false;
             botonEnviar.innerHTML = textoOriginal;
         });
-    }
-    
-    function actualizarDesdeAPI() {
-        const btn = document.getElementById('btnActualizarDesdeApi');
-        const textoOriginal = btn.innerHTML;
-        
-        // Mostrar superposición de carga
-        document.getElementById('superposicionCarga').style.display = 'block';
-        
-        // Deshabilitar botón
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
-        
-        fetch('{% url "divisas:api_actualizar_tasas" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': tokenCSRF
-            },
-            body: new URLSearchParams({
-                'type': 'api'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                mostrarAlerta('success', data.message || 'Tasas actualizadas desde API');
-                // Recargar la página para mostrar los datos actualizados
-                setTimeout(() => window.location.reload(), 1500);
-            } else {
-                mostrarAlerta('error', data.error || 'Error al actualizar desde API');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            mostrarAlerta('error', 'Error de conexión al actualizar desde API');
-        })
-        .finally(() => {
-            // Ocultar superposición de carga
-            document.getElementById('superposicionCarga').style.display = 'none';
-            
-            // Restaurar estado del botón
-            btn.disabled = false;
-            btn.innerHTML = textoOriginal;
-        });
-    }
-    
+    };
+
     function mostrarAlerta(tipo, mensaje) {
         const contenedorAlertas = document.getElementById('contenedorAlertas');
         const claseAlerta = tipo === 'success' ? 'alert-success' : 'alert-danger';

@@ -8,6 +8,8 @@ from django.db.models import Q
 from decimal import Decimal
 import requests
 from clientes.models import CategoriaCliente
+from django.utils.formats import number_format
+from django.template.loader import render_to_string
 
 from .models import Moneda, TasaCambio, HistorialTasaCambio, PrecioBase, MetodoPago, AlertaTasa
 from transacciones.models import SimulacionTransaccion
@@ -911,13 +913,38 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
                 defaults = {'precio_base': nuevo_precio_base}
                 if hasattr(PrecioBase, 'actualizado_por'):
                     defaults['actualizado_por'] = request.user
-                precio_base_obj, created = PrecioBase.objects.update_or_create(
+                    precio_base_obj, created = PrecioBase.objects.update_or_create(
                     moneda=moneda,
                     defaults=defaults
                 )
+                tasas_actuales = moneda.obtener_tasas_actuales()  # recomputadas a partir del precio base
+
+                tbody_html = render_to_string(
+                    'divisas/_tasas_activas_tbody.html',
+                    {'tasas_actuales': tasas_actuales},
+                    request=request
+                )
+
                 msg = 'Precio base actualizado correctamente.'
                 if ajax:
-                    return JsonResponse({'success': True, 'message': msg})
+                    fecha_str = ""
+                    if hasattr(precio_base_obj, "fecha_actualizacion") and precio_base_obj.fecha_actualizacion:
+                        fecha_str = timezone.localtime(precio_base_obj.fecha_actualizacion).strftime("%d/%m/%Y %H:%M")
+
+                    return JsonResponse({
+                        "success": True,
+                        "message": "Precio base actualizado correctamente.",
+                        "moneda_id": moneda.id,
+                        "precio_base_raw": float(nuevo_precio_base),
+                        "precio_base_html": f"{number_format(nuevo_precio_base, 0, use_l10n=True, force_grouping=True)} PYG",
+                        "fecha_actualizacion_str": fecha_str,
+                        "actualizado_por": (
+                            getattr(request.user, "nombre_completo", None)
+                            or request.user.get_full_name()
+                            or request.user.username
+                        ),
+                        "tasas_tbody_html": tbody_html,
+                    })
                 else:
                     messages.success(request, msg)
                     return redirect('divisas:gestionar_tasas')

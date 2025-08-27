@@ -1,0 +1,22 @@
+{% load humanize %}
+{% if tasas_actuales %}
+  {% for tasa in tasas_actuales %}
+    <tr>
+      <td class="text-nowrap">
+        <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">
+          {{ tasa.categoria_cliente.nombre }}
+        </span>
+      </td>
+      <td class="text-end text-success fw-semibold">
+        {{ tasa.tasa_compra|floatformat:0|intcomma }} PYG
+      </td>
+      <td class="text-end text-danger fw-semibold">
+        {{ tasa.tasa_venta|floatformat:0|intcomma }} PYG
+      </td>
+    </tr>
+  {% endfor %}
+{% else %}
+  <tr>
+    <td colspan="3" class="text-center text-muted py-4">Sin tasas activas</td>
+  </tr>
+{% endif %}
