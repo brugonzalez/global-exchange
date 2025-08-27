@@ -9,7 +9,7 @@ from decimal import Decimal
 import requests
 from clientes.models import CategoriaCliente
 
-from .models import Moneda, TasaCambio, HistorialTasaCambio, MetodoPago, AlertaTasa
+from .models import Moneda, TasaCambio, HistorialTasaCambio, PrecioBase, MetodoPago, AlertaTasa
 from transacciones.models import SimulacionTransaccion
 from .forms import FormularioSimulacion, FormularioActualizacionTasa, FormularioAlerta
 
@@ -841,7 +841,10 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
     
     def dispatch(self, solicitud, *args, **kwargs):
         # Asegurar que solo usuarios del personal puedan acceder a esta vista
+        ajax = solicitud.headers.get('x-requested-with') == 'XMLHttpRequest'
         if not solicitud.user.is_staff:
+            if ajax:
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para acceder a esta página.'}, status=403)
             messages.error(solicitud, 'No tiene permisos para acceder a esta página.')
             return redirect('divisas:panel_de_control')
         return super().dispatch(solicitud, *args, **kwargs)
@@ -856,7 +859,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         datos_tasas = []
         for moneda in monedas:
             tasa_actual = moneda.obtener_precio_base()
-            
+            tasas_actuales = moneda.obtener_tasas_actuales()
             # Obtener historial reciente para esta moneda (últimos 7 días)
             from datetime import timedelta
             hace_una_semana = timezone.now() - timedelta(days=7)
@@ -867,11 +870,16 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
             
             datos_tasas.append({
                 'moneda': moneda,
-                'tasa_actual': tasa_actual,
+                'precio_actual': tasa_actual.precio_base if tasa_actual else None,
+                'fecha_actualizacion': tasa_actual.fecha_actualizacion if tasa_actual else None,
+                'actualizado_por': tasa_actual.actualizado_por if tasa_actual else None,
                 'historial_reciente': historial_reciente,
                 'formulario': FormularioActualizacionTasa() if tasa_actual else None,
+                'tasas_actuales': tasas_actuales
             })
+
         
+
         # Obtener moneda base
         moneda_base = Moneda.objects.filter(es_moneda_base=True).first()
         
@@ -888,6 +896,45 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         })
         
         return contexto
+    
+    def post(self, request, *args, **kwargs):
+        from django.utils import timezone
+        from django.http import JsonResponse
+        ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        try:
+            moneda_id = request.POST.get('moneda_id')
+            form = FormularioActualizacionTasa(request.POST)
+            if form.is_valid() and moneda_id:
+                nuevo_precio_base = form.cleaned_data['precio_base']
+                moneda = get_object_or_404(Moneda, id=moneda_id)
+                # Guardar actualizado_por si el modelo lo soporta
+                defaults = {'precio_base': nuevo_precio_base}
+                if hasattr(PrecioBase, 'actualizado_por'):
+                    defaults['actualizado_por'] = request.user
+                precio_base_obj, created = PrecioBase.objects.update_or_create(
+                    moneda=moneda,
+                    defaults=defaults
+                )
+                msg = 'Precio base actualizado correctamente.'
+                if ajax:
+                    return JsonResponse({'success': True, 'message': msg})
+                else:
+                    messages.success(request, msg)
+                    return redirect('divisas:gestionar_tasas')
+            else:
+                msg = 'Error al actualizar el precio base.'
+                if ajax:
+                    return JsonResponse({'success': False, 'message': msg, 'errors': form.errors})
+                else:
+                    messages.error(request, msg)
+                    return redirect('divisas:gestionar_tasas')
+        except Exception as e:
+            import traceback
+            if ajax:
+                return JsonResponse({'success': False, 'message': 'Error interno del servidor', 'error': str(e), 'trace': traceback.format_exc()}, status=500)
+            else:
+                messages.error(request, f'Error interno: {e}')
+                return redirect('divisas:gestionar_tasas')
 
 
 class VistaActualizarTasa(LoginRequiredMixin, TemplateView):

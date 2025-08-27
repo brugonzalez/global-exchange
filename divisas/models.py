@@ -2,8 +2,8 @@ from django.db import models
 from decimal import Decimal
 from django.utils import timezone
 from clientes.models import CategoriaCliente
-from cuentas.models import Usuario
 from django.db import transaction
+from django_countries.fields import CountryField
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ class Moneda(models.Model):
     )
     nombre = models.CharField(max_length=100)
     simbolo = models.CharField(max_length=10)
+    pais = CountryField(blank=True, null=True)
 
     esta_activa = models.BooleanField(default=True)
     es_moneda_base = models.BooleanField(
@@ -86,9 +87,10 @@ class Moneda(models.Model):
 
     def obtener_precio_base(self):
         """Obtiene el precio base actual."""
-        precio_base = self.precio_base.filter(esta_activa=True).first()
-        return precio_base.precio_base if precio_base else None
-
+        return self.precio_base.filter(esta_activa=True).first() 
+    
+    def obtener_tasas_actuales(self):
+        return self.tasas_cambio.filter(esta_activa=True).select_related('categoria_cliente')
 
 class PrecioBase(models.Model):
     """
@@ -141,31 +143,19 @@ class PrecioBase(models.Model):
 
     def save(self, *args, **kwargs):
         """Guarda el precio base y crea/actualiza automáticamente las tasas de cambio para todas las categorías de cliente si está activa."""
-        
-        super_save = super().save
         with transaction.atomic():
-            # Lógica de exclusividad de precio base activo
             if self.esta_activa:
+                # Desactivar todos los demás precios base activos para esta moneda/moneda_base
+                qs = PrecioBase.objects.filter(
+                    moneda=self.moneda,
+                    moneda_base=self.moneda_base,
+                    esta_activa=True
+                )
                 if self.pk:
-                    esta_activa_actual = self.esta_activa
-                    self.esta_activa = False
-                    super_save(update_fields=['esta_activa'], *args, **kwargs)
-                    PrecioBase.objects.filter(
-                        moneda=self.moneda,
-                        moneda_base=self.moneda_base,
-                        esta_activa=True
-                    ).exclude(pk=self.pk).update(esta_activa=False)
-                    self.esta_activa = esta_activa_actual
-                    super_save(*args, **kwargs)
-                else:
-                    PrecioBase.objects.filter(
-                        moneda=self.moneda,
-                        moneda_base=self.moneda_base,
-                        esta_activa=True
-                    ).update(esta_activa=False)
-                    super_save(*args, **kwargs)
-            else:
-                super_save(*args, **kwargs)
+                    qs = qs.exclude(pk=self.pk)
+                qs.update(esta_activa=False)
+                self.esta_activa = True
+            super().save(*args, **kwargs)
 
             # Crear/actualizar tasas de cambio automáticamente si está activa
             if self.esta_activa:

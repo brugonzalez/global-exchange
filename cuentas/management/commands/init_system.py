@@ -116,12 +116,12 @@ class Command(BaseCommand):
 
         # Crear otras monedas
         datos_monedas = [
-            {'codigo': 'USD', 'nombre': 'Dólar Estadounidense', 'simbolo': '$'},
-            {'codigo': 'EUR', 'nombre': 'Euro', 'simbolo': '€'},
-            {'codigo': 'BRL', 'nombre': 'Real Brasileño', 'simbolo': 'R$'},
-            {'codigo': 'ARS', 'nombre': 'Peso Argentino', 'simbolo': '$'},
-            {'codigo': 'CLP', 'nombre': 'Peso Chileno', 'simbolo': '$'},
-            {'codigo': 'UYU', 'nombre': 'Peso Uruguayo', 'simbolo': '$'},
+            {'codigo': 'USD', 'nombre': 'Dólar Estadounidense', 'simbolo': '$', 'pais': 'US'},
+            {'codigo': 'EUR', 'nombre': 'Euro', 'simbolo': '€', 'pais': 'EU'},
+            {'codigo': 'BRL', 'nombre': 'Real Brasileño', 'simbolo': 'R$', 'pais': 'BR'},
+            {'codigo': 'ARS', 'nombre': 'Peso Argentino', 'simbolo': '$', 'pais': 'AR'},
+            {'codigo': 'CLP', 'nombre': 'Peso Chileno', 'simbolo': '$', 'pais': 'CL'},
+            {'codigo': 'UYU', 'nombre': 'Peso Uruguayo', 'simbolo': '$', 'pais': 'UY'},
         ]
 
         for dato_moneda in datos_monedas:
@@ -130,6 +130,7 @@ class Command(BaseCommand):
                 defaults={
                     'nombre': dato_moneda['nombre'],
                     'simbolo': dato_moneda['simbolo'],
+                    'pais': dato_moneda['pais'],
                     'es_moneda_base': False,
                     'esta_activa': True,
                     'lugares_decimales': 2,

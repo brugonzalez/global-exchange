@@ -15,10 +15,6 @@
                     Gestión de Tasas de Cambio
                 </h2>
                 <div>
-                    <button type="button" class="btn btn-success me-2" id="btnActualizarDesdeApi">
-                        <i class="fas fa-sync-alt me-2"></i>
-                        Actualizar desde API
-                    </button>
                     <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-primary">
                         <i class="fas fa-home me-2"></i>Volver al Inicio
                     </a>
@@ -67,166 +63,208 @@
         </div>
     </div>
 
-    <!-- Gestión de Tasas de Cambio -->
-    <div class="row">
-        {% if datos_tasas %}
-            {% for info_tasa in datos_tasas %}
-                <div class="col-lg-6 col-xl-4 mb-4">
-                    <div class="card h-100 tarjeta-tasa-moneda" data-currency-id="{{ info_tasa.moneda.id }}">
-                        <div class="card-header bg-primary text-white">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-money-bill-wave me-2"></i>
-                                    {{ info_tasa.moneda.simbolo }} {{ info_tasa.moneda.codigo }}
-                                </h5>
-                                {% if info_tasa.moneda.es_moneda_empresa %}
-                                    <span class="badge bg-light text-dark">Propia</span>
-                                {% elif info_tasa.moneda.es_moneda_base %}
-                                    <span class="badge bg-info">Base</span>
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-10 col-md-12">
+            <div class="accordion justify-content-center" id="accordionDivisas">
+                {% for info_tasa in datos_tasas %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading-{{ info_tasa.moneda.id }}">
+                            <button class="accordion-button collapsed d-flex align-items-center" 
+                                    type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse-{{ info_tasa.moneda.id }}" 
+                                    aria-expanded="false" aria-controls="collapse-{{ info_tasa.moneda.id }}">
+
+                                <img src="{{ info_tasa.moneda.pais.flag }}" 
+                                    alt="{{ info_tasa.moneda.pais.name }}" 
+                                    class="me-2" width="20" height="14">
+
+                                <span class="me-3 fw-bold text-center" style="width: 20px; ">
+                                    {{ info_tasa.moneda.simbolo }}
+                                </span>
+
+                                <span class="me-3 fw-bold" style="width: 40px;">
+                                    {{ info_tasa.moneda.codigo }}
+                                </span>
+
+                                <span class="me-3 text-muted" style="width: 350px;">
+                                    {{ info_tasa.moneda.nombre }}
+                                </span>
+
+                                {% if info_tasa.moneda.es_moneda_base %}
+                                    <span class="badge bg-primary ms-2">Base</span>
+                                {% else %}
+                                    <span class="me-3 text-info" style="width: 200px;">
+                                        Precio Base:
+                                        <span class="badge bg-info">{{ info_tasa.precio_actual|floatformat:0|intcomma }} PYG</span>
+                                    </span>
+
+                                    <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            Actualizado: {{ info_tasa.fecha_actualizacion|date:"d/m/Y H:i"   }}
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i>
+                                                Fuente: 
+                                                {% if info_tasa.actualizado_por %}
+                                                    por {{ info_tasa.actualizado_por.nombre_completo|default:info_tasa.actualizado_por.username }}
+                                                {% endif %}
+                                            </small>
+                                    </small>
                                 {% endif %}
-                            </div>
-                            <small>{{ info_tasa.moneda.nombre }}</small>
-                        </div>
-                        
-                        <div class="card-body">
-                            {% if info_tasa.tasa_actual %}
-                                <!-- Visualización de Tasas Actuales -->
-                                <div class="row text-center mb-3">
-                                    <div class="col-6">
-                                        <div class="border-end">
-                                            <h6 class="text-success mb-1">Compra</h6>
-                                            <h4 class="tasa-compra text-success" data-rate="{{ info_tasa.tasa_actual.tasa_compra }}">
-                                                {{ info_tasa.tasa_actual.tasa_compra|floatformat:4 }}
-                                            </h4>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <h6 class="text-danger mb-1">Venta</h6>
-                                        <h4 class="tasa-venta text-danger" data-rate="{{ info_tasa.tasa_actual.tasa_venta }}">
-                                            {{ info_tasa.tasa_actual.tasa_venta|floatformat:4 }}
-                                        </h4>
-                                    </div>
-                                </div>
-
-                                <!-- Información de Actualización de Tasa -->
-                                <div class="mb-3">
-                                    <small class="text-muted">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Actualizado: hace {{ info_tasa.tasa_actual.fecha_actualizacion|timesince }}
-                                    </small>
-                                    <br>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user me-1"></i>
-                                        Fuente: {{ info_tasa.tasa_actual.get_fuente_display }}
-                                        {% if info_tasa.tasa_actual.actualizado_por %}
-                                            por {{ info_tasa.tasa_actual.actualizado_por.get_full_name|default:info_tasa.tasa_actual.actualizado_por.username }}
-                                        {% endif %}
-                                    </small>
-                                </div>
-
-                                <!-- Formulario de Actualización Manual -->
-                                <div class="border-top pt-3">
-                                    <h6 class="mb-2">
-                                        <i class="fas fa-edit me-1"></i>
-                                        Actualizar Manualmente
-                                    </h6>
-                                    <form class="formulario-actualizar-tasa" data-currency-id="{{ info_tasa.moneda.id }}">
-                                        {% csrf_token %}
-                                        <div class="row">
-                                            <div class="col-6">
-                                                <div class="form-group mb-2">
-                                                    <label class="form-label small">Compra</label>
-                                                    <input type="number" 
-                                                           class="form-control form-control-sm input-tasa-compra" 
-                                                           step="0.00000001" 
-                                                           min="0" 
-                                                           placeholder="Tasa de compra"
-                                                           value="{{ info_tasa.tasa_actual.tasa_compra|unlocalize }}">
-                                                </div>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="form-group mb-2">
-                                                    <label class="form-label small">Venta</label>
-                                                    <input type="number" 
-                                                           class="form-control form-control-sm input-tasa-venta" 
-                                                           step="0.00000001" 
-                                                           min="0" 
-                                                           placeholder="Tasa de venta"
-                                                           value="{{ info_tasa.tasa_actual.tasa_venta|unlocalize }}">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary btn-sm w-100">
-                                            <i class="fas fa-save me-1"></i>
-                                            Actualizar Tasa
-                                        </button>
-                                    </form>
-                                </div>
-                            {% else %}
-                                <!-- No hay Tasa Disponible -->
-                                <div class="text-center text-muted mb-3">
-                                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem;"></i>
-                                    <p class="mt-2">No hay tasa configurada</p>
-                                </div>
-
-                                <!-- Formulario de Tasa Inicial -->
-                                <form class="formulario-actualizar-tasa" data-currency-id="{{ info_tasa.moneda.id }}">
+                            </button>
+                        </h2>
+                        <div id="collapse-{{ info_tasa.moneda.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ info_tasa.moneda.id }}" data-bs-parent="#accordionDivisas">
+                            <div class="accordion-body">                               
+                                {# ==== PRECIO BASE ==== #}
+                                <form class="formulario-actualizar-tasa" data-currency-id="{{ info_tasa.moneda.id }}" method="post" autocomplete="off">
                                     {% csrf_token %}
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="form-group mb-2">
-                                                <label class="form-label small">Compra</label>
-                                                <input type="number" 
-                                                       class="form-control form-control-sm input-tasa-compra" 
-                                                       step="0.00000001" 
-                                                       min="0" 
-                                                       placeholder="Tasa de compra">
-                                            </div>
+                                    <div class="border rounded-3 p-3 mb-3">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <i class="fas fa-edit text-primary"></i>
+                                            <strong class="mb-0">Precio base</strong>
                                         </div>
-                                        <div class="col-6">
-                                            <div class="form-group mb-2">
-                                                <label class="form-label small">Venta</label>
-                                                <input type="number" 
-                                                       class="form-control form-control-sm input-tasa-venta" 
-                                                       step="0.00000001" 
-                                                       min="0" 
-                                                       placeholder="Tasa de venta">
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-12 col-md-8">
+                                                <label for="precio-base-{{ info_tasa.moneda.id }}" class="form-label mb-1">Monto</label>
+                                                <div class="input-group input-group-sm">
+                                                    <input
+                                                        id="precio-base-{{ info_tasa.moneda.id }}"
+                                                        name="precio_base"
+                                                        type="number" inputmode="numeric"
+                                                        class="form-control text-end"
+                                                        step="1" min="0" placeholder="0"
+                                                        value="{{ info_tasa.precio_actual|unlocalize|floatformat:0 }}"
+                                                        required
+                                                    >
+                                                    <span class="input-group-text">PYG</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-text">Enteros (sin puntos). Se guarda como precio base.</div>
+
+                                            <div class="col-12 col-md-4 d-grid">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-save me-1"></i> Actualizar precio
+                                                </button>
+                                            </div>
+                                        </div>                                            
+                                    </div>
+                                </form>
+
+                                {# ==== COMISIONES ==== #}
+                                <form class="formulario-actualizar-moneda" data-currency-id="{{ info_tasa.moneda.id }}" method="post" autocomplete="off">
+                                    {% csrf_token %}
+                                    <div class="border rounded-3 p-3 mb-3">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <i class="fas fa-percent text-primary"></i>
+                                            <strong class="mb-0">Comisiones</strong>
+                                        </div>
+
+                                        <div class="card-body">
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-12 col-md-6">
+                                                    <label for="comision-compra-{{ info_tasa.moneda.id }}" class="form-label mb-1">Comisión de compra</label>
+
+                                                    <div class="input-group input-group-sm">
+                                                        <input
+                                                            id="comision-compra-{{ info_tasa.moneda.id }}"
+                                                            name="comision_compra"
+                                                            type="number" inputmode="numeric"
+                                                            class="form-control text-end"
+                                                            step="1" min="0" placeholder="0"
+                                                            value="{{ info_tasa.moneda.comision_compra|unlocalize|floatformat:0 }}"
+                                                            required
+                                                        >
+                                                        <span class="input-group-text">PYG</span>
+                                                    </div>
+
+                                                    <div class="form-text">Enteros. Se aplica al comprar esta divisa.</div>
+                                                </div>
+
+                                                <div class="col-12 col-md-6">
+                                                    <label for="comision-venta-{{ info_tasa.moneda.id }}" class="form-label mb-1">Comisión de venta</label>
+
+                                                    <div class="input-group input-group-sm">
+                                                        <input
+                                                            id="comision-venta-{{ info_tasa.moneda.id }}"
+                                                            name="comision_venta"
+                                                            type="number" inputmode="numeric"
+                                                            class="form-control text-end"
+                                                            step="1" min="0" placeholder="0"
+                                                            value="{{ info_tasa.moneda.comision_venta|unlocalize|floatformat:0 }}"
+                                                            required
+                                                        >
+                                                        <span class="input-group-text">PYG</span>
+                                                    </div>
+
+                                                    <div class="form-text">Enteros. Se aplica cuando vendés esta divisa.</div>
+                                                </div>
+
+                                                <div class="col-12 d-grid d-md-flex justify-content-md-end gap-2">
+                                                    <button type="submit" class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-save me-1"></i> Guardar cambios
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <button type="submit" class="btn btn-success btn-sm w-100">
-                                        <i class="fas fa-plus me-1"></i>
-                                        Crear Tasa Inicial
-                                    </button>
                                 </form>
-                            {% endif %}
-                        </div>
 
-                        <!-- Mini Gráfico de Historial Reciente -->
-                        {% if info_tasa.historial_reciente %}
-                            <div class="card-footer">
-                                <small class="text-muted">
-                                    <i class="fas fa-chart-area me-1"></i>
-                                    Histórico (7 días)
-                                </small>
-                                <div class="mini-grafico" id="grafico-{{ info_tasa.moneda.id }}" style="height: 60px;">
-                                    <!-- El gráfico será renderizado aquí por JavaScript -->
+                                    
+                                <div class="border rounded-3 p-3 mb-3">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <i class="fas fa-chart-line text-primary"></i>
+                                        <strong class="mb-0">Tasas activas</strong>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped align-middle mb-0">
+                                            <colgroup>
+                                                <col style="width: 50%">
+                                                <col style="width: 25%">
+                                                <col style="width: 25%">
+                                            </colgroup>
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="text-muted">Categoría</th>
+                                                    <th class="text-end">Compra</th>
+                                                    <th class="text-end">Venta</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="table-group-divider">
+                                                {% for tasa in info_tasa.tasas_actuales %}
+                                                <tr>
+                                                    <td class="text-nowrap">
+                                                        <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">
+                                                        {{ tasa.categoria_cliente.nombre }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-end text-success fw-semibold">
+                                                        {{ tasa.tasa_compra|floatformat:0|intcomma }} PYG
+                                                    </td>
+                                                    <td class="text-end text-danger fw-semibold">
+                                                        {{ tasa.tasa_venta|floatformat:0|intcomma }} PYG
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted py-4">Sin tasas activas</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
-                        {% endif %}
+                        </div>
                     </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <div class="col-12">
-                <div class="alert alert-warning text-center">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    No hay monedas activas configuradas en el sistema.
-                </div>
+                {% endfor %}
             </div>
-        {% endif %}
+        </div>
     </div>
+
+   
 </div>
+
 
 <!-- Contenedor de Alertas de Éxito/Error -->
 <div id="contenedorAlertas" style="position: fixed; top: 20px; right: 20px; z-index: 1050; max-width: 400px;"></div>
@@ -247,7 +285,7 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const tokenCSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    // No tomar el token global, se tomará del formulario en cada submit
     
     // Actualizar la hora de la última actualización
     actualizarHoraUltimaActualizacion();
@@ -255,71 +293,70 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurar actualización periódica
     setInterval(actualizarHoraUltimaActualizacion, 60000); // Actualizar cada minuto
     
-    // Manejar actualizaciones manuales de tasas
+    // Solo enganchar AJAX para formularios que tengan el campo precio_base
     document.querySelectorAll('.formulario-actualizar-tasa').forEach(formulario => {
-        formulario.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const idMoneda = this.dataset.currencyId;
-            const tasaCompra = this.querySelector('.input-tasa-compra').value;
-            const tasaVenta = this.querySelector('.input-tasa-venta').value;
-            
-            if (!tasaCompra || !tasaVenta) {
-                mostrarAlerta('error', 'Por favor ingrese ambas tasas (compra y venta)');
-                return;
-            }
-            
-            if (parseFloat(tasaVenta) <= parseFloat(tasaCompra)) {
-                mostrarAlerta('error', 'La tasa de venta debe ser mayor que la tasa de compra');
-                return;
-            }
-            
-            actualizarTasa(idMoneda, tasaCompra, tasaVenta, this);
-        });
+        if (formulario.querySelector('input[name="precio_base"]')) {
+            formulario.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const idMoneda = this.dataset.currencyId;
+                const precioBase = this.querySelector('input[name="precio_base"]').value;
+                if (!precioBase || isNaN(precioBase) || parseFloat(precioBase) <= 0) {
+                    mostrarAlerta('error', 'Por favor ingrese un precio base válido (> 0)');
+                    return;
+                }
+                actualizarPrecioBase(idMoneda, precioBase, this);
+            });
+        }
     });
-    
-    // Manejar actualizaciones desde API
-    document.getElementById('btnActualizarDesdeApi').addEventListener('click', function() {
-        actualizarDesdeAPI();
-    });
-    
-    function actualizarTasa(idMoneda, tasaCompra, tasaVenta, formulario) {
+
+    function actualizarPrecioBase(idMoneda, precioBase, formulario) {
         const botonEnviar = formulario.querySelector('button[type="submit"]');
         const textoOriginal = botonEnviar.innerHTML;
-        
-        // Mostrar estado de carga
         botonEnviar.disabled = true;
         botonEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Actualizando...';
-        
-        fetch('{% url "divisas:api_actualizar_tasas" %}', {
+        // Tomar el token CSRF del propio formulario
+        const tokenCSRF = formulario.querySelector('[name=csrfmiddlewaretoken]').value;
+        fetch('{% url "divisas:actualizar_precio_base" %}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': tokenCSRF
+                'X-CSRFToken': tokenCSRF,
+                'X-Requested-With': 'XMLHttpRequest',   // 🔴 CLAVE
+                'Accept': 'application/json'            // ayuda a negociar JSON
             },
             body: new URLSearchParams({
-                'type': 'manual',
-                'currency_id': idMoneda,
-                'buy_rate': tasaCompra,
-                'sell_rate': tasaVenta
-            })
+                'moneda_id': idMoneda,
+                'precio_base': precioBase
+            }),
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
-        .then(data => {
+        .then(async (res) => {
+            const ct = res.headers.get('content-type') || '';
+            if (!res.ok) {
+            // lee el cuerpo para depurar
+            const text = await res.text();
+            throw new Error(`HTTP ${res.status}: ${text.slice(0,200)}`);
+            }
+            if (ct.includes('application/json')) {
+            return res.json();
+            }
+            // si por algún motivo volvió HTML, lo mostramos en error legible
+            const text = await res.text();
+            throw new Error('Respuesta no-JSON:\n' + text.slice(0,200));
+        })
+        .then((data) => {
             if (data.success) {
-                mostrarAlerta('success', data.message || 'Tasa actualizada correctamente');
-                // Recargar la página para mostrar los datos actualizados
-                setTimeout(() => window.location.reload(), 1000);
+            mostrarAlerta('success', data.message || 'Precio base actualizado correctamente');
+            setTimeout(() => window.location.reload(), 600);
             } else {
-                mostrarAlerta('error', data.error || 'Error al actualizar la tasa');
+            mostrarAlerta('error', (data.message || data.error) || 'Error al actualizar el precio base');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            mostrarAlerta('error', 'Error de conexión al actualizar la tasa');
+        .catch((err) => {
+            console.error(err);
+            mostrarAlerta('error', 'Error de conexión o respuesta inválida del servidor');
         })
         .finally(() => {
-            // Restaurar estado del botón
             botonEnviar.disabled = false;
             botonEnviar.innerHTML = textoOriginal;
         });

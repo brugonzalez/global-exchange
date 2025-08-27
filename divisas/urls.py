@@ -17,7 +17,8 @@ urlpatterns = [
     
     # Vistas de administración (solo usuarios autenticados)
     path('admin/tasas/', views.VistaGestionarTasas.as_view(), name='gestionar_tasas'),
-    path('admin/tasas/actualizar/<int:id_tasa>/', views.VistaActualizarTasa.as_view(), name='actualizar_tasa'),
+    path('admin/precio-base/actualizar/', views.VistaGestionarTasas.as_view(), name='actualizar_precio_base'),
+    path('admin/tasas/actualizar/', views.VistaGestionarTasas.as_view(), name='actualizar_tasa'),
     path('admin/monedas/', views.VistaGestionarMonedas.as_view(), name='gestionar_monedas'),
     path('admin/metodos-pago/', views.VistaGestionarMetodosPago.as_view(), name='gestionar_metodos_pago'),
     

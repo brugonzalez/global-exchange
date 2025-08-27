@@ -102,11 +102,12 @@
                                 <div class="card-body text-center">
                                     <div class="d-flex justify-content-between align-items-start mb-3">
                                         <h5 class="card-title mb-0">
+                                            <img src="{{ tasa.moneda.pais.flag }}" 
+                                                alt="{{ tasa.moneda.pais.name }}" 
+                                                width="20" height="14"
+                                                class="align-middle me-1">
                                             {{ tasa.moneda.simbolo }} {{ tasa.moneda.codigo }}
                                         </h5>
-                                        {% if tasa.moneda.es_moneda_empresa %}
-                                            <span class="badge bg-primary">Propia</span>
-                                        {% endif %}
                                     </div>
                                     
                                     <h6 class="text-muted">{{ tasa.moneda.nombre }}</h6>
