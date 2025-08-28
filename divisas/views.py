@@ -1,3 +1,8 @@
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.utils.decorators import method_decorator
+
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -8,8 +13,10 @@ from django.db.models import Q
 from decimal import Decimal
 import requests
 from clientes.models import CategoriaCliente
+from django.utils.formats import number_format
+from django.template.loader import render_to_string
 
-from .models import Moneda, TasaCambio, HistorialTasaCambio, MetodoPago, AlertaTasa
+from .models import Moneda, TasaCambio, HistorialTasaCambio, PrecioBase, MetodoPago, AlertaTasa
 from transacciones.models import SimulacionTransaccion
 from .forms import FormularioSimulacion, FormularioActualizacionTasa, FormularioAlerta
 
@@ -841,7 +848,10 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
     
     def dispatch(self, solicitud, *args, **kwargs):
         # Asegurar que solo usuarios del personal puedan acceder a esta vista
+        ajax = solicitud.headers.get('x-requested-with') == 'XMLHttpRequest'
         if not solicitud.user.is_staff:
+            if ajax:
+                return JsonResponse({'success': False, 'message': 'No tiene permisos para acceder a esta página.'}, status=403)
             messages.error(solicitud, 'No tiene permisos para acceder a esta página.')
             return redirect('divisas:panel_de_control')
         return super().dispatch(solicitud, *args, **kwargs)
@@ -856,7 +866,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         datos_tasas = []
         for moneda in monedas:
             tasa_actual = moneda.obtener_precio_base()
-            
+            tasas_actuales = moneda.obtener_tasas_actuales()
             # Obtener historial reciente para esta moneda (últimos 7 días)
             from datetime import timedelta
             hace_una_semana = timezone.now() - timedelta(days=7)
@@ -867,17 +877,26 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
             
             datos_tasas.append({
                 'moneda': moneda,
-                'tasa_actual': tasa_actual,
+                'precio_actual': tasa_actual.precio_base if tasa_actual else None,
+                'fecha_actualizacion': tasa_actual.fecha_actualizacion if tasa_actual else None,
+                'actualizado_por': tasa_actual.actualizado_por if tasa_actual else None,
                 'historial_reciente': historial_reciente,
                 'formulario': FormularioActualizacionTasa() if tasa_actual else None,
+                'tasas_actuales': tasas_actuales
             })
+
         
+
         # Obtener moneda base
         moneda_base = Moneda.objects.filter(es_moneda_base=True).first()
         
         # Obtener todos los métodos de pago para el contexto
         metodos_pago = MetodoPago.objects.filter(esta_activo=True).order_by('nombre')
         
+        # Calcular la última fecha de actualización entre todas las monedas
+        fechas = [dt['fecha_actualizacion'] for dt in datos_tasas if dt.get('fecha_actualizacion')]
+        ultima_actualizacion = max(fechas) if fechas else None
+
         contexto.update({
             'datos_tasas': datos_tasas,
             'monedas': monedas,
@@ -885,10 +904,123 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
             'metodos_pago': metodos_pago,
             'total_monedas': monedas.count(),
             'tasas_activas': TasaCambio.objects.filter(esta_activa=True).count(),
+            'ultima_actualizacion': ultima_actualizacion,
         })
         
         return contexto
+    
+    def post(self, request, *args, **kwargs):
+        from django.utils import timezone
+        from django.http import JsonResponse
+        ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        try:
+            moneda_id = request.POST.get('moneda_id')
+            form = FormularioActualizacionTasa(request.POST)
+            if form.is_valid() and moneda_id:
+                nuevo_precio_base = form.cleaned_data['precio_base']
+                moneda = get_object_or_404(Moneda, id=moneda_id)
+                # Guardar actualizado_por si el modelo lo soporta
+                defaults = {'precio_base': nuevo_precio_base}
+                if hasattr(PrecioBase, 'actualizado_por'):
+                    defaults['actualizado_por'] = request.user
+                    precio_base_obj, created = PrecioBase.objects.update_or_create(
+                    moneda=moneda,
+                    defaults=defaults
+                )
+                tasas_actuales = moneda.obtener_tasas_actuales()  # recomputadas a partir del precio base
 
+                tbody_html = render_to_string(
+                    'divisas/_tasas_activas_tbody.html',
+                    {'tasas_actuales': tasas_actuales},
+                    request=request
+                )
+
+                msg = 'Precio base actualizado correctamente.'
+                if ajax:
+                    fecha_str = ""
+                    if hasattr(precio_base_obj, "fecha_actualizacion") and precio_base_obj.fecha_actualizacion:
+                        fecha_str = timezone.localtime(precio_base_obj.fecha_actualizacion).strftime("%d/%m/%Y %H:%M")
+
+                    # Construir fuente_actualizacion_str igual que en el template
+                    fuente_actualizacion_str = ""
+                    if getattr(precio_base_obj, "actualizado_por", None):
+                        fuente_actualizacion_str = f"por {getattr(precio_base_obj.actualizado_por, 'nombre_completo', '') or getattr(precio_base_obj.actualizado_por, 'username', '')}"
+                    return JsonResponse({
+                        "success": True,
+                        "message": "Precio base actualizado correctamente.",
+                        "moneda_id": moneda.id,
+                        "precio_base_raw": float(nuevo_precio_base),
+                        "precio_base_html": f"{number_format(nuevo_precio_base, 0, use_l10n=True, force_grouping=True)} PYG",
+                        "fecha_actualizacion_str": fecha_str,
+                        "actualizado_por": (
+                            getattr(request.user, "nombre_completo", None)
+                            or request.user.get_full_name()
+                            or request.user.username
+                        ),
+                        "tasas_tbody_html": tbody_html,
+                    })
+                else:
+                    messages.success(request, msg)
+                    return redirect('divisas:gestionar_tasas')
+            else:
+                msg = 'Error al actualizar el precio base.'
+                if ajax:
+                    return JsonResponse({'success': False, 'message': msg, 'errors': form.errors})
+                else:
+                    messages.error(request, msg)
+                    return redirect('divisas:gestionar_tasas')
+        except Exception as e:
+            import traceback
+            if ajax:
+                return JsonResponse({'success': False, 'message': 'Error interno del servidor', 'error': str(e), 'trace': traceback.format_exc()}, status=500)
+            else:
+                messages.error(request, f'Error interno: {e}')
+                return redirect('divisas:gestionar_tasas')
+
+# Vista para actualizar comisiones de una moneda y recalcular tasas
+@csrf_exempt
+@require_POST
+def actualizar_comisiones(request):
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    try:
+        ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        moneda_id = request.POST.get('moneda_id')
+        comision_compra = request.POST.get('comision_compra')
+        comision_venta = request.POST.get('comision_venta')
+        if not (moneda_id and comision_compra is not None and comision_venta is not None):
+            return JsonResponse({'success': False, 'message': 'Datos incompletos.'}, status=400)
+        moneda = get_object_or_404(Moneda, id=moneda_id)
+        # Guardar comisiones
+        moneda.comision_compra = Decimal(comision_compra)
+        moneda.comision_venta = Decimal(comision_venta)
+        moneda.save(update_fields=['comision_compra', 'comision_venta'])
+
+        # Recalcular tasas de cambio activas para esa moneda
+        tasas = TasaCambio.objects.filter(moneda=moneda, esta_activa=True)
+        for tasa in tasas:
+            # Recalcular usando la lógica actual del modelo
+            precio_base = tasa.precio_base.precio_base
+            categoria = tasa.categoria_cliente
+            tasa.tasa_compra = precio_base + moneda.comision_compra - (categoria.margen_tasa_preferencial * moneda.comision_compra)
+            tasa.tasa_venta = precio_base + moneda.comision_venta - (categoria.margen_tasa_preferencial * moneda.comision_venta)
+            tasa.save(update_fields=['tasa_compra', 'tasa_venta', 'fecha_actualizacion'])
+
+        # Renderizar tabla de tasas activas
+        tasas_actuales = moneda.obtener_tasas_actuales()
+        tbody_html = render_to_string('divisas/_tasas_activas_tbody.html', {'tasas_actuales': tasas_actuales}, request=request)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Comisiones actualizadas correctamente.',
+            'comision_compra_raw': float(moneda.comision_compra),
+            'comision_venta_raw': float(moneda.comision_venta),
+            'tasas_tbody_html': tbody_html,
+        })
+    except Exception as e:
+        import traceback
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor', 'error': str(e), 'trace': traceback.format_exc()}, status=500)
 
 class VistaActualizarTasa(LoginRequiredMixin, TemplateView):
     template_name = 'en_construccion.html'

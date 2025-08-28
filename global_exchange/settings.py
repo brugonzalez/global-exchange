@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'django_countries',
     
     # Aplicaciones de terceros
     'django_extensions',
@@ -145,6 +146,7 @@ LANGUAGE_CODE = 'es-py'  # Español de Paraguay
 TIME_ZONE = 'America/Asuncion'  # Zona horaria apropiada para Global Exchange en Paraguay
 
 USE_I18N = True
+USE_L10N = True # Formato de números y fechas
 
 USE_TZ = True
 

@@ -108,7 +108,8 @@ class Command(BaseCommand):
                 'simbolo': '₲',
                 'es_moneda_base': True,
                 'esta_activa': True,
-                'lugares_decimales': 2
+                'lugares_decimales': 2,
+                'pais': 'PY'
             }
         )
         if creado:
@@ -116,12 +117,12 @@ class Command(BaseCommand):
 
         # Crear otras monedas
         datos_monedas = [
-            {'codigo': 'USD', 'nombre': 'Dólar Estadounidense', 'simbolo': '$'},
-            {'codigo': 'EUR', 'nombre': 'Euro', 'simbolo': '€'},
-            {'codigo': 'BRL', 'nombre': 'Real Brasileño', 'simbolo': 'R$'},
-            {'codigo': 'ARS', 'nombre': 'Peso Argentino', 'simbolo': '$'},
-            {'codigo': 'CLP', 'nombre': 'Peso Chileno', 'simbolo': '$'},
-            {'codigo': 'UYU', 'nombre': 'Peso Uruguayo', 'simbolo': '$'},
+            {'codigo': 'USD', 'nombre': 'Dólar Estadounidense', 'simbolo': '$', 'pais': 'US'},
+            {'codigo': 'EUR', 'nombre': 'Euro', 'simbolo': '€', 'pais': 'EU'},
+            {'codigo': 'BRL', 'nombre': 'Real Brasileño', 'simbolo': 'R$', 'pais': 'BR'},
+            {'codigo': 'ARS', 'nombre': 'Peso Argentino', 'simbolo': '$', 'pais': 'AR'},
+            {'codigo': 'CLP', 'nombre': 'Peso Chileno', 'simbolo': '$', 'pais': 'CL'},
+            {'codigo': 'UYU', 'nombre': 'Peso Uruguayo', 'simbolo': '$', 'pais': 'UY'},
         ]
 
         for dato_moneda in datos_monedas:
@@ -130,6 +131,7 @@ class Command(BaseCommand):
                 defaults={
                     'nombre': dato_moneda['nombre'],
                     'simbolo': dato_moneda['simbolo'],
+                    'pais': dato_moneda['pais'],
                     'es_moneda_base': False,
                     'esta_activa': True,
                     'lugares_decimales': 2,
@@ -152,7 +154,7 @@ class Command(BaseCommand):
 
         for dato_precio in datos_precios_base:
             moneda = Moneda.objects.get(codigo=dato_precio['moneda'])
-            precio_base, creado = PrecioBase.objects.get_or_create(
+            precio_base, creado = PrecioBase.objects.update_or_create(
                 moneda=moneda,
                 moneda_base=guarani_paraguayo,
                 esta_activa=True,
@@ -162,6 +164,7 @@ class Command(BaseCommand):
             )
             if creado:
                 self.stdout.write(f'  ✓ Precio base creado: {precio_base}')
+
 
 
 

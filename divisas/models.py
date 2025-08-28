@@ -2,8 +2,8 @@ from django.db import models
 from decimal import Decimal
 from django.utils import timezone
 from clientes.models import CategoriaCliente
-from cuentas.models import Usuario
 from django.db import transaction
+from django_countries.fields import CountryField
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ class Moneda(models.Model):
     )
     nombre = models.CharField(max_length=100)
     simbolo = models.CharField(max_length=10)
+    pais = CountryField(blank=True, null=True)
 
     esta_activa = models.BooleanField(default=True)
     es_moneda_base = models.BooleanField(
@@ -86,9 +87,10 @@ class Moneda(models.Model):
 
     def obtener_precio_base(self):
         """Obtiene el precio base actual."""
-        precio_base = self.precio_base.filter(esta_activa=True).first()
-        return precio_base.precio_base if precio_base else None
-
+        return self.precio_base.filter(esta_activa=True).first() 
+    
+    def obtener_tasas_actuales(self):
+        return self.tasas_cambio.filter(esta_activa=True).select_related('categoria_cliente')
 
 class PrecioBase(models.Model):
     """
@@ -110,7 +112,8 @@ class PrecioBase(models.Model):
     precio_base = models.DecimalField(
         max_digits=20,
         decimal_places=8,
-        help_text="Precio base de la moneda en la moneda base"
+        help_text="Precio base de la moneda en la moneda base",
+        default=Decimal('0.00')
     )
 
     # Fuente y validación
@@ -140,49 +143,22 @@ class PrecioBase(models.Model):
         return f"{self.moneda.codigo}/{self.moneda_base.codigo} - Precio base: {self.precio_base}"
 
     def save(self, *args, **kwargs):
-        """Guarda el precio base y crea/actualiza automáticamente las tasas de cambio para todas las categorías de cliente si está activa."""
-        
-        super_save = super().save
+        """
+        Guarda el precio base y desactiva otros precios base activos para la misma moneda/moneda_base.
+        La creación/actualización de tasas de cambio se maneja ahora en una señal post_save.
+        """
         with transaction.atomic():
-            # Lógica de exclusividad de precio base activo
             if self.esta_activa:
+                qs = PrecioBase.objects.filter(
+                    moneda=self.moneda,
+                    moneda_base=self.moneda_base,
+                    esta_activa=True
+                )
                 if self.pk:
-                    esta_activa_actual = self.esta_activa
-                    self.esta_activa = False
-                    super_save(update_fields=['esta_activa'], *args, **kwargs)
-                    PrecioBase.objects.filter(
-                        moneda=self.moneda,
-                        moneda_base=self.moneda_base,
-                        esta_activa=True
-                    ).exclude(pk=self.pk).update(esta_activa=False)
-                    self.esta_activa = esta_activa_actual
-                    super_save(*args, **kwargs)
-                else:
-                    PrecioBase.objects.filter(
-                        moneda=self.moneda,
-                        moneda_base=self.moneda_base,
-                        esta_activa=True
-                    ).update(esta_activa=False)
-                    super_save(*args, **kwargs)
-            else:
-                super_save(*args, **kwargs)
-
-            # Crear/actualizar tasas de cambio automáticamente si está activa
-            if self.esta_activa:
-                categorias = CategoriaCliente.objects.all()
-                for categoria in categorias:
-                    from divisas.models import TasaCambio
-                    TasaCambio.objects.update_or_create(
-                        moneda=self.moneda,
-                        moneda_base=self.moneda_base,
-                        precio_base=self,
-                        categoria_cliente=categoria,
-                        defaults={
-                            'tasa_compra': self.precio_base + self.moneda.comision_compra - (categoria.margen_tasa_preferencial * self.moneda.comision_compra),
-                            'tasa_venta': self.precio_base + self.moneda.comision_venta - (categoria.margen_tasa_preferencial * self.moneda.comision_venta),
-                            'esta_activa': True,
-                        }
-                    )
+                    qs = qs.exclude(pk=self.pk)
+                qs.update(esta_activa=False)
+                self.esta_activa = True
+            super().save(*args, **kwargs)
 
 class TasaCambio(models.Model):
     """
@@ -237,20 +213,18 @@ class TasaCambio(models.Model):
         return f"{self.moneda.codigo}/{self.moneda_base.codigo} - Tasa de Cambio: {self.tasa_compra}/{self.tasa_venta}"
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # Crear/actualizar historial de tasas de cambio
+        # Agregar SIEMPRE un nuevo historial de tasas de cambio
         with transaction.atomic():
-            HistorialTasaCambio.objects.update_or_create(
+            HistorialTasaCambio.objects.create(
                 moneda=self.moneda,
                 moneda_base=self.moneda_base,
                 categoria_cliente=self.categoria_cliente,
-                defaults={
-                    'precio_base': self.precio_base.precio_base,
-                    'tasa_compra': self.tasa_compra,
-                    'tasa_venta': self.tasa_venta,
-                    'comision_compra': self.moneda.comision_compra,
-                    'comision_venta': self.moneda.comision_venta,
-                    'marca_de_tiempo': timezone.now()
-                }
+                precio_base=self.precio_base.precio_base,
+                tasa_compra=self.tasa_compra,
+                tasa_venta=self.tasa_venta,
+                comision_compra=self.moneda.comision_compra,
+                comision_venta=self.moneda.comision_venta,
+                marca_de_tiempo=timezone.now()
             )
 
 class HistorialTasaCambio(models.Model):

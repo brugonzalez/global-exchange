@@ -1,6 +1,6 @@
 from django import forms
 from decimal import Decimal
-from .models import Moneda, TasaCambio, AlertaTasa
+from .models import Moneda, PrecioBase, AlertaTasa
 
 
 class FormularioSimulacion(forms.Form):
@@ -69,35 +69,24 @@ class FormularioActualizacionTasa(forms.ModelForm):
     Formulario para actualizaciones manuales de tasas.
     """
     class Meta:
-        model = TasaCambio
-        fields = ['tasa_compra', 'tasa_venta']
+        model = PrecioBase
+        fields = ['precio_base']
         widgets = {
-            'tasa_compra': forms.NumberInput(attrs={
+            'precio_base': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.00000001',
+                'step': '1',
                 'min': '0',
                 'placeholder': 'Tasa de compra'
             }),
-            'tasa_venta': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.00000001',
-                'min': '0',
-                'placeholder': 'Tasa de venta'
-            })
         }
         labels = {
-            'tasa_compra': 'Tasa de Compra',
-            'tasa_venta': 'Tasa de Venta'
+            'precio_base': 'Precio Base'
         }
     
     def clean(self):
         datos_limpios = super().clean()
-        tasa_compra = datos_limpios.get('tasa_compra')
-        tasa_venta = datos_limpios.get('tasa_venta')
-        
-        if tasa_compra and tasa_venta and tasa_venta <= tasa_compra:
-            raise forms.ValidationError('La tasa de venta debe ser mayor que la tasa de compra.')
-        
+        precio_base = datos_limpios.get('precio_base')
+
         return datos_limpios
 
 
@@ -164,7 +153,7 @@ class FormularioMoneda(forms.ModelForm):
     class Meta:
         model = Moneda
         fields = ['codigo', 'nombre', 'simbolo', 'esta_activa', 
-                 'es_moneda_base', 'lugares_decimales']
+                 'es_moneda_base', 'lugares_decimales', 'comision_compra', 'comision_venta']
         widgets = {
             'codigo': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -191,6 +180,18 @@ class FormularioMoneda(forms.ModelForm):
                 'min': '0',
                 'max': '8'
             })
+            ,'comision_compra': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '1',
+                'min': '0',
+                'placeholder': 'Comisión de compra en PYG'
+            }),
+            'comision_venta': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '1',
+                'min': '0',
+                'placeholder': 'Comisión de venta en PYG'
+            })
         }
         labels = {
             'codigo': 'Código',
@@ -198,7 +199,9 @@ class FormularioMoneda(forms.ModelForm):
             'simbolo': 'Símbolo',
             'esta_activa': 'Activa',
             'es_moneda_base': 'Moneda Base',
-            'lugares_decimales': 'Decimales'
+            'lugares_decimales': 'Decimales',
+            'comision_compra': 'Comisión de compra',
+            'comision_venta': 'Comisión de venta'
         }
     
     def clean_codigo(self):
