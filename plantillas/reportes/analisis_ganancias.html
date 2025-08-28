@@ -5,25 +5,37 @@
 {% block title %}Análisis de Ganancias - Global Exchange{% endblock %}
 
 {% block content %}
+
+<style>
+    .ganancias-header {
+        background: linear-gradient(135deg, #044413, #0aa174);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+</style>
+
 <div class="container mt-4">
     <!-- Encabezado -->
-    <div class="row mb-4">
+    <!-- <div class="row mb-4"> -->
+    <div class="ganancias-header">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
-                    <i class="fas fa-chart-line me-2 text-success"></i>
+                    <i class="fas fa-chart-line me-2 "></i>
                     Análisis de Ganancias
                 </h2>
                 <div>
-                    <button class="btn btn-success me-2" onclick="refrescarMetricas()">
+                    <button class="btn btn-light me-2" onclick="refrescarMetricas()">
                         <i class="fas fa-sync-alt me-2"></i>Actualizar
                     </button>
-                    <a href="{% url 'reportes:panel_analiticas' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-arrow-left me-2"></i>Panel Analítico
+                    <a href="{% url 'reportes:panel_analiticas' %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-1"></i>Panel Analítico
                     </a>
                 </div>
             </div>
-            <p class="text-muted">Monitoreo en tiempo real de ganancias y rentabilidad</p>
+            <p class="mb-0">Monitoreo en tiempo real de ganancias y rentabilidad</p>
         </div>
     </div>
 
