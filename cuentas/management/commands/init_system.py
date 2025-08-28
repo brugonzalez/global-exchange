@@ -108,7 +108,8 @@ class Command(BaseCommand):
                 'simbolo': '₲',
                 'es_moneda_base': True,
                 'esta_activa': True,
-                'lugares_decimales': 2
+                'lugares_decimales': 2,
+                'pais': 'PY'
             }
         )
         if creado:
@@ -153,7 +154,7 @@ class Command(BaseCommand):
 
         for dato_precio in datos_precios_base:
             moneda = Moneda.objects.get(codigo=dato_precio['moneda'])
-            precio_base, creado = PrecioBase.objects.get_or_create(
+            precio_base, creado = PrecioBase.objects.update_or_create(
                 moneda=moneda,
                 moneda_base=guarani_paraguayo,
                 esta_activa=True,
@@ -163,6 +164,7 @@ class Command(BaseCommand):
             )
             if creado:
                 self.stdout.write(f'  ✓ Precio base creado: {precio_base}')
+
 
 
 

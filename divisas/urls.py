@@ -19,6 +19,7 @@ urlpatterns = [
     path('admin/tasas/', views.VistaGestionarTasas.as_view(), name='gestionar_tasas'),
     path('admin/precio-base/actualizar/', views.VistaGestionarTasas.as_view(), name='actualizar_precio_base'),
     path('admin/tasas/actualizar/', views.VistaGestionarTasas.as_view(), name='actualizar_tasa'),
+    path('admin/comisiones/actualizar/', views.actualizar_comisiones, name='actualizar_comisiones'),
     path('admin/monedas/', views.VistaGestionarMonedas.as_view(), name='gestionar_monedas'),
     path('admin/metodos-pago/', views.VistaGestionarMetodosPago.as_view(), name='gestionar_metodos_pago'),
     

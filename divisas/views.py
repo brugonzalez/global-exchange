@@ -1,3 +1,8 @@
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.utils.decorators import method_decorator
+
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -888,6 +893,10 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         # Obtener todos los métodos de pago para el contexto
         metodos_pago = MetodoPago.objects.filter(esta_activo=True).order_by('nombre')
         
+        # Calcular la última fecha de actualización entre todas las monedas
+        fechas = [dt['fecha_actualizacion'] for dt in datos_tasas if dt.get('fecha_actualizacion')]
+        ultima_actualizacion = max(fechas) if fechas else None
+
         contexto.update({
             'datos_tasas': datos_tasas,
             'monedas': monedas,
@@ -895,6 +904,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
             'metodos_pago': metodos_pago,
             'total_monedas': monedas.count(),
             'tasas_activas': TasaCambio.objects.filter(esta_activa=True).count(),
+            'ultima_actualizacion': ultima_actualizacion,
         })
         
         return contexto
@@ -931,6 +941,10 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
                     if hasattr(precio_base_obj, "fecha_actualizacion") and precio_base_obj.fecha_actualizacion:
                         fecha_str = timezone.localtime(precio_base_obj.fecha_actualizacion).strftime("%d/%m/%Y %H:%M")
 
+                    # Construir fuente_actualizacion_str igual que en el template
+                    fuente_actualizacion_str = ""
+                    if getattr(precio_base_obj, "actualizado_por", None):
+                        fuente_actualizacion_str = f"por {getattr(precio_base_obj.actualizado_por, 'nombre_completo', '') or getattr(precio_base_obj.actualizado_por, 'username', '')}"
                     return JsonResponse({
                         "success": True,
                         "message": "Precio base actualizado correctamente.",
@@ -963,6 +977,50 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
                 messages.error(request, f'Error interno: {e}')
                 return redirect('divisas:gestionar_tasas')
 
+# Vista para actualizar comisiones de una moneda y recalcular tasas
+@csrf_exempt
+@require_POST
+def actualizar_comisiones(request):
+    from django.http import JsonResponse
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    try:
+        ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        moneda_id = request.POST.get('moneda_id')
+        comision_compra = request.POST.get('comision_compra')
+        comision_venta = request.POST.get('comision_venta')
+        if not (moneda_id and comision_compra is not None and comision_venta is not None):
+            return JsonResponse({'success': False, 'message': 'Datos incompletos.'}, status=400)
+        moneda = get_object_or_404(Moneda, id=moneda_id)
+        # Guardar comisiones
+        moneda.comision_compra = Decimal(comision_compra)
+        moneda.comision_venta = Decimal(comision_venta)
+        moneda.save(update_fields=['comision_compra', 'comision_venta'])
+
+        # Recalcular tasas de cambio activas para esa moneda
+        tasas = TasaCambio.objects.filter(moneda=moneda, esta_activa=True)
+        for tasa in tasas:
+            # Recalcular usando la lógica actual del modelo
+            precio_base = tasa.precio_base.precio_base
+            categoria = tasa.categoria_cliente
+            tasa.tasa_compra = precio_base + moneda.comision_compra - (categoria.margen_tasa_preferencial * moneda.comision_compra)
+            tasa.tasa_venta = precio_base + moneda.comision_venta - (categoria.margen_tasa_preferencial * moneda.comision_venta)
+            tasa.save(update_fields=['tasa_compra', 'tasa_venta', 'fecha_actualizacion'])
+
+        # Renderizar tabla de tasas activas
+        tasas_actuales = moneda.obtener_tasas_actuales()
+        tbody_html = render_to_string('divisas/_tasas_activas_tbody.html', {'tasas_actuales': tasas_actuales}, request=request)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Comisiones actualizadas correctamente.',
+            'comision_compra_raw': float(moneda.comision_compra),
+            'comision_venta_raw': float(moneda.comision_venta),
+            'tasas_tbody_html': tbody_html,
+        })
+    except Exception as e:
+        import traceback
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor', 'error': str(e), 'trace': traceback.format_exc()}, status=500)
 
 class VistaActualizarTasa(LoginRequiredMixin, TemplateView):
     template_name = 'en_construccion.html'
