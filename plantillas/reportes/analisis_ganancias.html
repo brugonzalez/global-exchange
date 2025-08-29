@@ -41,42 +41,42 @@
 
     <!-- Métricas de Ganancias en Tiempo Real -->
     <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card bg-success text-white h-100">
+        <div class="col-md-3">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-dollar-sign fa-3x mb-3"></i>
-                    <h3 id="displayGananciaHoy">$ {{ ganancia_hoy|floatformat:2 }}</h3>
-                    <p class="mb-0">Ganancia Hoy</p>
+                    <i class="text-success fas fa-dollar-sign fa-2x mb-2"></i>
+                    <h3 class="text-success" id="displayGananciaHoy">$ {{ ganancia_hoy|floatformat:2 }}</h3>
+                    <p class="text-dark mb-0">Ganancia Hoy</p>
                     <small class="opacity-75">Actualizado en tiempo real</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card bg-info text-white h-100">
+        <div class="col-md-3">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-calendar-week fa-3x mb-3"></i>
-                    <h3>$ {{ ganancia_semana|floatformat:2 }}</h3>
-                    <p class="mb-0">Ganancia Semana</p>
+                    <i class=" text-info fas fa-calendar-week fa-2x mb-2"></i>
+                    <h3 class="text-info">$ {{ ganancia_semana|floatformat:2 }}</h3>
+                    <p class="text-dark mb-0">Ganancia Semana</p>
                     <small class="opacity-75">Últimos 7 días</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card bg-warning text-white h-100">
+        <div class="col-md-3">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-calendar-alt fa-3x mb-3"></i>
-                    <h3>$ {{ ganancia_mes|floatformat:2 }}</h3>
-                    <p class="mb-0">Ganancia Mes</p>
+                    <i class="text-warning fas fa-calendar-alt fa-2x mb-2"></i>
+                    <h3 class="text-warning">$ {{ ganancia_mes|floatformat:2 }}</h3>
+                    <p class="text-dark mb-0">Ganancia Mes</p>
                     <small class="opacity-75">Últimos 30 días</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card bg-primary text-white h-100">
+        <div class="col-md-3">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
-                    <h3>$ {{ ganancia_total|floatformat:2 }}</h3>
-                    <p class="mb-0">Ganancia Total</p>
+                    <i class="text-primary fas fa-chart-bar fa-2x mb-2"></i>
+                    <h3 class="text-primary">$ {{ ganancia_total|floatformat:2 }}</h3>
+                    <p class="text-dark mb-0">Ganancia Total</p>
                     <small class="opacity-75">Histórico completo</small>
                 </div>
             </div>

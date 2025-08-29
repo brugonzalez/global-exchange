@@ -5,59 +5,71 @@
 {% block title %}Historial de Transacciones - Global Exchange{% endblock %}
 
 {% block content %}
+
+<style>
+    .transaccion-lista-header {
+        background: linear-gradient(135deg, #093be0, #00a6e7);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+</style>
+
 <div class="container mt-4">
     <!-- Encabezado -->
-    <div class="row mb-4">
+    <div class="transaccion-lista-header">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
-                    <i class="fas fa-history me-2 text-primary"></i>
+                    <i class="fas fa-history me-2"></i>
                     Historial de Transacciones
                 </h2>
                 <div>
-                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-primary">
+                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-light">
                         <i class="fas fa-arrow-left me-2"></i>Volver al Panel de Control
                     </a>
                 </div>
             </div>
+            <p>Visualice movimientos realizados en la casa de cambios</p>
         </div>
     </div>
 
     <!-- Estadísticas de Resumen -->
     <div class="row mb-4">
         <div class="col-md-3 mb-3">
-            <div class="card bg-primary text-white">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-list-ol fa-2x mb-2"></i>
-                    <h4>{{ total_transacciones }}</h4>
-                    <p class="mb-0">Total Transacciones</p>
+                    <i class="fas text-primary fa-list-ol fa-2x mb-2"></i>
+                    <h4 class="text-primary">{{ total_transacciones }}</h4>
+                    <p class="mb-0 text-dark">Total Transacciones</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
-            <div class="card bg-success text-white">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-dollar-sign fa-2x mb-2"></i>
-                    <h4>{{ volumen_total|floatformat:0 }}</h4>
-                    <p class="mb-0">Volumen Total</p>
+                    <i class="fas text-success fa-dollar-sign fa-2x mb-2"></i>
+                    <h4 class="text-success">{{ volumen_total|floatformat:2 }}</h4>
+                    <p class="text-dark mb-0">Volumen Total</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
-            <div class="card bg-info text-white">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-chart-bar fa-2x mb-2"></i>
-                    <h4>{{ transaccion_promedio|floatformat:0 }}</h4>
-                    <p class="mb-0">Promedio por Transacción</p>
+                    <i class="fas text-info fa-chart-bar fa-2x mb-2"></i>
+                    <h4 class="text-info">{{ transaccion_promedio|floatformat:2 }}</h4>
+                    <p class="text-dark mb-0">Promedio por Transacción</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
-            <div class="card bg-warning text-white">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-chart-pie fa-2x mb-2"></i>
-                    <h4>{{ conteo_estados|length }}</h4>
-                    <p class="mb-0">Estados Diferentes</p>
+                    <i class="fas text-warning fa-chart-pie fa-2x mb-2"></i>
+                    <h4 class="text-warning">{{ conteo_estados|length }}</h4>
+                    <p class="text-dark mb-0">Estados Diferentes</p>
                 </div>
             </div>
         </div>

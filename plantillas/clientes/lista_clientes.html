@@ -66,38 +66,38 @@
     <!-- Tarjetas de Estadísticas -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card stats-card">
-                <div class="card-body text-center">
+            <div class="card bg-light">
+                <div class="text-primary card-body text-center">
                     <i class="fas fa-users fa-2x mb-2"></i>
-                    <h3>{{ total_clientes }}</h3>
-                    <p class="mb-0">Total Clientes</p>
+                    <h3 class="text-primary">{{ total_clientes }}</h3>
+                    <p class="text-dark mb-0">Total Clientes</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-check-circle fa-2x mb-2"></i>
-                    <h3>{{ clientes_activos }}</h3>
-                    <p class="mb-0">Clientes Activos</p>
+                    <i class="text-success fas fa-check-circle fa-2x mb-2"></i>
+                    <h3 class="text-success">{{ clientes_activos }}</h3>
+                    <p class="text-dark mb-0">Clientes Activos</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-white">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-building fa-2x mb-2"></i>
-                    <h3>{{ clientes|length }}</h3>
-                    <p class="mb-0">En esta página</p>
+                    <i class="text-warning fas fa-building fa-2x mb-2"></i>
+                    <h3 class="text-warning">{{ clientes|length }}</h3>
+                    <p class="text-dark mb-0">En esta página</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas fa-user-tie fa-2x mb-2"></i>
-                    <h3>{{ page_obj.paginator.count }}</h3>
-                    <p class="mb-0">Resultados</p>
+                    <i class="text-info fas fa-user-tie fa-2x mb-2"></i>
+                    <h3 class="text-info">{{ page_obj.paginator.count }}</h3>
+                    <p class="text-dark mb-0">Resultados</p>
                 </div>
             </div>
         </div>
