@@ -215,9 +215,7 @@ BLOQUEO_CUENTA_ACTIVADO = True
 INTENTOS_MAX_BLOQUEO_CUENTA = 5
 DURACION_BLOQUEO_CUENTA = 1800  # 30 minutos
 
-# Configuración de API Externa
-API_KEY_TASA_CAMBIO = config('API_KEY_TASA_CAMBIO', default='')
-API_URL_TASA_CAMBIO = 'https://api.exchangerate-api.com/v4/latest/'
+# Configuración de API Externa eliminada - ahora solo actualización manual
 
 # Configuración de Stripe
 STRIPE_CLAVE_PUBLICABLE = config('STRIPE_CLAVE_PUBLICABLE', default='pk_test_51234567890abcdef')

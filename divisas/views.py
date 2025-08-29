@@ -2,7 +2,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 
-
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -11,7 +10,6 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Q
 from decimal import Decimal
-import requests
 from clientes.models import CategoriaCliente
 from django.utils.formats import number_format
 from django.template.loader import render_to_string
@@ -341,224 +339,147 @@ class APIVistaActualizarTasas(LoginRequiredMixin, TemplateView):
         if not solicitud.user.is_staff:
             return JsonResponse({'error': 'Permiso denegado'}, status=403)
         
-        # Actualizar tasas desde API externa o entrada manual
-        tipo_actualizacion = solicitud.POST.get('type', 'manual')
+        # Solo actualización manual disponible
+        id_moneda = solicitud.POST.get('currency_id')
+        tasa_compra = solicitud.POST.get('buy_rate')
+        tasa_venta = solicitud.POST.get('sell_rate')
         
-        if tipo_actualizacion == 'api':
-            # Actualizar desde API externa
+        # Validar campos requeridos
+        if not id_moneda:
+            return JsonResponse({
+                'success': False,
+                'error': 'ID de moneda es requerido'
+            })
+        
+        if not tasa_compra or not tasa_venta:
+            return JsonResponse({
+                'success': False,
+                'error': 'Las tasas de compra y venta son requeridas'
+            })
+        
+        try:
+            # Obtener moneda de forma segura
             try:
-                conteo_actualizados = self.actualizar_desde_api_externa()
+                moneda = Moneda.objects.get(id=id_moneda, esta_activa=True)
+            except Moneda.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'La moneda con ID {id_moneda} no existe o no está activa'
+                })
+            
+            # Obtener moneda base de forma segura
+            try:
+                moneda_base = Moneda.objects.get(es_moneda_base=True)
+            except Moneda.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No se encontró una moneda base configurada en el sistema'
+                })
+            
+            try:
+                tasa_compra_decimal = Decimal(tasa_compra)
+                tasa_venta_decimal = Decimal(tasa_venta)
+                
+                if tasa_compra_decimal <= 0 or tasa_venta_decimal <= 0:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Las tasas deben ser mayores que cero'
+                    })
+                    
+                if tasa_venta_decimal <= tasa_compra_decimal:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'La tasa de venta debe ser mayor que la tasa de compra'
+                    })
+                    
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Las tasas ingresadas no son válidas'
+                })
+            
+            # Comprobar si existe una tasa activa para este par de monedas
+            tasa_existente = TasaCambio.objects.filter(
+                moneda=moneda,
+                moneda_base=moneda_base,
+                esta_activa=True
+            ).first()
+            
+            if tasa_existente:
+                # Actualizar la tasa existente en lugar de crear una nueva
+                tasa_existente.tasa_compra = tasa_compra_decimal
+                tasa_existente.tasa_venta = tasa_venta_decimal
+                tasa_existente.fuente = 'MANUAL'
+                tasa_existente.actualizado_por = solicitud.user
+                tasa_existente.save()
+                
+                # Guardar en el historial
+                HistorialTasaCambio.objects.create(
+                    moneda=moneda,
+                    moneda_base=moneda_base,
+                    tasa_compra=tasa_compra_decimal,
+                    tasa_venta=tasa_venta_decimal
+                )
+                
+                # Enviar notificaciones de actualización de tasa
+                try:
+                    from notificaciones.tasks import enviar_notificacion_actualizacion_tasa_manual, llamar_tarea_con_fallback
+                    llamar_tarea_con_fallback(
+                        enviar_notificacion_actualizacion_tasa_manual,
+                        moneda.id,
+                        tasa_compra_decimal,
+                        tasa_venta_decimal,
+                        solicitud.user.nombre_completo or solicitud.user.username
+                    )
+                except Exception:
+                    pass  # Fallar silenciosamente si el sistema de notificaciones no está disponible
+                
                 return JsonResponse({
                     'success': True,
-                    'message': f'Se actualizaron {conteo_actualizados} tasas de cambio'
+                    'message': 'Tasa actualizada correctamente'
                 })
-            except Exception as e:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Error actualizando desde API: {str(e)}'
-                })
-        else:
-            # Actualización manual
-            id_moneda = solicitud.POST.get('currency_id')
-            tasa_compra = solicitud.POST.get('buy_rate')
-            tasa_venta = solicitud.POST.get('sell_rate')
-            
-            # Validar campos requeridos
-            if not id_moneda:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'ID de moneda es requerido'
-                })
-            
-            if not tasa_compra or not tasa_venta:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Las tasas de compra y venta son requeridas'
-                })
-            
-            try:
-                # Obtener moneda de forma segura
-                try:
-                    moneda = Moneda.objects.get(id=id_moneda, esta_activa=True)
-                except Moneda.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'La moneda con ID {id_moneda} no existe o no está activa'
-                    })
-                
-                # Obtener moneda base de forma segura
-                try:
-                    moneda_base = Moneda.objects.get(es_moneda_base=True)
-                except Moneda.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'No se encontró una moneda base configurada en el sistema'
-                    })
-                
-                try:
-                    tasa_compra_decimal = Decimal(tasa_compra)
-                    tasa_venta_decimal = Decimal(tasa_venta)
-                    
-                    if tasa_compra_decimal <= 0 or tasa_venta_decimal <= 0:
-                        return JsonResponse({
-                            'success': False,
-                            'error': 'Las tasas deben ser mayores que cero'
-                        })
-                        
-                    if tasa_venta_decimal <= tasa_compra_decimal:
-                        return JsonResponse({
-                            'success': False,
-                            'error': 'La tasa de venta debe ser mayor que la tasa de compra'
-                        })
-                        
-                except (ValueError, TypeError):
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Las tasas ingresadas no son válidas'
-                    })
-                
-                # Comprobar si existe una tasa activa para este par de monedas
-                tasa_existente = TasaCambio.objects.filter(
-                    moneda=moneda,
-                    moneda_base=moneda_base,
-                    esta_activa=True
-                ).first()
-                
-                if tasa_existente:
-                    # Actualizar la tasa existente en lugar de crear una nueva
-                    tasa_existente.tasa_compra = tasa_compra_decimal
-                    tasa_existente.tasa_venta = tasa_venta_decimal
-                    tasa_existente.fuente = 'MANUAL'
-                    tasa_existente.actualizado_por = solicitud.user
-                    tasa_existente.save()
-                    
-                    # Guardar en el historial
-                    HistorialTasaCambio.objects.create(
-                        moneda=moneda,
-                        moneda_base=moneda_base,
-                        tasa_compra=tasa_compra_decimal,
-                        tasa_venta=tasa_venta_decimal
-                    )
-                    
-                    # Enviar notificaciones de actualización de tasa
-                    try:
-                        from notificaciones.tasks import enviar_notificacion_actualizacion_tasa_manual, llamar_tarea_con_fallback
-                        llamar_tarea_con_fallback(
-                            enviar_notificacion_actualizacion_tasa_manual,
-                            moneda.id,
-                            tasa_compra_decimal,
-                            tasa_venta_decimal,
-                            solicitud.user.nombre_completo or solicitud.user.username
-                        )
-                    except Exception:
-                        pass  # Fallar silenciosamente si el sistema de notificaciones no está disponible
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Tasa actualizada correctamente'
-                    })
-                else:
-                    # Crear nueva tasa solo si no existe una tasa activa
-                    TasaCambio.objects.create(
-                        moneda=moneda,
-                        moneda_base=moneda_base,
-                        tasa_compra=tasa_compra_decimal,
-                        tasa_venta=tasa_venta_decimal,
-                        fuente='MANUAL',
-                        actualizado_por=solicitud.user
-                    )
-                    
-                    # Guardar en el historial
-                    HistorialTasaCambio.objects.create(
-                        moneda=moneda,
-                        moneda_base=moneda_base,
-                        tasa_compra=tasa_compra_decimal,
-                        tasa_venta=tasa_venta_decimal
-                    )
-                    
-                    # Enviar notificaciones de actualización de tasa
-                    try:
-                        from notificaciones.tasks import enviar_notificacion_actualizacion_tasa_manual, llamar_tarea_con_fallback
-                        llamar_tarea_con_fallback(
-                            enviar_notificacion_actualizacion_tasa_manual,
-                            moneda.id,
-                            tasa_compra_decimal,
-                            tasa_venta_decimal,
-                            solicitud.user.nombre_completo or solicitud.user.username
-                        )
-                    except Exception:
-                        pass  # Fallar silenciosamente si el sistema de notificaciones no está disponible
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Tasa creada correctamente'
-                    })
-                
-            except Exception as e:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Error interno del servidor: {str(e)}'
-                })
-    
-    def actualizar_desde_api_externa(self):
-        """Actualiza las tasas desde una API externa."""
-        # Esto se integraría con una API de tasas de cambio real
-        # Por ahora, simularemos la actualización
-        conteo_actualizados = 0
-        
-        # Obtener moneda base de forma segura
-        try:
-            moneda_base = Moneda.objects.get(es_moneda_base=True)
-        except Moneda.DoesNotExist:
-            raise Exception('No se encontró una moneda base configurada en el sistema')
-        
-        # Simular datos de la API (en producción, llamarías a una API real)
-        tasas_api = {
-            'USD': {'buy': 1.0, 'sell': 1.02},
-            'EUR': {'buy': 0.85, 'sell': 0.87},
-            'PYG': {'buy': 7200, 'sell': 7300},
-            'BRL': {'buy': 5.2, 'sell': 5.4},
-        }
-        
-        for codigo, tasas in tasas_api.items():
-            try:
-                moneda = Moneda.objects.get(codigo=codigo, esta_activa=True)
-                
-                # Desactivar tasas existentes para este par de monedas
-                TasaCambio.objects.filter(
-                    moneda=moneda,
-                    moneda_base=moneda_base,
-                    esta_activa=True
-                ).update(esta_activa=False)
-                
-                # Crear nueva tasa
+            else:
+                # Crear nueva tasa solo si no existe una tasa activa
                 TasaCambio.objects.create(
                     moneda=moneda,
                     moneda_base=moneda_base,
-                    tasa_compra=Decimal(str(tasas['buy'])),
-                    tasa_venta=Decimal(str(tasas['sell'])),
-                    fuente='API'
+                    tasa_compra=tasa_compra_decimal,
+                    tasa_venta=tasa_venta_decimal,
+                    fuente='MANUAL',
+                    actualizado_por=solicitud.user
                 )
                 
                 # Guardar en el historial
                 HistorialTasaCambio.objects.create(
                     moneda=moneda,
                     moneda_base=moneda_base,
-                    tasa_compra=Decimal(str(tasas['buy'])),
-                    tasa_venta=Decimal(str(tasas['sell']))
+                    tasa_compra=tasa_compra_decimal,
+                    tasa_venta=tasa_venta_decimal
                 )
                 
-                conteo_actualizados += 1
+                # Enviar notificaciones de actualización de tasa
+                try:
+                    from notificaciones.tasks import enviar_notificacion_actualizacion_tasa_manual, llamar_tarea_con_fallback
+                    llamar_tarea_con_fallback(
+                        enviar_notificacion_actualizacion_tasa_manual,
+                        moneda.id,
+                        tasa_compra_decimal,
+                        tasa_venta_decimal,
+                        solicitud.user.nombre_completo or solicitud.user.username
+                    )
+                except Exception:
+                    pass  # Fallar silenciosamente si el sistema de notificaciones no está disponible
                 
-            except Moneda.DoesNotExist:
-                # Omitir monedas que no existen, esto es esperado
-                continue
-            except Exception as e:
-                # Registrar el error pero continuar con otras monedas
-                print(f"Error actualizando {codigo}: {str(e)}")
-                continue
-        
-        return conteo_actualizados
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Tasa creada correctamente'
+                })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Error interno del servidor: {str(e)}'
+            })
 
 
 class APIVistaSimulacion(TemplateView):
