@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Moneda {{ object.codigo }} - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="text-primary">
+                <i class="fas fa-edit me-2"></i>
+                Editar Moneda: {{ object.codigo }} - {{ object.nombre }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'divisas:panel_de_control' %}">Inicio</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'divisas:gestionar_monedas' %}">Gestión de Monedas</a></li>
+                    <li class="breadcrumb-item active">Editar {{ object.codigo }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        Información de la Moneda
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Información básica -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Información Básica
+                                </h6>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.codigo.id_for_label }}" class="form-label">
+                                        {{ form.codigo.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.codigo }}
+                                    {% if form.codigo.errors %}
+                                        <div class="text-danger small">{{ form.codigo.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">El código no puede modificarse después de la creación</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.simbolo.id_for_label }}" class="form-label">
+                                        {{ form.simbolo.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.simbolo }}
+                                    {% if form.simbolo.errors %}
+                                        <div class="text-danger small">{{ form.simbolo.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Símbolo de la moneda (ej: $, €, ₲)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.lugares_decimales.id_for_label }}" class="form-label">
+                                        {{ form.lugares_decimales.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.lugares_decimales }}
+                                    {% if form.lugares_decimales.errors %}
+                                        <div class="text-danger small">{{ form.lugares_decimales.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Número de decimales (0-8)</div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.nombre.id_for_label }}" class="form-label">
+                                        {{ form.nombre.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.nombre }}
+                                    {% if form.nombre.errors %}
+                                        <div class="text-danger small">{{ form.nombre.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Nombre completo de la moneda</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración de trading -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-cogs me-1"></i>
+                                    Configuración de Trading
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.precio_base_inicial.id_for_label }}" class="form-label">
+                                        {{ form.precio_base_inicial.label }}
+                                    </label>
+                                    {{ form.precio_base_inicial }}
+                                    {% if form.precio_base_inicial.errors %}
+                                        <div class="text-danger small">{{ form.precio_base_inicial.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        <strong>Nota:</strong> Para actualizar el precio actual, use la sección "Gestionar Tasas"
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.denominacion_minima.id_for_label }}" class="form-label">
+                                        {{ form.denominacion_minima.label }} <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.denominacion_minima }}
+                                    {% if form.denominacion_minima.errors %}
+                                        <div class="text-danger small">{{ form.denominacion_minima.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Monto mínimo para operaciones</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.stock_inicial.id_for_label }}" class="form-label">
+                                        {{ form.stock_inicial.label }}
+                                    </label>
+                                    {{ form.stock_inicial }}
+                                    {% if form.stock_inicial.errors %}
+                                        <div class="text-danger small">{{ form.stock_inicial.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Stock base de referencia</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Disponibilidad -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-toggle-on me-1"></i>
+                                    Disponibilidad para Operaciones
+                                </h6>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    {{ form.disponible_para_compra }}
+                                    <label class="form-check-label" for="{{ form.disponible_para_compra.id_for_label }}">
+                                        {{ form.disponible_para_compra.label }}
+                                    </label>
+                                    <div class="form-text">Permitir que los clientes compren esta moneda</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    {{ form.disponible_para_venta }}
+                                    <label class="form-check-label" for="{{ form.disponible_para_venta.id_for_label }}">
+                                        {{ form.disponible_para_venta.label }}
+                                    </label>
+                                    <div class="form-text">Permitir que los clientes vendan esta moneda</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comisiones -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-percentage me-1"></i>
+                                    Comisiones
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.comision_compra.id_for_label }}" class="form-label">
+                                        {{ form.comision_compra.label }}
+                                    </label>
+                                    {{ form.comision_compra }}
+                                    {% if form.comision_compra.errors %}
+                                        <div class="text-danger small">{{ form.comision_compra.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Comisión aplicada en compras (en PYG)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.comision_venta.id_for_label }}" class="form-label">
+                                        {{ form.comision_venta.label }}
+                                    </label>
+                                    {{ form.comision_venta }}
+                                    {% if form.comision_venta.errors %}
+                                        <div class="text-danger small">{{ form.comision_venta.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Comisión aplicada en ventas (en PYG)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-flag me-1"></i>
+                                    Estado y Configuración
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    {{ form.esta_activa }}
+                                    <label class="form-check-label" for="{{ form.esta_activa.id_for_label }}">
+                                        {{ form.esta_activa.label }}
+                                    </label>
+                                    <div class="form-text">La moneda está disponible para usar</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                {% if object.es_moneda_base %}
+                                    <div class="form-check mb-3">
+                                        {{ form.es_moneda_base }}
+                                        <label class="form-check-label" for="{{ form.es_moneda_base.id_for_label }}">
+                                            {{ form.es_moneda_base.label }}
+                                        </label>
+                                        <div class="form-text text-warning">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            Esta es la moneda base del sistema
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="form-check mb-3">
+                                        {{ form.es_moneda_base }}
+                                        <label class="form-check-label" for="{{ form.es_moneda_base.id_for_label }}">
+                                            {{ form.es_moneda_base.label }}
+                                        </label>
+                                        <div class="form-text">Solo puede haber una moneda base en el sistema</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Errores generales del formulario -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Botones de acción -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'divisas:gestionar_monedas' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de información -->
+        <div class="col-lg-4">
+            <!-- Estadísticas de uso -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-bar me-1"></i>
+                        Estadísticas de Uso
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-primary">{{ stats.total_transacciones }}</h4>
+                            <small class="text-muted">Transacciones</small>
+                        </div>
+                        <div class="col-6">
+                            {% if puede_eliminarse %}
+                                <span class="badge bg-success fs-6">Puede eliminarse</span>
+                            {% else %}
+                                <span class="badge bg-warning fs-6">En uso</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if stats.total_transacciones > 0 %}
+                        <hr>
+                        <div class="small">
+                            <div><strong>Total origen:</strong> {{ stats.monto_total_origen }}</div>
+                            <div><strong>Total destino:</strong> {{ stats.monto_total_destino }}</div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones rápidas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-tools me-1"></i>
+                        Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'divisas:gestionar_tasas' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-chart-line me-1"></i>
+                            Gestionar Tasas
+                        </a>
+                        
+                        {% if not object.es_moneda_base %}
+                            {% if puede_eliminarse %}
+                                <a href="{% url 'divisas:eliminar_moneda' object.id %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-trash me-1"></i>
+                                    Eliminar Moneda
+                                </a>
+                            {% else %}
+                                <a href="{% url 'divisas:eliminar_moneda' object.id %}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-ban me-1"></i>
+                                    Deshabilitar Moneda
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    
+                    {% if object.es_moneda_base %}
+                        <div class="alert alert-warning small mt-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Esta es la moneda base del sistema y no puede eliminarse.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Deshabilitar el campo código para evitar modificaciones accidentales
+    const codigoField = document.getElementById('{{ form.codigo.id_for_label }}');
+    if (codigoField) {
+        codigoField.setAttribute('readonly', 'readonly');
+        codigoField.style.backgroundColor = '#f8f9fa';
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Monedas - Global Exchange{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <h2 class="text-primary">
+                <i class="fas fa-coins me-2"></i>
+                Gestión de Monedas
+            </h2>
+            <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Volver al Inicio
+            </a>
+        </div>
+        <div class="col-lg-4 text-end">
+            <a href="{% url 'divisas:crear_moneda' %}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>Registrar Nueva Moneda
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de estadísticas -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-coins text-primary mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-primary">{{ total_monedas }}</h4>
+                    <p class="mb-0">Total de Monedas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle text-success mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-success">{{ monedas_activas }}</h4>
+                    <p class="mb-0">Monedas Activas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-pause-circle text-warning mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-warning">{{ monedas_inactivas }}</h4>
+                    <p class="mb-0">Monedas Inactivas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-star text-info mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-info">1</h4>
+                    <p class="mb-0">Moneda Base</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y búsqueda -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form method="get" class="d-flex gap-2">
+                <div class="flex-grow-1">
+                    <input type="text" 
+                           name="busqueda" 
+                           value="{{ busqueda }}" 
+                           class="form-control" 
+                           placeholder="Buscar por código, nombre o símbolo...">
+                </div>
+                <select name="estado" class="form-select" style="width: auto;">
+                    <option value="all" {% if estado_filtro == 'all' %}selected{% endif %}>Todas</option>
+                    <option value="activa" {% if estado_filtro == 'activa' %}selected{% endif %}>Activas</option>
+                    <option value="inactiva" {% if estado_filtro == 'inactiva' %}selected{% endif %}>Inactivas</option>
+                </select>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if busqueda or estado_filtro != 'all' %}
+                <a href="{% url 'divisas:gestionar_monedas' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Limpiar Filtros
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Lista de monedas -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Lista de Monedas
+                {% if busqueda %}
+                    <small class="text-muted">- Resultados para "{{ busqueda }}"</small>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if monedas_con_stats %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Moneda</th>
+                                <th>Estado</th>
+                                <th>Disponibilidad</th>
+                                <th>Configuración</th>
+                                <th>Estadísticas</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in monedas_con_stats %}
+                                {% with moneda=item.moneda stats=item.stats puede_eliminarse=item.puede_eliminarse %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                {% if moneda.pais %}
+                                                    <span class="flag-icon flag-icon-{{ moneda.pais.code|lower }} me-2"></span>
+                                                {% endif %}
+                                                <strong class="me-2">{{ moneda.simbolo }}</strong>
+                                                <span class="badge bg-secondary">{{ moneda.codigo }}</span>
+                                            </div>
+                                            <div>
+                                                <strong>{{ moneda.nombre }}</strong>
+                                                {% if moneda.es_moneda_base %}
+                                                    <span class="badge bg-warning text-dark ms-2">Base</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if moneda.esta_activa %}
+                                            <span class="badge bg-success">Activa</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactiva</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div>
+                                                <i class="fas fa-shopping-cart me-1 {% if moneda.disponible_para_compra %}text-success{% else %}text-danger{% endif %}"></i>
+                                                Compra: {% if moneda.disponible_para_compra %}Sí{% else %}No{% endif %}
+                                            </div>
+                                            <div>
+                                                <i class="fas fa-handshake me-1 {% if moneda.disponible_para_venta %}text-success{% else %}text-danger{% endif %}"></i>
+                                                Venta: {% if moneda.disponible_para_venta %}Sí{% else %}No{% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div><strong>Decimales:</strong> {{ moneda.lugares_decimales }}</div>
+                                            <div><strong>Min:</strong> {{ moneda.denominacion_minima }}</div>
+                                            <div><strong>Stock:</strong> {{ moneda.stock_inicial }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div><strong>Transacciones:</strong> {{ stats.total_transacciones }}</div>
+                                            {% if stats.total_transacciones > 0 %}
+                                                <div class="text-muted">En uso</div>
+                                            {% else %}
+                                                <div class="text-success">Sin uso</div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'divisas:editar_moneda' moneda.id %}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            
+                                            {% if not moneda.es_moneda_base %}
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-secondary toggle-estado-btn" 
+                                                        data-moneda-id="{{ moneda.id }}"
+                                                        data-estado-actual="{{ moneda.esta_activa|yesno:'true,false' }}"
+                                                        title="{% if moneda.esta_activa %}Deshabilitar{% else %}Habilitar{% endif %}">
+                                                    <i class="fas fa-{% if moneda.esta_activa %}pause{% else %}play{% endif %}"></i>
+                                                </button>
+                                            {% endif %}
+                                            
+                                            {% if puede_eliminarse and not moneda.es_moneda_base %}
+                                                <a href="{% url 'divisas:eliminar_moneda' moneda.id %}" 
+                                                   class="btn btn-sm btn-outline-danger" 
+                                                   title="Eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            {% elif not moneda.es_moneda_base %}
+                                                <a href="{% url 'divisas:eliminar_moneda' moneda.id %}" 
+                                                   class="btn btn-sm btn-outline-warning" 
+                                                   title="Deshabilitar (tiene transacciones)">
+                                                    <i class="fas fa-ban"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-coins fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No se encontraron monedas</h5>
+                    {% if busqueda %}
+                        <p class="text-muted">No hay monedas que coincidan con "{{ busqueda }}"</p>
+                        <a href="{% url 'divisas:gestionar_monedas' %}" class="btn btn-outline-primary">Ver todas las monedas</a>
+                    {% else %}
+                        <p class="text-muted">Comience registrando una nueva moneda</p>
+                        <a href="{% url 'divisas:crear_moneda' %}" class="btn btn-primary">Registrar Primera Moneda</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript para toggle de estado -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleButtons = document.querySelectorAll('.toggle-estado-btn');
+    
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const monedaId = this.dataset.monedaId;
+            const estadoActual = this.dataset.estadoActual === 'true';
+            
+            if (confirm(`¿Está seguro de que desea ${estadoActual ? 'deshabilitar' : 'habilitar'} esta moneda?`)) {
+                fetch(`/divisas/admin/monedas/${monedaId}/toggle-estado/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Error al cambiar el estado');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error de conexión');
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

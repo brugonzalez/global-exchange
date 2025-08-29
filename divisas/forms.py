@@ -152,8 +152,10 @@ class FormularioMoneda(forms.ModelForm):
     """
     class Meta:
         model = Moneda
-        fields = ['codigo', 'nombre', 'simbolo', 'esta_activa', 
-                 'es_moneda_base', 'lugares_decimales', 'comision_compra', 'comision_venta']
+        fields = ['codigo', 'nombre', 'simbolo', 'esta_activa', 'es_moneda_base', 
+                 'precio_base_inicial', 'denominacion_minima', 'stock_inicial', 
+                 'lugares_decimales', 'disponible_para_compra', 'disponible_para_venta',
+                 'comision_compra', 'comision_venta']
         widgets = {
             'codigo': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -175,12 +177,36 @@ class FormularioMoneda(forms.ModelForm):
             'es_moneda_base': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
+            'precio_base_inicial': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.00000001',
+                'min': '0',
+                'placeholder': 'Precio base inicial'
+            }),
+            'denominacion_minima': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.00000001',
+                'min': '0.00000001',
+                'placeholder': 'Denominación mínima'
+            }),
+            'stock_inicial': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.00000001',
+                'min': '0',
+                'placeholder': 'Stock inicial'
+            }),
             'lugares_decimales': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
                 'max': '8'
-            })
-            ,'comision_compra': forms.NumberInput(attrs={
+            }),
+            'disponible_para_compra': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'disponible_para_venta': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'comision_compra': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '1',
                 'min': '0',
@@ -197,11 +223,16 @@ class FormularioMoneda(forms.ModelForm):
             'codigo': 'Código',
             'nombre': 'Nombre',
             'simbolo': 'Símbolo',
-            'esta_activa': 'Activa',
+            'esta_activa': 'Habilitada',
             'es_moneda_base': 'Moneda Base',
-            'lugares_decimales': 'Decimales',
-            'comision_compra': 'Comisión de compra',
-            'comision_venta': 'Comisión de venta'
+            'precio_base_inicial': 'Precio Base Inicial',
+            'denominacion_minima': 'Denominación Mínima',
+            'stock_inicial': 'Stock Inicial',
+            'lugares_decimales': 'Precisión Decimal',
+            'disponible_para_compra': 'Disponible para Compra',
+            'disponible_para_venta': 'Disponible para Venta',
+            'comision_compra': 'Comisión de Compra',
+            'comision_venta': 'Comisión de Venta'
         }
     
     def clean_codigo(self):

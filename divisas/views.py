@@ -3,12 +3,14 @@ from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import TemplateView, ListView, CreateView, UpdateView
+from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DeleteView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Q
+from django.db import models
+from django.urls import reverse_lazy
 from decimal import Decimal
 from clientes.models import CategoriaCliente
 from django.utils.formats import number_format
@@ -16,7 +18,7 @@ from django.template.loader import render_to_string
 
 from .models import Moneda, TasaCambio, HistorialTasaCambio, PrecioBase, MetodoPago, AlertaTasa
 from transacciones.models import SimulacionTransaccion
-from .forms import FormularioSimulacion, FormularioActualizacionTasa, FormularioAlerta
+from .forms import FormularioSimulacion, FormularioActualizacionTasa, FormularioAlerta, FormularioMoneda
 
 
 class VistaPanelControl(TemplateView):
@@ -948,7 +950,232 @@ class VistaActualizarTasa(LoginRequiredMixin, TemplateView):
 
 
 class VistaGestionarMonedas(LoginRequiredMixin, TemplateView):
-    template_name = 'en_construccion.html'
+    """
+    Vista de administración para gestionar monedas.
+    """
+    template_name = 'divisas/gestionar_monedas.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.es_administrador:
+            return redirect('divisas:panel_de_control')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        
+        # Obtener parámetros de búsqueda y filtrado
+        busqueda = self.request.GET.get('busqueda', '')
+        estado_filtro = self.request.GET.get('estado', 'all')  # all, activa, inactiva
+        
+        # Construir query base
+        monedas = Moneda.objects.all().order_by('codigo')
+        
+        # Aplicar filtros
+        if busqueda:
+            monedas = monedas.filter(
+                models.Q(codigo__icontains=busqueda) |
+                models.Q(nombre__icontains=busqueda) |
+                models.Q(simbolo__icontains=busqueda)
+            )
+        
+        if estado_filtro == 'activa':
+            monedas = monedas.filter(esta_activa=True)
+        elif estado_filtro == 'inactiva':
+            monedas = monedas.filter(esta_activa=False)
+        
+        # Agregar estadísticas de uso para cada moneda
+        monedas_con_stats = []
+        for moneda in monedas:
+            stats = moneda.obtener_estadisticas_uso()
+            monedas_con_stats.append({
+                'moneda': moneda,
+                'puede_eliminarse': moneda.puede_ser_eliminada(),
+                'stats': stats
+            })
+        
+        contexto.update({
+            'monedas_con_stats': monedas_con_stats,
+            'total_monedas': monedas.count(),
+            'monedas_activas': monedas.filter(esta_activa=True).count(),
+            'monedas_inactivas': monedas.filter(esta_activa=False).count(),
+            'busqueda': busqueda,
+            'estado_filtro': estado_filtro,
+        })
+        
+        return contexto
+
+
+class VistaCrearMoneda(LoginRequiredMixin, CreateView):
+    """
+    Vista para crear una nueva moneda.
+    """
+    model = Moneda
+    form_class = FormularioMoneda
+    template_name = 'divisas/crear_moneda.html'
+    success_url = reverse_lazy('divisas:gestionar_monedas')
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.es_administrador:
+            return redirect('divisas:panel_de_control')
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        moneda = form.save()
+        
+        # Si tiene precio base inicial, crear el precio base
+        if moneda.precio_base_inicial > 0:
+            moneda_base = Moneda.objects.filter(es_moneda_base=True).first()
+            if moneda_base and moneda != moneda_base:
+                PrecioBase.objects.create(
+                    moneda=moneda,
+                    moneda_base=moneda_base,
+                    precio_base=moneda.precio_base_inicial,
+                    actualizado_por=self.request.user
+                )
+        
+        messages.success(
+            self.request, 
+            f'Moneda {moneda.codigo} - {moneda.nombre} creada exitosamente.'
+        )
+        return super().form_valid(form)
+
+
+class VistaEditarMoneda(LoginRequiredMixin, UpdateView):
+    """
+    Vista para editar una moneda existente.
+    """
+    model = Moneda
+    form_class = FormularioMoneda
+    template_name = 'divisas/editar_moneda.html'
+    success_url = reverse_lazy('divisas:gestionar_monedas')
+    pk_url_kwarg = 'moneda_id'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.es_administrador:
+            return redirect('divisas:panel_de_control')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        moneda = self.get_object()
+        contexto.update({
+            'stats': moneda.obtener_estadisticas_uso(),
+            'puede_eliminarse': moneda.puede_ser_eliminada(),
+        })
+        return contexto
+
+    def form_valid(self, form):
+        moneda = form.save()
+        messages.success(
+            self.request, 
+            f'Moneda {moneda.codigo} - {moneda.nombre} actualizada exitosamente.'
+        )
+        return super().form_valid(form)
+
+
+class VistaEliminarMoneda(LoginRequiredMixin, DeleteView):
+    """
+    Vista para eliminar o deshabilitar una moneda.
+    """
+    model = Moneda
+    template_name = 'divisas/eliminar_moneda.html'
+    success_url = reverse_lazy('divisas:gestionar_monedas')
+    pk_url_kwarg = 'moneda_id'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.es_administrador:
+            return redirect('divisas:panel_de_control')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        moneda = self.get_object()
+        stats = moneda.obtener_estadisticas_uso()
+        contexto.update({
+            'puede_eliminarse': moneda.puede_ser_eliminada(),
+            'stats': stats,
+        })
+        return contexto
+
+    def delete(self, request, *args, **kwargs):
+        moneda = self.get_object()
+        
+        # Verificar si es moneda base
+        if moneda.es_moneda_base:
+            messages.error(
+                request,
+                'No se puede eliminar la moneda base del sistema.'
+            )
+            return redirect('divisas:gestionar_monedas')
+        
+        # Si puede eliminarse completamente
+        if moneda.puede_ser_eliminada():
+            codigo = moneda.codigo
+            nombre = moneda.nombre
+            moneda.delete()
+            messages.success(
+                request,
+                f'Moneda {codigo} - {nombre} eliminada exitosamente.'
+            )
+        else:
+            # Solo deshabilitar
+            moneda.esta_activa = False
+            moneda.disponible_para_compra = False
+            moneda.disponible_para_venta = False
+            moneda.save()
+            messages.warning(
+                request,
+                f'Moneda {moneda.codigo} - {moneda.nombre} deshabilitada temporalmente. '
+                'No puede eliminarse porque tiene transacciones asociadas.'
+            )
+        
+        return redirect('divisas:gestionar_monedas')
+
+
+class VistaToggleEstadoMoneda(LoginRequiredMixin, View):
+    """
+    Vista AJAX para alternar el estado activo/inactivo de una moneda.
+    """
+    
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.es_administrador:
+            return JsonResponse({'success': False, 'message': 'Sin permisos'}, status=403)
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, moneda_id):
+        try:
+            moneda = get_object_or_404(Moneda, id=moneda_id)
+            
+            # No se puede deshabilitar la moneda base
+            if moneda.es_moneda_base and moneda.esta_activa:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'No se puede deshabilitar la moneda base'
+                }, status=400)
+            
+            # Alternar estado
+            moneda.esta_activa = not moneda.esta_activa
+            
+            # Si se desactiva, también deshabilitar compra/venta
+            if not moneda.esta_activa:
+                moneda.disponible_para_compra = False
+                moneda.disponible_para_venta = False
+            
+            moneda.save()
+            
+            estado_texto = 'habilitada' if moneda.esta_activa else 'deshabilitada'
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Moneda {moneda.codigo} {estado_texto} exitosamente',
+                'esta_activa': moneda.esta_activa
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error: {str(e)}'
+            }, status=500)
 
 
 class VistaGestionarMetodosPago(LoginRequiredMixin, TemplateView):
