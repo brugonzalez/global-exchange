@@ -1,3 +1,4 @@
+
 {% extends 'base.html' %}
 
 {% block title %}Editar Moneda {{ object.codigo }} - Global Exchange{% endblock %}
@@ -97,7 +98,7 @@
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-2 mb-3">
                                     <i class="fas fa-cogs me-1"></i>
-                                    Configuración de Trading
+                                    Parámetros de Moneda
                                 </h6>
                             </div>
                             <div class="col-md-6">
@@ -168,40 +169,6 @@
                             </div>
                         </div>
 
-                        <!-- Comisiones -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-2 mb-3">
-                                    <i class="fas fa-percentage me-1"></i>
-                                    Comisiones
-                                </h6>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.comision_compra.id_for_label }}" class="form-label">
-                                        {{ form.comision_compra.label }}
-                                    </label>
-                                    {{ form.comision_compra }}
-                                    {% if form.comision_compra.errors %}
-                                        <div class="text-danger small">{{ form.comision_compra.errors.0 }}</div>
-                                    {% endif %}
-                                    <div class="form-text">Comisión aplicada en compras (en PYG)</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.comision_venta.id_for_label }}" class="form-label">
-                                        {{ form.comision_venta.label }}
-                                    </label>
-                                    {{ form.comision_venta }}
-                                    {% if form.comision_venta.errors %}
-                                        <div class="text-danger small">{{ form.comision_venta.errors.0 }}</div>
-                                    {% endif %}
-                                    <div class="form-text">Comisión aplicada en ventas (en PYG)</div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Estado -->
                         <div class="row mb-4">
                             <div class="col-12">
@@ -218,28 +185,6 @@
                                     </label>
                                     <div class="form-text">La moneda está disponible para usar</div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                {% if object.es_moneda_base %}
-                                    <div class="form-check mb-3">
-                                        {{ form.es_moneda_base }}
-                                        <label class="form-check-label" for="{{ form.es_moneda_base.id_for_label }}">
-                                            {{ form.es_moneda_base.label }}
-                                        </label>
-                                        <div class="form-text text-warning">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                            Esta es la moneda base del sistema
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <div class="form-check mb-3">
-                                        {{ form.es_moneda_base }}
-                                        <label class="form-check-label" for="{{ form.es_moneda_base.id_for_label }}">
-                                            {{ form.es_moneda_base.label }}
-                                        </label>
-                                        <div class="form-text">Solo puede haber una moneda base en el sistema</div>
-                                    </div>
-                                {% endif %}
                             </div>
                         </div>
 
@@ -311,11 +256,6 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{% url 'divisas:gestionar_tasas' %}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-chart-line me-1"></i>
-                            Gestionar Tasas
-                        </a>
-                        
                         {% if not object.es_moneda_base %}
                             {% if puede_eliminarse %}
                                 <a href="{% url 'divisas:eliminar_moneda' object.id %}" class="btn btn-outline-danger btn-sm">
