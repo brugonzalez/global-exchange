@@ -3,22 +3,35 @@
 {% block title %}Gestión de Monedas - Global Exchange{% endblock %}
 
 {% block content %}
-<div class="container my-4">
+
+<style>
+    .monedas-header {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+</style>
+<div class="container mt-4">
     <!-- Encabezado -->
-    <div class="row mb-4">
-        <div class="col-lg-8">
-            <h2 class="text-primary">
-                <i class="fas fa-coins me-2"></i>
-                Gestión de Monedas
-            </h2>
-            <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i>Volver al Inicio
-            </a>
-        </div>
-        <div class="col-lg-4 text-end">
-            <a href="{% url 'divisas:crear_moneda' %}" class="btn btn-success">
-                <i class="fas fa-plus me-1"></i>Registrar Nueva Moneda
-            </a>
+    <div class="monedas-header mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-coins me-2"></i>
+                    Gestión de Monedas
+                </h2>
+                <div>
+                    <a href="{% url 'divisas:crear_moneda' %}" class="btn btn-light me-2">
+                        <i class="fas fa-plus me-2"></i>Registrar Nueva Moneda
+                    </a>
+                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>Volver al Inicio
+                    </a>
+                </div>
+            </div>
+            <p class="mb-0">Administre las monedas del sistema y sus configuraciones</p>
         </div>
     </div>
 
@@ -125,10 +138,12 @@
                                         <div class="d-flex align-items-center">
                                             <div class="me-3">
                                                 {% if moneda.pais %}
-                                                    <span class="flag-icon flag-icon-{{ moneda.pais.code|lower }} me-2"></span>
+                                                    <img src="{{ moneda.pais.flag }}" 
+                                                        alt="{{ moneda.pais.name }}" 
+                                                        class="me-2" width="20" height="14">
                                                 {% endif %}
                                                 <strong class="me-2">{{ moneda.simbolo }}</strong>
-                                                <span class="badge bg-secondary">{{ moneda.codigo }}</span>
+                                                <span class="me-2 fw-bold">{{ moneda.codigo }}</span>
                                             </div>
                                             <div>
                                                 <strong>{{ moneda.nombre }}</strong>
