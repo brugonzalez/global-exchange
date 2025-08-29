@@ -87,163 +87,169 @@
         margin-bottom: 20px;
         opacity: 0.5;
     }
+
+    .lista-ticket-header {
+        background: linear-gradient(135deg, #00a2ff, #53ebff,#00a2ff);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
+    <div class="lista-ticket-header">
         <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-ticket-alt me-2"></i>Mis Tickets de Soporte</h2>
                 <div>
-                    <h2><i class="fas fa-ticket-alt me-2"></i>Mis Tickets de Soporte</h2>
-                    <p class="text-muted mb-0">Gestiona tus solicitudes de soporte técnico</p>
-                </div>
-                <div>
-                    <a href="{% url 'notificaciones:crear_ticket' %}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i>Nuevo Ticket
+                    <a href="{% url 'notificaciones:crear_ticket' %}" class="btn btn-light">
+                        <i class="fas fa-plus me-2"></i>Nuevo Ticket
                     </a>
-                    <a href="{% url 'notificaciones:soporte' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-question-circle me-1"></i>Ayuda
+                    <a href="{% url 'notificaciones:soporte' %}" class="btn btn-light">
+                        <i class="fas fa-question-circle me-2"></i>Ayuda
+                    </a>
+                    <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>Volver
                     </a>
                 </div>
             </div>
-
-            {% if tickets %}
-                <!-- Lista de Tickets -->
-                <div class="tickets-list">
-                    {% for ticket in tickets %}
-                    <div class="ticket-card">
-                        <div class="ticket-header">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h5 class="mb-1">
-                                        <a href="{% url 'notificaciones:detalle_ticket' ticket_number=ticket.numero_ticket %}" 
-                                           class="text-decoration-none text-dark">
-                                            #{{ ticket.numero_ticket }} - {{ ticket.asunto }}
-                                        </a>
-                                    </h5>
-                                    <div class="ticket-meta">
-                                        <span>
-                                            <i class="fas fa-tag me-1"></i>
-                                            {{ ticket.get_categoria_display }}
-                                        </span>
-                                        <span class="priority-{{ ticket.prioridad|lower }}">
-                                            <i class="fas fa-flag me-1"></i>
-                                            {{ ticket.get_prioridad_display }}
-                                        </span>
-                                        <span>
-                                            <i class="fas fa-clock me-1"></i>
-                                            {{ ticket.fecha_creacion|date:"d/m/Y H:i" }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    <span class="ticket-status status-{{ ticket.estado|lower }}">
-                                        {{ ticket.get_estado_display }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="ticket-body">
-                            <p class="mb-3">{{ ticket.descripcion|truncatewords:30 }}</p>
-                            
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-muted small">
-                                    {% if ticket.mensajes.count > 0 %}
-                                        <i class="fas fa-comments me-1"></i>
-                                        {{ ticket.mensajes.count }} respuesta{{ ticket.mensajes.count|pluralize }}
-                                        {% if ticket.ultima_actividad %}
-                                            • Última actividad: hace {{ ticket.ultima_actividad|timesince }}
-                                        {% endif %}
-                                    {% else %}
-                                        <i class="fas fa-clock me-1"></i>
-                                        Sin respuestas aún
-                                    {% endif %}
-                                </div>
-                                
-                                <div>
-                                    <a href="{% url 'notificaciones:detalle_ticket' ticket_number=ticket.numero_ticket %}" 
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye me-1"></i>Ver Detalles
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-
-                <!-- Paginación -->
-                {% if is_paginated %}
-                <div class="d-flex justify-content-center mt-4">
-                    <nav aria-label="Paginación de tickets">
-                        <ul class="pagination">
-                            {% if page_obj.has_previous %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page=1">
-                                        <i class="fas fa-angle-double-left"></i>
-                                    </a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
-                                        <i class="fas fa-angle-left"></i>
-                                    </a>
-                                </li>
-                            {% endif %}
-
-                            {% for num in page_obj.paginator.page_range %}
-                                {% if page_obj.number == num %}
-                                    <li class="page-item active">
-                                        <span class="page-link">{{ num }}</span>
-                                    </li>
-                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-
-                            {% if page_obj.has_next %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
-                                        <i class="fas fa-angle-right"></i>
-                                    </a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
-                                        <i class="fas fa-angle-double-right"></i>
-                                    </a>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                </div>
-                {% endif %}
-
-            {% else %}
-                <!-- Estado Vacío -->
-                <div class="empty-state">
-                    <div class="mb-4">
-                        <i class="fas fa-ticket-alt"></i>
-                    </div>
-                    <h4>No tienes tickets de soporte</h4>
-                    <p class="mb-4">
-                        Cuando necesites ayuda, puedes crear un ticket de soporte y nuestro equipo te ayudará.
-                    </p>
-                    <div>
-                        <a href="{% url 'notificaciones:crear_ticket' %}" class="btn btn-primary me-2">
-                            <i class="fas fa-plus me-1"></i>Crear Primer Ticket
-                        </a>
-                        <a href="{% url 'notificaciones:soporte' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-question-circle me-1"></i>Ver Ayuda
-                        </a>
-                    </div>
-                </div>
-            {% endif %}
+            <p>Gestiona tus solicitudes de soporte técnico</p>
         </div>
     </div>
+
+    {% if tickets %}
+        <!-- Lista de Tickets -->
+        <div class="tickets-list">
+            {% for ticket in tickets %}
+            <div class="ticket-card">
+                <div class="ticket-header">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-1">
+                                <a href="{% url 'notificaciones:detalle_ticket' ticket_number=ticket.numero_ticket %}" 
+                                    class="text-decoration-none text-dark">
+                                    #{{ ticket.numero_ticket }} - {{ ticket.asunto }}
+                                </a>
+                            </h5>
+                            <div class="ticket-meta">
+                                <span>
+                                    <i class="fas fa-tag me-1"></i>
+                                    {{ ticket.get_categoria_display }}
+                                </span>
+                                <span class="priority-{{ ticket.prioridad|lower }}">
+                                    <i class="fas fa-flag me-1"></i>
+                                    {{ ticket.get_prioridad_display }}
+                                </span>
+                                <span>
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ ticket.fecha_creacion|date:"d/m/Y H:i" }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="ticket-status status-{{ ticket.estado|lower }}">
+                                {{ ticket.get_estado_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ticket-body">
+                    <p class="mb-3">{{ ticket.descripcion|truncatewords:30 }}</p>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted small">
+                            {% if ticket.mensajes.count > 0 %}
+                                <i class="fas fa-comments me-1"></i>
+                                {{ ticket.mensajes.count }} respuesta{{ ticket.mensajes.count|pluralize }}
+                                {% if ticket.ultima_actividad %}
+                                    • Última actividad: hace {{ ticket.ultima_actividad|timesince }}
+                                {% endif %}
+                            {% else %}
+                                <i class="fas fa-clock me-1"></i>
+                                Sin respuestas aún
+                            {% endif %}
+                        </div>
+                        
+                        <div>
+                            <a href="{% url 'notificaciones:detalle_ticket' ticket_number=ticket.numero_ticket %}" 
+                                class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>Ver Detalles
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Paginación -->
+        {% if is_paginated %}
+        <div class="d-flex justify-content-center mt-4">
+            <nav aria-label="Paginación de tickets">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Estado Vacío -->
+        <div class="empty-state">
+            <div class="mb-4">
+                <i class="fas fa-ticket-alt"></i>
+            </div>
+            <h4>No tienes tickets de soporte</h4>
+            <p class="mb-4">
+                Cuando necesites ayuda, puedes crear un ticket de soporte y nuestro equipo te ayudará.
+            </p>
+            <div>
+                <a href="{% url 'notificaciones:crear_ticket' %}" class="text-light btn" style="background: linear-gradient(135deg, #00a2ff, #53ebff)">
+                    <i class="fas mb-0" style="color: white; opacity: 1;">+</i>
+                </a>
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
 

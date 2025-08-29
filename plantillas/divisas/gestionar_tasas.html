@@ -5,9 +5,20 @@
 {% block title %}Gestión de Tasas - Global Exchange{% endblock %}
 
 {% block content %}
+
+<style>
+    .tasa-header {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+</style>
 <div class="container mt-4">
     <!-- Encabezado -->
-    <div class="row mb-4">
+    <!-- <div class="row mb-4"> -->
+    <div class="tasa-header mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
@@ -20,6 +31,7 @@
                     </a>
                 </div>
             </div>
+            <p class="mb-0">Administre el valor de compra y venta de las monedas</p>
         </div>
     </div>
 
@@ -196,6 +208,13 @@
                                                         Enteros (sin puntos). Se guarda como precio base.
                                                     </div>
                                                 </div>
+                                            </div>
+
+                                            <!-- Divider + acciones unificados -->
+                                            <div class="border-top pt-3 mt-3 d-grid d-md-flex justify-content-md-end gap-2">
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-save me-1"></i> Actualizar precio
+                                                </button>
                                             </div>
 
                                             <!-- Divider + acciones unificados -->
