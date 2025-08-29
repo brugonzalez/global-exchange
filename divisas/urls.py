@@ -20,7 +20,14 @@ urlpatterns = [
     path('admin/precio-base/actualizar/', views.VistaGestionarTasas.as_view(), name='actualizar_precio_base'),
     path('admin/tasas/actualizar/', views.VistaGestionarTasas.as_view(), name='actualizar_tasa'),
     path('admin/comisiones/actualizar/', views.actualizar_comisiones, name='actualizar_comisiones'),
+    
+    # Gestión de monedas (CRUD)
     path('admin/monedas/', views.VistaGestionarMonedas.as_view(), name='gestionar_monedas'),
+    path('admin/monedas/crear/', views.VistaCrearMoneda.as_view(), name='crear_moneda'),
+    path('admin/monedas/<int:moneda_id>/editar/', views.VistaEditarMoneda.as_view(), name='editar_moneda'),
+    path('admin/monedas/<int:moneda_id>/eliminar/', views.VistaEliminarMoneda.as_view(), name='eliminar_moneda'),
+    path('admin/monedas/<int:moneda_id>/toggle-estado/', views.VistaToggleEstadoMoneda.as_view(), name='toggle_estado_moneda'),
+    
     path('admin/metodos-pago/', views.VistaGestionarMetodosPago.as_view(), name='gestionar_metodos_pago'),
     
     # Alertas de usuario

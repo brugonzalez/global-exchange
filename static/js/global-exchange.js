@@ -247,12 +247,6 @@ $(document).ready(function() {
         });
     }
     
-    // Actualización de tasas cada 30 segundos (solo si no está en modo debug)
-    const esDebug = document.querySelector('[data-debug="true"]');
-    if (!esDebug) {
-        setInterval(refrescarTasas, 30000);
-    }
-    
     // Funcionalidad del botón de cierre para las alertas
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('btn-close')) {

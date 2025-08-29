@@ -47,6 +47,34 @@ class Moneda(models.Model):
     lugares_decimales = models.PositiveIntegerField(default=2)
     icono = models.ImageField(upload_to='iconos_moneda/', blank=True, null=True)
     
+    # Configuración de trading y disponibilidad
+    precio_base_inicial = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.00'),
+        help_text="Precio base inicial al crear la moneda"
+    )
+    denominacion_minima = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.01'),
+        help_text="Denominación mínima para operaciones con esta moneda"
+    )
+    stock_inicial = models.DecimalField(
+        max_digits=20,
+        decimal_places=8,
+        default=Decimal('0.00'),
+        help_text="Stock inicial disponible de la moneda"
+    )
+    disponible_para_compra = models.BooleanField(
+        default=True,
+        help_text="Si está disponible para operaciones de compra"
+    )
+    disponible_para_venta = models.BooleanField(
+        default=True,
+        help_text="Si está disponible para operaciones de venta"
+    )
+    
     # Metadatos
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
@@ -91,6 +119,54 @@ class Moneda(models.Model):
     
     def obtener_tasas_actuales(self):
         return self.tasas_cambio.filter(esta_activa=True).select_related('categoria_cliente')
+    
+    def puede_ser_eliminada(self):
+        """
+        Verifica si la moneda puede ser eliminada.
+        Solo se puede eliminar si no tiene transacciones asociadas.
+        """
+        # Verificar si tiene transacciones donde es moneda origen o destino
+        from transacciones.models import Transaccion
+        
+        tiene_transacciones = Transaccion.objects.filter(
+            models.Q(moneda_origen=self) | models.Q(moneda_destino=self)
+        ).exists()
+        
+        return not tiene_transacciones
+    
+    def obtener_estadisticas_uso(self):
+        """
+        Obtiene estadísticas de uso de la moneda.
+        """
+        from transacciones.models import Transaccion
+        from django.db.models import Count, Sum
+        
+        stats = {
+            'total_transacciones': 0,
+            'monto_total_origen': Decimal('0.00'),
+            'monto_total_destino': Decimal('0.00'),
+        }
+        
+        # Transacciones donde es moneda origen
+        transacciones_origen = Transaccion.objects.filter(moneda_origen=self).aggregate(
+            total=Count('id'),
+            monto_total=Sum('monto_origen')
+        )
+        
+        # Transacciones donde es moneda destino
+        transacciones_destino = Transaccion.objects.filter(moneda_destino=self).aggregate(
+            total=Count('id'),
+            monto_total=Sum('monto_destino')
+        )
+        
+        stats['total_transacciones'] = (
+            (transacciones_origen['total'] or 0) + 
+            (transacciones_destino['total'] or 0)
+        )
+        stats['monto_total_origen'] = transacciones_origen['monto_total'] or Decimal('0.00')
+        stats['monto_total_destino'] = transacciones_destino['monto_total'] or Decimal('0.00')
+        
+        return stats
 
 class PrecioBase(models.Model):
     """

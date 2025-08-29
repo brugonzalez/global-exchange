@@ -169,7 +169,7 @@ class VistaSoporte(TemplateView):
             },
             {
                 'pregunta': '¿Las tasas de cambio se actualizan en tiempo real?',
-                'respuesta': 'Sí, nuestras tasas de cambio se actualizan automáticamente cada 30 segundos durante el horario de operación.'
+                'respuesta': 'Sí, nuestras tasas de cambio se actualizan manualmente por nuestros administradores durante el horario de operación.'
             },
             {
                 'pregunta': '¿Cómo genero un reporte de mis transacciones?',
