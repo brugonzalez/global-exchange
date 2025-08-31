@@ -95,16 +95,8 @@ WSGI_APPLICATION = 'global_exchange.wsgi.application'
 # Base de datos
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Usar SQLite para desarrollo
-# En producción, reemplazar con la configuración de PostgreSQL
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': DIRECTORIO_BASE / 'db.sqlite3',
-#     }
-# }
 
-# Descomentar y configurar para PostgreSQL en producción:
+# Configuración de base de datos: PostgreSQL
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -112,7 +104,7 @@ DATABASES = {
         'USER': config('DB_USER', default='postgres'),
         'PASSWORD': config('DB_PASSWORD', default='postgres'),
         'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432', cast=int),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
@@ -215,7 +207,9 @@ BLOQUEO_CUENTA_ACTIVADO = True
 INTENTOS_MAX_BLOQUEO_CUENTA = 5
 DURACION_BLOQUEO_CUENTA = 1800  # 30 minutos
 
-# Configuración de API Externa eliminada - ahora solo actualización manual
+# Configuración de API Externa
+API_KEY_TASA_CAMBIO = config('API_KEY_TASA_CAMBIO', default='')
+API_URL_TASA_CAMBIO = 'https://api.exchangerate-api.com/v4/latest/'
 
 # Configuración de Stripe
 STRIPE_CLAVE_PUBLICABLE = config('STRIPE_CLAVE_PUBLICABLE', default='pk_test_51234567890abcdef')
