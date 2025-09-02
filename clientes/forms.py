@@ -13,11 +13,19 @@ from decimal import Decimal
 
 from django import forms
 from .models import PreferenciaCliente
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita
+from divisas.models import Moneda
+
+Usuario = get_user_model()
 
 class FormularioPreferenciaCliente(forms.ModelForm):
-    """Formulario para la gestión de preferencias de clientes."""
+    """
+    Formulario para la gestión de preferencias de clientes.
+    Permite establecer límites y preferencias personalizadas que sobrescriben los valores por defecto de la categoría del cliente.
+    """
     class Meta:
-        """Metadatos del formulario."""
         model = PreferenciaCliente
         fields = ['limite_compra', 'limite_venta', 'frecuencia_maxima', 'preferencia_tipo_cambio']
         widgets = {
@@ -26,13 +34,6 @@ class FormularioPreferenciaCliente(forms.ModelForm):
             'frecuencia_maxima': forms.NumberInput(attrs={'class': 'form-control'}),
             'preferencia_tipo_cambio': forms.TextInput(attrs={'class': 'form-control'}),
         }
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
-from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita
-from divisas.models import Moneda
-
-Usuario = get_user_model()
-
 
 class FormularioCliente(forms.ModelForm):
     """
@@ -67,7 +68,11 @@ class FormularioCliente(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """Inicializa el formulario y aplica reglas dinámicas a los campos."""
+        """
+        Inicializa el formulario y aplica reglas dinámicas a los campos.
+        Notes:
+            - Si hay edicion, se establecen los requerimientos por tipo de cliente.
+        """
         super().__init__(*args, **kwargs)
         
         # Hacer campos requeridos según el tipo de cliente
@@ -78,7 +83,15 @@ class FormularioCliente(forms.ModelForm):
         self.fields['tipo_cliente'].widget.attrs['onchange'] = 'alternarCamposPorTipoCliente()'
 
     def clean(self):
-        """Valida los campos según el tipo de cliente y limpia los no aplicables."""
+        """
+        Valida los campos según el tipo de cliente y limpia los no aplicables.
+
+        Returns:
+            dict: Datos limpios después de la validación con campos no aplicables vaciados.
+        
+        Raises:
+            ValidationError: Si faltan campos requeridos por tipo de cliente.
+        """
         datos_limpios = super().clean()
         tipo_cliente = datos_limpios.get('tipo_cliente')
         
@@ -105,7 +118,8 @@ class FormularioCliente(forms.ModelForm):
         return datos_limpios
 
     def _establecer_requerimientos_campos(self):
-        """Establece los requerimientos de los campos según el tipo de cliente."""
+        """Establece los requerimientos de los campos según el tipo de cliente.
+        Evita requerir campos que no aplican al tipo seleccionado"""
         if self.instance.tipo_cliente == 'FISICA':
             self.fields['nombre'].required = True
             self.fields['apellido'].required = True
@@ -119,8 +133,9 @@ class FormularioCliente(forms.ModelForm):
 
 class FormularioClienteUsuario(forms.ModelForm):
     """
-    Formulario para gestionar las asociaciones usuario-cliente.
-    Permite asignar un usuario a un cliente con un rol específico y permisos opcionales.
+    Formulario para gestionar las asociaciones usuario-cliente con sus estados.
+
+    Permite asignar un usuario activo a un cliente.
     """
     usuario = forms.ModelChoiceField(
         queryset=Usuario.objects.filter(is_active=True),
@@ -177,10 +192,9 @@ class FormularioClienteUsuario(forms.ModelForm):
 
 class FormularioBusquedaCliente(forms.Form):
     """
-    Formulario para búsqueda y filtrado de clientes.
+    Formulario para búsqueda y filtrado de clientes (solo lectura)
 
-    Este formulario no crea ni edita registros, solo sirve como filtro en vistas
-    de listado. Incluye los siguientes criterios opcionales:
+   Incluye los siguientes criterios opcionales:
 
     - ``busqueda``: texto libre que puede coincidir con nombre, empresa, email o identificación.
     - ``tipo_cliente``: restringe la búsqueda por tipo de cliente (FISICA/JURIDICA).
@@ -297,7 +311,7 @@ class FormularioAsignarUsuarioACliente(forms.Form):
 
 class FormularioCategoriaCliente(forms.ModelForm):
     """
-    Formulario para gestionar las categorías de clientes.
+    Formulario para gestionar las categorías de clientes (límites y márgenes).
     """
     class Meta:
         model = CategoriaCliente

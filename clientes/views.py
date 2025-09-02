@@ -31,19 +31,36 @@ Usuario = get_user_model()
 
 
 class MixinStaffRequerido(UserPassesTestMixin):
-    """Mixin para asegurar que solo usuarios del personal puedan acceder a la gestión de clientes"""
+    """
+    Mixin para asegurar que solo usuarios del personal puedan acceder a la gestión de clientes.
+    """
     
     def test_func(self):
+        """
+        Verifica si el usuario es staff.
+
+        Returns:
+            bool: True si el usuario es staff, False en caso contrario.
+        """
         return self.request.user.is_staff
 
     def handle_no_permission(self):
+        """
+        Redirige a la página de control si no tiene permisos.
+        Returns:
+            HttpResponseRedirect: Redirección al panel de control.
+        """
         messages.error(self.request, 'No tiene permisos para acceder a esta página.')
         return redirect('divisas:panel_de_control')
 
 
 class VistaListaClientes(LoginRequiredMixin, MixinStaffRequerido, ListView):
     """
-    Lista todos los clientes con capacidades de búsqueda y filtrado.
+    Lista paginado de todos los clientes con capacidades de búsqueda y filtrado.
+
+    Methods:
+        get_queryset(): Aplica filtros de búsqueda y retorna el queryset.
+        get_context_data(): Agrega información adicional al contexto.
     """
     model = Cliente
     template_name = 'clientes/lista_clientes.html'
@@ -52,7 +69,16 @@ class VistaListaClientes(LoginRequiredMixin, MixinStaffRequerido, ListView):
 
     def get_queryset(self):
         """
-        Obtiene el queryset de clientes con información relacionada.
+        Construye el queryset de clientes con información relacionada y filtros
+
+        Filtros soportados: (si el formulario es válido)
+            - `busqueda`: `icontains` sobre nombre, apellido, empresa, identificación y email.
+            - `tipo_cliente`: igualdad exacta.
+            - `estado`: igualdad exacta.
+            - `categoria`: instancia de `CategoriaCliente`.
+
+        Returns:
+            QuerySet: El queryset filtrado y ordenado de clientes (recientes primero)
         """
         queryset = Cliente.objects.select_related('categoria').annotate(
             conteo_usuarios=Count('usuarios')
@@ -89,6 +115,9 @@ class VistaListaClientes(LoginRequiredMixin, MixinStaffRequerido, ListView):
     def get_context_data(self, **kwargs):
         """
         Agrega información adicional al contexto de la vista.
+
+        Returns:
+            dict: Contexto adicional para la plantilla.
         """
         contexto = super().get_context_data(**kwargs)
         contexto['formulario_busqueda'] = FormularioBusquedaCliente(self.request.GET)
@@ -100,6 +129,14 @@ class VistaListaClientes(LoginRequiredMixin, MixinStaffRequerido, ListView):
 class VistaCrearCliente(LoginRequiredMixin, MixinStaffRequerido, CreateView):
     """
     Crea un nuevo cliente.
+
+    Methods:
+        form_valid(): Lógica al validar el formulario.
+        get_context_data(): Agrega información adicional al contexto.
+
+    Notes:
+        - Asigna 'creado_por' al usuario que crea el cliente.
+        - Muestra mensaje de éxito al crear el cliente y redirige a la lista de clientes.
     """
     model = Cliente
     form_class = FormularioCliente
@@ -109,6 +146,8 @@ class VistaCrearCliente(LoginRequiredMixin, MixinStaffRequerido, CreateView):
     def form_valid(self, formulario):
         """
         Se llama cuando el formulario es válido.
+        Asigna el usuario que crea el cliente y muestra un mensaje de éxito.
+        Luego llama al método original para guardar el cliente.
         """
         formulario.instance.creado_por = self.request.user
         messages.success(self.request, f'Cliente {formulario.instance.obtener_nombre_completo()} creado exitosamente.')
@@ -133,7 +172,10 @@ class VistaCrearCliente(LoginRequiredMixin, MixinStaffRequerido, CreateView):
 
 class VistaDetalleCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
     """
-    Ve los detalles del cliente con usuarios y saldos asociados.
+    Detalles de un cliente con relaciones (usuarios, monedas favoritas, saldos y preferencias)
+
+    Methods:
+        get_context_data(): Agrega usuarios, monedas favoritas, saldos y preferencias al contexto.
     """
     model = Cliente
     template_name = 'clientes/detalle_cliente.html'
@@ -143,6 +185,9 @@ class VistaDetalleCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
     def get_context_data(self, **kwargs):
         """
         Agrega información adicional al contexto de la vista.
+
+        Returns:
+            dict: Contexto adicional con 'cliente_usuarios', 'monedas_favoritas', 'saldos_moneda' y 'preferencias'.
         """
         contexto = super().get_context_data(**kwargs)
         # Obtener usuarios asociados
@@ -165,6 +210,15 @@ class VistaDetalleCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
 class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
     """
     Edita la información del cliente.
+
+    Notes: 
+        - Si el cliente no tiene preferencias, se crean con valores por defecto.
+        - Inyecta 'FormularioPreferenciaCliente' en el contexto.
+
+    Methods:
+        get_success_url(): Retorna la URL tras actualizar.
+        form_valid(): Lógica al validar el formulario.
+        get_context_data(): Agrega información adicional y preferencias al contexto.
     """
     model = Cliente
     form_class = FormularioCliente
@@ -174,12 +228,19 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
     def get_success_url(self):
         """
         Obtiene la URL de éxito después de actualizar el cliente.
+
+        Returns:
+            str: URL a 'clientes:detalle_cliente' del objeto actualizado.
         """
         return reverse('clientes:detalle_cliente', kwargs={'id_cliente': self.object.pk})
 
     def form_valid(self, formulario):
         """
-        Se llama cuando el formulario es válido.
+        Muestra un mensaje de éxito al actualizar el cliente.
+
+        Args:
+            formulario (Form): El formulario que fue validado y procesado.
+
         """
         messages.success(self.request, f'Cliente {formulario.instance.obtener_nombre_completo()} actualizado exitosamente.')
         return super().form_valid(formulario)
@@ -187,6 +248,9 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
     def get_context_data(self, **kwargs):
         """
         Agrega información adicional al contexto de la vista.
+
+        Returns:
+            dict: Contexto adicional con 'formulario_preferencias' y 'preferencias'.
         """
         contexto = super().get_context_data(**kwargs)
         contexto['titulo'] = f'Editar Cliente: {self.object.obtener_nombre_completo()}'
@@ -218,7 +282,10 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
 
 class VistaGestionarUsuariosCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
     """
-    Gestiona los usuarios asociados a un cliente.
+    Gestiona los usuarios asociados a un cliente en concreto
+
+    Methods:
+        get_context_data(): Agrega usuarios asociados y disponibles al contexto.
     """
     model = Cliente
     template_name = 'clientes/gestionar_usuarios_cliente.html'
@@ -228,6 +295,9 @@ class VistaGestionarUsuariosCliente(LoginRequiredMixin, MixinStaffRequerido, Det
     def get_context_data(self, **kwargs):
         """
         Agrega información adicional al contexto de la vista.
+
+        Returns:
+            dict: Contexto adicional con 'cliente_usuarios' y 'usuarios_disponibles'.
         """
         contexto = super().get_context_data(**kwargs)
         
@@ -247,21 +317,31 @@ class VistaGestionarUsuariosCliente(LoginRequiredMixin, MixinStaffRequerido, Det
 
 class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormView):
     """
-    Añade un usuario a un cliente.
+    Asocia un usuario a un cliente usando 'FormularioClienteUsuario'.
+
+    Attributes:
+        form_class (Form): FormularioClienteUsuario.
+
+    Methods:
+        dispatch(): Obtiene el cliente objetivo.
+        get_form_kwargs(): Pasa el cliente al formulario.
+        form_valid(): Lógica al asociar usuario a cliente.
+        form_invalid(): Lógica si el formulario es inválido.
+        get_context_data(): Agrega cliente y token CSRF al contexto.
     """
     form_class = FormularioClienteUsuario
     template_name = 'clientes/anadir_usuario_cliente.html'
 
     def dispatch(self, solicitud, *args, **kwargs):
         """
-        Se llama al despachar la solicitud.
+        Se llama al despachar la solicitud. Obtiene el cliente objetivo desde la URL.
         """
         self.cliente = get_object_or_404(Cliente, pk=kwargs['id_cliente'])
         return super().dispatch(solicitud, *args, **kwargs)
 
     def get_form_kwargs(self):
         """
-        Obtiene los argumentos del formulario.
+        Inyecta el cliente en los argumentos del formulario para filtrar usuarios
         """
         kwargs = super().get_form_kwargs()
         kwargs['cliente'] = self.cliente
@@ -269,7 +349,7 @@ class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormVie
 
     def form_valid(self, formulario):
         """
-        Se llama cuando el formulario es válido.
+        Crea asociación 'ClienteUsuario' al validar el formulario.
         """
         try:
             cliente_usuario = formulario.save(commit=False)
@@ -295,6 +375,7 @@ class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormVie
     def form_invalid(self, formulario):
         """
         Se llama cuando el formulario no es válido.
+        Regenera el token CSRF para el reintento.
         """
         # Asegurar que el token CSRF esté disponible para el reintento
         get_token(self.request)
@@ -309,27 +390,50 @@ class VistaAnadirUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, FormVie
     
     
 class VistaEditarPreferenciasCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
+    """
+    Edita las preferencias de un cliente específico.
+
+    Attributes:
+        model (Model): Modelo PreferenciaCliente.
+        form_class (Form): FormularioPreferenciaCliente.
+
+    Methods:
+        get_success_url(): Retorna la URL tras actualizar.
+        form_valid(): Lógica al validar el formulario.
+        get_context_data(): Agrega información adicional al contexto.
+    
+    Notes:
+        - Redirige a la vista de detalle del cliente al guardar
+    """
     model = PreferenciaCliente
     form_class = FormularioPreferenciaCliente
     template_name = 'clientes/formulario_preferencia_cliente.html'
     pk_url_kwarg = 'id_preferencia'
 
     def get_success_url(self):
+        """
+        Devuelve la URL del detalle del cliente.
+        """
         return reverse('clientes:detalle_cliente', kwargs={'id_cliente': self.object.cliente.pk})
 
     def form_valid(self, form):
+        """
+        Se llama cuando el formulario es válido.
+        Muestra mensaje de éxito y delega a superclase
+        """
         messages.success(self.request, 'Preferencias del cliente actualizadas exitosamente.')
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega información adicional al contexto.
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['titulo'] = f'Editar Preferencias de {self.object.cliente.obtener_nombre_completo()}'
         contexto['texto_submit'] = 'Guardar Preferencias'
-        #contexto['formulario'] = contexto.get('form')
         if 'form' in contexto:
             contexto['formulario'] = contexto['form']
         else:
-            # Si no hay 'form', crear uno vacío o manejar el caso
             contexto['formulario'] = self.get_form()
         contexto['redirect_url'] = reverse('clientes:detalle_cliente', kwargs={'id_cliente': self.object.cliente.pk})
         return contexto
@@ -337,12 +441,28 @@ class VistaEditarPreferenciasCliente(LoginRequiredMixin, MixinStaffRequerido, Up
 
 class VistaEliminarUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, DeleteView):
     """
-    Elimina un usuario de un cliente.
+    Desasocia un usuario de un cliente.
+
+    Attributes:
+        model (Model): Modelo ClienteUsuario.
+
+    Methods:
+        get_object(): Obtiene la instancia ClienteUsuario.
+        get_success_url(): URL tras eliminar.
+        delete(): Lógica de eliminación y limpieza de último cliente seleccionado.
+        get_context_data(): Agrega cliente y usuario al contexto.
+
+    Notas:
+        - Si el usuario tiene este cliente como su último cliente seleccionado, se limpiará esa asociación.
+        - Muestra mensaje de éxito y redirige a la vista de gestión de usuarios del cliente.
     """
     model = ClienteUsuario
     template_name = 'clientes/confirmar_eliminar_usuario.html'
 
     def get_object(self):
+        """
+        Obtiene la instancia ClienteUsuario por IDs de URL
+        """
         return get_object_or_404(
             ClienteUsuario,
             cliente_id=self.kwargs['id_cliente'],
@@ -350,9 +470,15 @@ class VistaEliminarUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, Delet
         )
 
     def get_success_url(self):
+        """
+        Devuelve la URL de retorno a la pantalla de gestion de usuarios del cliente tras eliminar
+        """
         return reverse('clientes:gestionar_usuarios_cliente', kwargs={'id_cliente': self.kwargs['id_cliente']})
 
     def delete(self, solicitud, *args, **kwargs):
+        """
+        Elimina la asociacion y limpia el ultimo cliente seleccionado si corresponde
+        """
         self.object = self.get_object()
         cliente = self.object.cliente
         usuario = self.object.usuario
@@ -368,6 +494,9 @@ class VistaEliminarUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, Delet
         return super().delete(solicitud, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega el cliente y el usuario al contexto.
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['cliente'] = self.object.cliente
         contexto['usuario'] = self.object.usuario
@@ -377,6 +506,15 @@ class VistaEliminarUsuarioCliente(LoginRequiredMixin, MixinStaffRequerido, Delet
 class VistaGestionarFavoritos(LoginRequiredMixin, MixinStaffRequerido, DetailView):
     """
     Gestiona las monedas favoritas de un cliente.
+
+    Attributes:
+        model (Model): Modelo Cliente.
+        template_name (str): Plantilla a usar.
+        context_object_name (str): Nombre del contexto para el cliente.
+        pk_url_kwarg (str): Nombre del parámetro de URL para el pk.
+
+    Methods:
+        get_context_data(): Agrega monedas favoritas y disponibles al contexto.
     """
     model = Cliente
     template_name = 'clientes/gestionar_favoritos.html'
@@ -403,6 +541,16 @@ class VistaGestionarFavoritos(LoginRequiredMixin, MixinStaffRequerido, DetailVie
 class VistaAnadirFavorito(LoginRequiredMixin, MixinStaffRequerido, FormView):
     """
     Añade una moneda favorita a un cliente.
+
+    Attributes:
+        form_class (Form): FormularioAnadirMonedaFavorita.
+        template_name (str): Plantilla a usar.
+
+    Methods:
+        dispatch(): Obtiene el cliente objetivo.
+        get_form_kwargs(): Pasa el cliente al formulario.
+        form_valid(): Lógica al añadir moneda favorita.
+        get_context_data(): Agrega cliente al contexto.
     """
     form_class = FormularioAnadirMonedaFavorita
     template_name = 'clientes/anadir_favorito.html'
@@ -436,6 +584,16 @@ class VistaAnadirFavorito(LoginRequiredMixin, MixinStaffRequerido, FormView):
 class VistaEliminarFavorito(LoginRequiredMixin, MixinStaffRequerido, DeleteView):
     """
     Elimina una moneda favorita de un cliente.
+
+    Attributes:
+        model (Model): Modelo MonedaFavorita.
+        template_name (str): Plantilla a usar.
+        pk_url_kwarg (str): Nombre del parámetro de URL para el pk.
+
+    Methods:
+        get_object(): Obtiene la instancia MonedaFavorita.
+        delete(): Lógica de eliminación y mensaje.
+        get_context_data(): Agrega cliente y moneda al contexto.
     """
     model = MonedaFavorita
     template_name = 'clientes/confirmar_eliminar_favorito.html'
@@ -468,7 +626,13 @@ class VistaEliminarFavorito(LoginRequiredMixin, MixinStaffRequerido, DeleteView)
 
 class VistaSaldosCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
     """
-    Ve los saldos del cliente por moneda.
+    Ver los saldos del cliente por moneda.
+
+    Attributes:
+        model (Model): Modelo Cliente.
+
+    Methods:
+        get_context_data(): Agrega saldos y saldo total al contexto.
     """
     model = Cliente
     template_name = 'clientes/saldos_cliente.html'
@@ -497,11 +661,33 @@ class VistaSaldosCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
 @method_decorator(require_POST, name='post')
 class VistaAsignarUsuarioAClienteAjax(LoginRequiredMixin, MixinStaffRequerido, FormView):
     """
-    Vista AJAX para asignar rápidamente un usuario a un cliente.
+    Vista AJAX para asignar rápidamente un usuario a un cliente. 
+
+    Request(POST):
+        - user_id: ID del usuario a asociar.
+        - cliente: Cliente al que se asignará el usuario.
+
+    Response (JSON):
+        - success (bool): Indica si la operación fue exitosa.
+        - message (str): Mensaje descriptivo de la operación.
+        - errors (dict): Errores de validación si los hay.
+
+    Methods:
+        form_valid(): Lógica para asociar usuario a cliente vía AJAX.
+        form_invalid(): Respuesta JSON si el formulario es inválido.
     """
     form_class = FormularioAsignarUsuarioACliente
 
     def form_valid(self, formulario):
+        """
+        Crea la asociación ClienteUsuario si no existe y devuelve JSON
+
+        Args:
+            formulario (FormularioAsignarUsuarioACliente): El formulario con los datos del cliente y usuario.
+
+            Returns:
+                JsonResponse: Respuesta JSON con el resultado de la operación.
+        """
         try:
             id_usuario = self.request.POST.get('user_id')
             usuario = get_object_or_404(Usuario, pk=id_usuario)
@@ -537,6 +723,9 @@ class VistaAsignarUsuarioAClienteAjax(LoginRequiredMixin, MixinStaffRequerido, F
             })
 
     def form_invalid(self, formulario):
+        """
+        Responde con JSON de errores de validación.
+        """
         return JsonResponse({
             'success': False,
             'message': 'Datos inválidos.',
@@ -546,8 +735,16 @@ class VistaAsignarUsuarioAClienteAjax(LoginRequiredMixin, MixinStaffRequerido, F
 
 def fallo_csrf(request, reason=""):
     """
-    Vista de fallo CSRF personalizada que proporciona mensajes de error amigables
-    y orientación para resolver problemas de CSRF.
+    Vista de fallo CSRF personalizada que proporciona mensajes de error y orientaciones de solución.
+
+    Determina la URL de retorno apropiada a la solicitud que falló.
+
+    Args:
+        request (HttpRequest): petición HTTP que falló.
+        reason (str, optional): Razón del fallo CSRF.
+
+    Returns:
+        TemplateResponse: Respuesta con plantilla de error CSRF con estado 403
     """
     from django.template.response import TemplateResponse
     from django.utils.translation import gettext as _
@@ -574,12 +771,23 @@ def fallo_csrf(request, reason=""):
 
 class VistaDetallesUsuario(LoginRequiredMixin, MixinStaffRequerido, View):
     """
-    Vista AJAX para devolver los detalles del usuario para mostrar en un modal.
+    Vista AJAX para devolver los detalles de un usuario asociado a un cliente.
+
+    Methods:
+        get(): Devuelve los detalles del usuario como respuesta JSON.
     """
     
     def get(self, solicitud, id_cliente, id_usuario):
         """
         Devuelve los detalles del usuario como respuesta JSON.
+
+        Args:
+            solicitud (HttpRequest): La solicitud GET
+            id_cliente (int): ID del cliente.
+            id_usuario (int): ID del usuario.
+
+        Returns:
+            JsonResponse: Detalles del usuario o error 500
         """
         try:
             # Verificar que el cliente y el usuario existen y están asociados

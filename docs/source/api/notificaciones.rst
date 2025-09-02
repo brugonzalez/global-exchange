@@ -21,7 +21,6 @@ Submodules
    notificaciones.models
    notificaciones.signals
    notificaciones.tasks
-   notificaciones.tests
    notificaciones.urls
    notificaciones.views
 
