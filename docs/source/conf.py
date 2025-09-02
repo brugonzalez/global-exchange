@@ -17,7 +17,7 @@ django.setup()
 project = 'global-exchange'
 copyright = '2025, EQUIPO_3'
 author = 'EQUIPO_3'
-release = '0.1'
+release = '1.0'
 
 # -- General configuration ---------------------------------------------------
 
@@ -31,6 +31,17 @@ extensions = [
     "sphinx.ext.autosummary" # Resumen automático de módulos
 ]
 autosummary_generate = True
+
+autodoc_default_options = {
+    'members': True, 
+    'undoc-members': True,
+    'private-members': False,
+    'show-inheritance': True,
+    'inherited-members': False,
+    'exclude-members': 'DoesNotExist , MultipleObjectsReturned, add_note, with_traceback, args'
+}
+autodoc_typehints = "description"
+autodoc_class_signature = "separated"   # saca el (*args, **kwargs) del título
 
 # Configuración del tema HTML
 
@@ -49,6 +60,32 @@ exclude_patterns = [
 ]
 
 language = "es"
+
+def skip_django_noise(app, what, name, obj, skip, options):
+    # Filtra helpers y managers/excepciones del ORM
+    if name in {"objects", "DoesNotExist", "MultipleObjectsReturned"}:
+        return True
+    if name.startswith(("get_next_by_", "get_previous_by_")):
+        return True
+    if name.startswith("get_") and name.endswith("_display"):
+        return True
+    try:
+        from django.db.models.query_utils import DeferredAttribute
+        from django.db.models.fields.related_descriptors import (
+            ReverseManyToOneDescriptor, ForwardManyToOneDescriptor, ManyToManyDescriptor
+        )
+        if isinstance(obj, (DeferredAttribute, ReverseManyToOneDescriptor,
+                            ForwardManyToOneDescriptor, ManyToManyDescriptor)):
+            return True
+    except Exception:
+        pass
+    return skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip_django_noise)
+
+add_module_names = False
+autodoc_member_order = "bysource"
 
 # -- Options for HTML output -------------------------------------------------
 

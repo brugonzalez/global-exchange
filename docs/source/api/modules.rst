@@ -8,7 +8,10 @@ global-exchange
    cuentas
    divisas
    global_exchange
+   gunicorn
    manage
    notificaciones
    reportes
+   tauser
+   tests
    transacciones

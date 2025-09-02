@@ -20,7 +20,7 @@ Submodules
    divisas.apps
    divisas.forms
    divisas.models
-   divisas.tests
+   divisas.signals
    divisas.urls
    divisas.views
 

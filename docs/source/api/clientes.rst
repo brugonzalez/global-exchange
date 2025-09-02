@@ -20,7 +20,6 @@ Submodules
    clientes.apps
    clientes.forms
    clientes.models
-   clientes.tests
    clientes.urls
    clientes.views
 

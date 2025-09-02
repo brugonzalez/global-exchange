@@ -1,5 +1,5 @@
-cuentas.migrations package
-==========================
+tests.reportes package
+======================
 
 Submodules
 ----------
@@ -7,12 +7,12 @@ Submodules
 .. toctree::
    :maxdepth: 2
 
-   cuentas.migrations.0001_initial
+   tests.reportes.test_reportes
 
 Module contents
 ---------------
 
-.. automodule:: cuentas.migrations
+.. automodule:: tests.reportes
    :members:
    :undoc-members:
    :show-inheritance:

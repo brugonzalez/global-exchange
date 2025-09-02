@@ -1,5 +1,5 @@
-cuentas.migrations package
-==========================
+tests.divisas package
+=====================
 
 Submodules
 ----------
@@ -7,12 +7,12 @@ Submodules
 .. toctree::
    :maxdepth: 2
 
-   cuentas.migrations.0001_initial
+   tests.divisas.test_divisas
 
 Module contents
 ---------------
 
-.. automodule:: cuentas.migrations
+.. automodule:: tests.divisas
    :members:
    :undoc-members:
    :show-inheritance:
