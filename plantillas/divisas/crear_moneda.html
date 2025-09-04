@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load formateo_divisas %}
 
 {% block title %}Registrar Nueva Moneda - Global Exchange{% endblock %}
 
@@ -90,6 +91,18 @@
                                     <div class="form-text">Nombre completo de la moneda</div>
                                 </div>
                             </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.pais.id_for_label }}" class="form-label">
+                                        {{ form.pais.label }}
+                                    </label>
+                                    {{ form.pais }}
+                                    {% if form.pais.errors %}
+                                        <div class="text-danger small">{{ form.pais.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Seleccione el país asociado a la moneda. Para monedas personalizadas sin país específico, puede dejarlo vacío</div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Configuración de trading -->
@@ -97,7 +110,7 @@
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-2 mb-3">
                                     <i class="fas fa-cogs me-1"></i>
-                                    Configuración de Trading
+                                    Parámetros de Moneda
                                 </h6>
                             </div>
                             <div class="col-md-6">
@@ -166,39 +179,7 @@
                             </div>
                         </div>
 
-                        <!-- Comisiones -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-2 mb-3">
-                                    <i class="fas fa-percentage me-1"></i>
-                                    Comisiones
-                                </h6>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.comision_compra.id_for_label }}" class="form-label">
-                                        {{ form.comision_compra.label }}
-                                    </label>
-                                    {{ form.comision_compra }}
-                                    {% if form.comision_compra.errors %}
-                                        <div class="text-danger small">{{ form.comision_compra.errors.0 }}</div>
-                                    {% endif %}
-                                    <div class="form-text">Comisión aplicada en compras (en PYG)</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.comision_venta.id_for_label }}" class="form-label">
-                                        {{ form.comision_venta.label }}
-                                    </label>
-                                    {{ form.comision_venta }}
-                                    {% if form.comision_venta.errors %}
-                                        <div class="text-danger small">{{ form.comision_venta.errors.0 }}</div>
-                                    {% endif %}
-                                    <div class="form-text">Comisión aplicada en ventas (en PYG)</div>
-                                </div>
-                            </div>
-                        </div>
+
 
                         <!-- Estado inicial -->
                         <div class="row mb-4">
@@ -217,15 +198,6 @@
                                     <div class="form-text">La moneda estará disponible para usar inmediatamente</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check mb-3">
-                                    {{ form.es_moneda_base }}
-                                    <label class="form-check-label" for="{{ form.es_moneda_base.id_for_label }}">
-                                        {{ form.es_moneda_base.label }}
-                                    </label>
-                                    <div class="form-text">Solo puede haber una moneda base en el sistema</div>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Errores generales del formulario -->
@@ -240,7 +212,7 @@
                         <!-- Botones de acción -->
                         <div class="d-flex justify-content-between">
                             <a href="{% url 'divisas:gestionar_monedas' %}" class="btn btn-secondary">
-                                <i class="fas fa-times me-1"></i>Cancelar
+                                <i class="fas fa-arrow-left me-1"></i>Volver
                             </a>
                             <button type="submit" class="btn btn-success">
                                 <i class="fas fa-save me-1"></i>Registrar Moneda
@@ -273,7 +245,6 @@
                     <ul class="small">
                         <li><strong>Precio Base Inicial:</strong> Si se especifica, se creará automáticamente el precio base para esta moneda</li>
                         <li><strong>Disponibilidad:</strong> Puede configurar independientemente la compra y venta</li>
-                        <li><strong>Moneda Base:</strong> Solo puede haber una en el sistema</li>
                     </ul>
 
                     <div class="alert alert-info small">
@@ -285,4 +256,49 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Aplicar la precisión inicial (por defecto 2)
+    const campoPrecision = document.getElementById('{{ form.lugares_decimales.id_for_label }}');
+    if (campoPrecision) {
+        const precisionInicial = campoPrecision.value || 2;
+        IG.aplicarPrecisionDecimalCampos(precisionInicial);
+    }
+    
+    // Agregar información dinámica sobre la precisión
+    const precisionField = document.getElementById('{{ form.lugares_decimales.id_for_label }}');
+    if (precisionField) {
+        const helpText = precisionField.parentNode.querySelector('.form-text');
+        if (helpText) {
+            // Función para actualizar texto de ayuda
+            function actualizarTextoAyuda(precision) {
+                const ejemplos = {
+                    0: 'Ejemplo: 1 (sin decimales)',
+                    1: 'Ejemplo: 0.1',
+                    2: 'Ejemplo: 0.01', 
+                    3: 'Ejemplo: 0.001',
+                    4: 'Ejemplo: 0.0001',
+                    5: 'Ejemplo: 0.00001',
+                    6: 'Ejemplo: 0.000001',
+                    7: 'Ejemplo: 0.0000001',
+                    8: 'Ejemplo: 0.00000001'
+                };
+                
+                const ejemplo = ejemplos[precision] || ejemplos[2];
+                helpText.innerHTML = `Número de decimales (0-8). ${ejemplo}`;
+            }
+            
+            // Actualizar al cambiar la precisión
+            precisionField.addEventListener('change', function() {
+                const precision = parseInt(this.value) || 2;
+                actualizarTextoAyuda(precision);
+            });
+            
+            // Inicializar texto
+            actualizarTextoAyuda(parseInt(precisionField.value) || 2);
+        }
+    }
+});
+</script>
 {% endblock %}

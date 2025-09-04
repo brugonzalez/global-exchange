@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load formateo_divisas %}
 
 {% block title %}Gestión de Monedas - Global Exchange{% endblock %}
 
@@ -67,8 +68,8 @@
         <div class="col-lg-3 col-md-6 mb-3">
             <div class="card border-info">
                 <div class="card-body text-center">
-                    <i class="fas fa-star text-info mb-2" style="font-size: 2rem;"></i>
-                    <h4 class="text-info">1</h4>
+                    <i class="fas fa-globe text-info mb-2" style="font-size: 2rem;"></i>
+                    <h4 class="text-info">{{ moneda_base.codigo|default:"1" }}</h4>
                     <p class="mb-0">Moneda Base</p>
                 </div>
             </div>
@@ -141,6 +142,9 @@
                                                     <img src="{{ moneda.pais.flag }}" 
                                                         alt="{{ moneda.pais.name }}" 
                                                         class="me-2" width="20" height="14">
+                                                {% else %}
+                                                    <!-- Bandera blanca por defecto para monedas personalizadas -->
+                                                    <div class="me-2 d-inline-block" style="width: 20px; height: 14px; background-color: #f8f9fa; border: 1px solid #dee2e6;"></div>
                                                 {% endif %}
                                                 <strong class="me-2">{{ moneda.simbolo }}</strong>
                                                 <span class="me-2 fw-bold">{{ moneda.codigo }}</span>
@@ -148,7 +152,7 @@
                                             <div>
                                                 <strong>{{ moneda.nombre }}</strong>
                                                 {% if moneda.es_moneda_base %}
-                                                    <span class="badge bg-warning text-dark ms-2">Base</span>
+                                                    <span class="badge bg-primary ms-2">Base</span>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -175,8 +179,8 @@
                                     <td>
                                         <div class="small">
                                             <div><strong>Decimales:</strong> {{ moneda.lugares_decimales }}</div>
-                                            <div><strong>Min:</strong> {{ moneda.denominacion_minima }}</div>
-                                            <div><strong>Stock:</strong> {{ moneda.stock_inicial }}</div>
+                                            <div><strong>Min:</strong> {{ moneda.denominacion_minima|floatformat:0 }}</div>
+                                            <div><strong>Stock:</strong> {{ moneda.stock_inicial|floatformat:0 }}</div>
                                         </div>
                                     </td>
                                     <td>

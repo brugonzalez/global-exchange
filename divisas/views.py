@@ -993,11 +993,15 @@ class VistaGestionarMonedas(LoginRequiredMixin, TemplateView):
                 'stats': stats
             })
         
+        # Obtener moneda base
+        moneda_base = Moneda.objects.filter(es_moneda_base=True).first()
+        
         contexto.update({
             'monedas_con_stats': monedas_con_stats,
             'total_monedas': monedas.count(),
             'monedas_activas': monedas.filter(esta_activa=True).count(),
             'monedas_inactivas': monedas.filter(esta_activa=False).count(),
+            'moneda_base': moneda_base,
             'busqueda': busqueda,
             'estado_filtro': estado_filtro,
         })
@@ -1022,16 +1026,23 @@ class VistaCrearMoneda(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         moneda = form.save()
         
-        # Si tiene precio base inicial, crear el precio base
+        # Si tiene precio base inicial, crear o actualizar el precio base
         if moneda.precio_base_inicial > 0:
             moneda_base = Moneda.objects.filter(es_moneda_base=True).first()
             if moneda_base and moneda != moneda_base:
-                PrecioBase.objects.create(
+                precio_base, created = PrecioBase.objects.get_or_create(
                     moneda=moneda,
                     moneda_base=moneda_base,
-                    precio_base=moneda.precio_base_inicial,
-                    actualizado_por=self.request.user
+                    defaults={
+                        'precio_base': moneda.precio_base_inicial,
+                        'actualizado_por': self.request.user
+                    }
                 )
+                # Si ya existía, actualizar el precio
+                if not created:
+                    precio_base.precio_base = moneda.precio_base_inicial
+                    precio_base.actualizado_por = self.request.user
+                    precio_base.save()
         
         messages.success(
             self.request, 
@@ -1058,9 +1069,17 @@ class VistaEditarMoneda(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         moneda = self.get_object()
+        
+        # Obtener el precio base actual desde PrecioBase
+        precio_base_actual = None
+        precio_base_obj = moneda.obtener_precio_base()
+        if precio_base_obj:
+            precio_base_actual = precio_base_obj.precio_base
+        
         contexto.update({
             'stats': moneda.obtener_estadisticas_uso(),
             'puede_eliminarse': moneda.puede_ser_eliminada(),
+            'precio_base_actual': precio_base_actual,
         })
         return contexto
 

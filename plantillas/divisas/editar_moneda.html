@@ -1,5 +1,6 @@
 
 {% extends 'base.html' %}
+{% load formateo_divisas %}
 
 {% block title %}Editar Moneda {{ object.codigo }} - Global Exchange{% endblock %}
 
@@ -91,6 +92,18 @@
                                     <div class="form-text">Nombre completo de la moneda</div>
                                 </div>
                             </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.pais.id_for_label }}" class="form-label">
+                                        {{ form.pais.label }}
+                                    </label>
+                                    {{ form.pais }}
+                                    {% if form.pais.errors %}
+                                        <div class="text-danger small">{{ form.pais.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Seleccione el país asociado a la moneda. Para monedas personalizadas sin país específico, puede dejarlo vacío</div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Configuración de trading -->
@@ -104,15 +117,21 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.precio_base_inicial.id_for_label }}" class="form-label">
-                                        {{ form.precio_base_inicial.label }}
+                                        Precio Base Actual
                                     </label>
-                                    {{ form.precio_base_inicial }}
-                                    {% if form.precio_base_inicial.errors %}
-                                        <div class="text-danger small">{{ form.precio_base_inicial.errors.0 }}</div>
+                                    {% if precio_base_actual %}
+                                        <input type="text" class="form-control" value="{{ precio_base_actual|floatformat:0 }} PYG" readonly style="background-color: #f8f9fa;">
+                                        <div class="form-text">
+                                            <strong>Nota:</strong> Para actualizar el precio actual, use la sección "Gestionar Tasas"
+                                        </div>
+                                    {% else %}
+                                        <input type="text" class="form-control" value="No establecido" readonly style="background-color: #f8f9fa;">
+                                        <div class="form-text">
+                                            <strong>Nota:</strong> Para establecer el precio base, use la sección "Gestionar Tasas"
+                                        </div>
                                     {% endif %}
-                                    <div class="form-text">
-                                        <strong>Nota:</strong> Para actualizar el precio actual, use la sección "Gestionar Tasas"
-                                    </div>
+                                    <!-- Campo oculto para mantener compatibilidad con el formulario -->
+                                    <input type="hidden" name="{{ form.precio_base_inicial.name }}" value="{{ form.precio_base_inicial.value|default:'0.00' }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -200,7 +219,7 @@
                         <!-- Botones de acción -->
                         <div class="d-flex justify-content-between">
                             <a href="{% url 'divisas:gestionar_monedas' %}" class="btn btn-secondary">
-                                <i class="fas fa-times me-1"></i>Cancelar
+                                <i class="fas fa-arrow-left me-1"></i>Volver
                             </a>
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-1"></i>Guardar Cambios
@@ -245,40 +264,6 @@
                     {% endif %}
                 </div>
             </div>
-
-            <!-- Acciones rápidas -->
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-tools me-1"></i>
-                        Acciones Rápidas
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        {% if not object.es_moneda_base %}
-                            {% if puede_eliminarse %}
-                                <a href="{% url 'divisas:eliminar_moneda' object.id %}" class="btn btn-outline-danger btn-sm">
-                                    <i class="fas fa-trash me-1"></i>
-                                    Eliminar Moneda
-                                </a>
-                            {% else %}
-                                <a href="{% url 'divisas:eliminar_moneda' object.id %}" class="btn btn-outline-warning btn-sm">
-                                    <i class="fas fa-ban me-1"></i>
-                                    Deshabilitar Moneda
-                                </a>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                    
-                    {% if object.es_moneda_base %}
-                        <div class="alert alert-warning small mt-3">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Esta es la moneda base del sistema y no puede eliminarse.
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -290,6 +275,47 @@ document.addEventListener('DOMContentLoaded', function() {
     if (codigoField) {
         codigoField.setAttribute('readonly', 'readonly');
         codigoField.style.backgroundColor = '#f8f9fa';
+    }
+    
+    // Aplicar la precisión actual de la moneda
+    const campoPrecision = document.getElementById('{{ form.lugares_decimales.id_for_label }}');
+    if (campoPrecision) {
+        const precisionActual = campoPrecision.value || {{ object.lugares_decimales|default:2 }};
+        IG.aplicarPrecisionDecimalCampos(precisionActual);
+    }
+    
+    // Agregar información dinámica sobre la precisión
+    const precisionField = document.getElementById('{{ form.lugares_decimales.id_for_label }}');
+    if (precisionField) {
+        const helpText = precisionField.parentNode.querySelector('.form-text');
+        if (helpText) {
+            // Función para actualizar texto de ayuda
+            function actualizarTextoAyuda(precision) {
+                const ejemplos = {
+                    0: 'Ejemplo: 1 (sin decimales)',
+                    1: 'Ejemplo: 0.1',
+                    2: 'Ejemplo: 0.01', 
+                    3: 'Ejemplo: 0.001',
+                    4: 'Ejemplo: 0.0001',
+                    5: 'Ejemplo: 0.00001',
+                    6: 'Ejemplo: 0.000001',
+                    7: 'Ejemplo: 0.0000001',
+                    8: 'Ejemplo: 0.00000001'
+                };
+                
+                const ejemplo = ejemplos[precision] || ejemplos[2];
+                helpText.innerHTML = `Número de decimales (0-8). ${ejemplo}`;
+            }
+            
+            // Actualizar al cambiar la precisión
+            precisionField.addEventListener('change', function() {
+                const precision = parseInt(this.value) || 2;
+                actualizarTextoAyuda(precision);
+            });
+            
+            // Inicializar texto
+            actualizarTextoAyuda(parseInt(precisionField.value) || {{ object.lugares_decimales|default:2 }});
+        }
     }
 });
 </script>

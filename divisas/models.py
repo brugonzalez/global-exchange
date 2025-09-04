@@ -56,14 +56,14 @@ class Moneda(models.Model):
     )
     denominacion_minima = models.DecimalField(
         max_digits=20,
-        decimal_places=8,
-        default=Decimal('0.01'),
+        decimal_places=0,
+        default=Decimal('1'),
         help_text="Denominación mínima para operaciones con esta moneda"
     )
     stock_inicial = models.DecimalField(
         max_digits=20,
-        decimal_places=8,
-        default=Decimal('0.00'),
+        decimal_places=0,
+        default=Decimal('0'),
         help_text="Stock inicial disponible de la moneda"
     )
     disponible_para_compra = models.BooleanField(

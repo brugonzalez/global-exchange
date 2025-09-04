@@ -115,9 +115,13 @@
                                     data-bs-target="#collapse-{{ info_tasa.moneda.id }}" 
                                     aria-expanded="false" aria-controls="collapse-{{ info_tasa.moneda.id }}">
 
-                                <img src="{{ info_tasa.moneda.pais.flag }}" 
-                                    alt="{{ info_tasa.moneda.pais.name }}" 
-                                    class="me-2" width="20" height="14">
+                                {% if info_tasa.moneda.pais %}
+                                    <img src="{{ info_tasa.moneda.pais.flag }}" 
+                                        alt="{{ info_tasa.moneda.pais.name }}" 
+                                        class="me-2" width="20" height="14">
+                                {% else %}
+                                    <div class="me-2 d-inline-block" style="width: 20px; height: 14px; background-color: #f8f9fa; border: 1px solid #dee2e6;"></div>
+                                {% endif %}
 
                                 <span class="me-3 fw-bold text-center" style="width: 20px; ">
                                     {{ info_tasa.moneda.simbolo }}
@@ -208,13 +212,6 @@
                                                         Enteros (sin puntos). Se guarda como precio base.
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            <!-- Divider + acciones unificados -->
-                                            <div class="border-top pt-3 mt-3 d-grid d-md-flex justify-content-md-end gap-2">
-                                                <button type="submit" class="btn btn-primary btn-sm">
-                                                    <i class="fas fa-save me-1"></i> Actualizar precio
-                                                </button>
                                             </div>
 
                                             <!-- Divider + acciones unificados -->

@@ -13,17 +13,31 @@ def crear_actualizar_tasas_cambio(sender, instance, created, **kwargs):
 		with transaction.atomic():
 			categorias = CategoriaCliente.objects.all()
 			for categoria in categorias:
-				TasaCambio.objects.update_or_create(
+				# Verificar si ya existe una tasa activa para esta combinación
+				tasa_existente = TasaCambio.objects.filter(
 					moneda=instance.moneda,
 					moneda_base=instance.moneda_base,
-					precio_base=instance,
 					categoria_cliente=categoria,
-					defaults={
-						'tasa_compra': instance.precio_base + instance.moneda.comision_compra - (categoria.margen_tasa_preferencial * instance.moneda.comision_compra),
-						'tasa_venta': instance.precio_base + instance.moneda.comision_venta - (categoria.margen_tasa_preferencial * instance.moneda.comision_venta),
-						'esta_activa': True,
-					}
-				)
+					esta_activa=True
+				).first()
+				
+				if tasa_existente:
+					# Si existe, actualizar los valores
+					tasa_existente.precio_base = instance
+					tasa_existente.tasa_compra = instance.precio_base + instance.moneda.comision_compra - (categoria.margen_tasa_preferencial * instance.moneda.comision_compra)
+					tasa_existente.tasa_venta = instance.precio_base + instance.moneda.comision_venta - (categoria.margen_tasa_preferencial * instance.moneda.comision_venta)
+					tasa_existente.save()
+				else:
+					# Si no existe, crear nueva
+					TasaCambio.objects.create(
+						moneda=instance.moneda,
+						moneda_base=instance.moneda_base,
+						precio_base=instance,
+						categoria_cliente=categoria,
+						tasa_compra=instance.precio_base + instance.moneda.comision_compra - (categoria.margen_tasa_preferencial * instance.moneda.comision_compra),
+						tasa_venta=instance.precio_base + instance.moneda.comision_venta - (categoria.margen_tasa_preferencial * instance.moneda.comision_venta),
+						esta_activa=True,
+					)
 
 @receiver(post_save, sender=Moneda)
 def crear_precio_base_al_crear_moneda(sender, instance, created, **kwargs):

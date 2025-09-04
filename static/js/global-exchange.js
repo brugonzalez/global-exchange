@@ -128,6 +128,89 @@ function formatearMoneda(monto, decimales = 4) {
     });
 }
 
+// Formatear valor decimal para parámetros de moneda según precisión
+function formatearValorParametroMoneda(valor, precision) {
+    if (valor === null || valor === undefined || valor === '') {
+        return '';
+    }
+    
+    // Convertir a número y aplicar la precisión
+    const numero = parseFloat(valor);
+    if (isNaN(numero)) {
+        return '';
+    }
+    
+    // Formatear con la precisión especificada, evitando notación científica
+    return numero.toFixed(precision);
+}
+
+// Obtener el step apropiado para un campo según la precisión decimal
+function obtenerStepSegunPrecision(precision) {
+    if (precision <= 0) {
+        return '1';
+    }
+    // Crear step como 0.0...01 con precision decimales
+    return '0.' + '0'.repeat(precision - 1) + '1';
+}
+
+// Aplicar formato de precisión decimal a los campos de parámetros de moneda
+function aplicarPrecisionDecimalCampos(precision) {
+    // Campos que siempre son enteros (sin decimales)
+    const camposEnteros = [
+        'id_denominacion_minima', 
+        'id_stock_inicial'
+    ];
+    
+    // Campos que usan la precisión definida
+    const camposPrecision = [
+        'id_precio_base_inicial'
+    ];
+    
+    // Configurar campos enteros
+    camposEnteros.forEach(function(campoId) {
+        const campo = document.getElementById(campoId);
+        if (campo) {
+            campo.setAttribute('step', '1');
+            
+            // Ajustar min según el campo
+            if (campoId === 'id_denominacion_minima') {
+                campo.setAttribute('min', '1');  // Denominación mínima debe ser >= 1
+            } else {
+                campo.setAttribute('min', '0');  // Stock inicial puede ser 0
+            }
+            
+            // Reformatear valor actual como entero
+            const valorActual = campo.value;
+            if (valorActual && valorActual !== '') {
+                const valorEntero = Math.floor(parseFloat(valorActual) || 0);
+                campo.value = valorEntero.toString();
+            }
+        }
+    });
+    
+    // Configurar campos con precisión
+    const step = obtenerStepSegunPrecision(precision);
+    camposPrecision.forEach(function(campoId) {
+        const campo = document.getElementById(campoId);
+        if (campo) {
+            campo.setAttribute('step', step);
+            
+            if (precision <= 0) {
+                campo.setAttribute('min', '1');
+            } else {
+                campo.setAttribute('min', step);
+            }
+            
+            // Reformatear el valor actual si existe
+            const valorActual = campo.value;
+            if (valorActual && valorActual !== '') {
+                const valorFormateado = formatearValorParametroMoneda(valorActual, precision);
+                campo.value = valorFormateado;
+            }
+        }
+    });
+}
+
 // Funcionalidad de actualización de tasas
 function refrescarTasas() {
     const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
@@ -273,6 +356,9 @@ window.IG = {
     refrescarTasas: refrescarTasas,
     simularConversion: simularConversion,
     formatearMoneda: formatearMoneda,
+    formatearValorParametroMoneda: formatearValorParametroMoneda,
+    obtenerStepSegunPrecision: obtenerStepSegunPrecision,
+    aplicarPrecisionDecimalCampos: aplicarPrecisionDecimalCampos,
     ajax: ajax,
     obtenerCookie: obtenerCookie,
     crearGrafico: crearGrafico
