@@ -154,8 +154,7 @@ class FormularioMoneda(forms.ModelForm):
         model = Moneda
         fields = ['codigo', 'nombre', 'simbolo', 'esta_activa', 
                  'precio_base_inicial', 'denominacion_minima', 'stock_inicial', 
-                 'lugares_decimales', 'disponible_para_compra', 'disponible_para_venta',
-                 'comision_compra', 'comision_venta']
+                 'lugares_decimales', 'disponible_para_compra', 'disponible_para_venta']
         widgets = {
             'codigo': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -200,18 +199,6 @@ class FormularioMoneda(forms.ModelForm):
             }),
             'disponible_para_venta': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
-            }),
-            'comision_compra': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '1',
-                'min': '0',
-                'placeholder': 'Comisión de compra en PYG'
-            }),
-            'comision_venta': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '1',
-                'min': '0',
-                'placeholder': 'Comisión de venta en PYG'
             })
         }
         labels = {
@@ -224,9 +211,7 @@ class FormularioMoneda(forms.ModelForm):
             'stock_inicial': 'Stock Inicial',
             'lugares_decimales': 'Precisión Decimal',
             'disponible_para_compra': 'Disponible para Compra',
-            'disponible_para_venta': 'Disponible para Venta',
-            'comision_compra': 'Comisión de Compra',
-            'comision_venta': 'Comisión de Venta'
+            'disponible_para_venta': 'Disponible para Venta'
         }
     
     def __init__(self, *args, **kwargs):
