@@ -993,11 +993,15 @@ class VistaGestionarMonedas(LoginRequiredMixin, TemplateView):
                 'stats': stats
             })
         
+        # Obtener moneda base
+        moneda_base = Moneda.objects.filter(es_moneda_base=True).first()
+        
         contexto.update({
             'monedas_con_stats': monedas_con_stats,
             'total_monedas': monedas.count(),
             'monedas_activas': monedas.filter(esta_activa=True).count(),
             'monedas_inactivas': monedas.filter(esta_activa=False).count(),
+            'moneda_base': moneda_base,
             'busqueda': busqueda,
             'estado_filtro': estado_filtro,
         })
