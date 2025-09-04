@@ -92,6 +92,18 @@
                                     <div class="form-text">Nombre completo de la moneda</div>
                                 </div>
                             </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="{{ form.pais.id_for_label }}" class="form-label">
+                                        {{ form.pais.label }}
+                                    </label>
+                                    {{ form.pais }}
+                                    {% if form.pais.errors %}
+                                        <div class="text-danger small">{{ form.pais.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Seleccione el país asociado a la moneda. Para monedas personalizadas sin país específico, puede dejarlo vacío</div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Configuración de trading -->
@@ -105,15 +117,21 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.precio_base_inicial.id_for_label }}" class="form-label">
-                                        {{ form.precio_base_inicial.label }}
+                                        Precio Base Actual
                                     </label>
-                                    {{ form.precio_base_inicial }}
-                                    {% if form.precio_base_inicial.errors %}
-                                        <div class="text-danger small">{{ form.precio_base_inicial.errors.0 }}</div>
+                                    {% if precio_base_actual %}
+                                        <input type="text" class="form-control" value="{{ precio_base_actual|floatformat:0 }} PYG" readonly style="background-color: #f8f9fa;">
+                                        <div class="form-text">
+                                            <strong>Nota:</strong> Para actualizar el precio actual, use la sección "Gestionar Tasas"
+                                        </div>
+                                    {% else %}
+                                        <input type="text" class="form-control" value="No establecido" readonly style="background-color: #f8f9fa;">
+                                        <div class="form-text">
+                                            <strong>Nota:</strong> Para establecer el precio base, use la sección "Gestionar Tasas"
+                                        </div>
                                     {% endif %}
-                                    <div class="form-text">
-                                        <strong>Nota:</strong> Para actualizar el precio actual, use la sección "Gestionar Tasas"
-                                    </div>
+                                    <!-- Campo oculto para mantener compatibilidad con el formulario -->
+                                    <input type="hidden" name="{{ form.precio_base_inicial.name }}" value="{{ form.precio_base_inicial.value|default:'0.00' }}">
                                 </div>
                             </div>
                             <div class="col-md-6">

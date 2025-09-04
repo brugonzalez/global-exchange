@@ -152,7 +152,7 @@ class FormularioMoneda(forms.ModelForm):
     """
     class Meta:
         model = Moneda
-        fields = ['codigo', 'nombre', 'simbolo', 'esta_activa', 
+        fields = ['codigo', 'nombre', 'simbolo', 'pais', 'esta_activa', 
                  'precio_base_inicial', 'denominacion_minima', 'stock_inicial', 
                  'lugares_decimales', 'disponible_para_compra', 'disponible_para_venta']
         widgets = {
@@ -169,6 +169,10 @@ class FormularioMoneda(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': '$, €, ₲, etc.',
                 'maxlength': '10'
+            }),
+            'pais': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'Seleccionar país (opcional)'
             }),
             'esta_activa': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
@@ -205,6 +209,7 @@ class FormularioMoneda(forms.ModelForm):
             'codigo': 'Código',
             'nombre': 'Nombre',
             'simbolo': 'Símbolo',
+            'pais': 'País',
             'esta_activa': 'Habilitada',
             'precio_base_inicial': 'Precio Base Inicial',
             'denominacion_minima': 'Denominación Mínima',

@@ -122,10 +122,14 @@
                                 <div class="card-body text-center">
                                     <div class="d-flex justify-content-between align-items-start mb-3">
                                         <h5 class="card-title mb-0">
-                                            <img src="{{ tasa.moneda.pais.flag }}" 
-                                                alt="{{ tasa.moneda.pais.name }}" 
-                                                width="20" height="14"
-                                                class="align-middle me-1">
+                                            {% if tasa.moneda.pais %}
+                                                <img src="{{ tasa.moneda.pais.flag }}" 
+                                                    alt="{{ tasa.moneda.pais.name }}" 
+                                                    width="20" height="14"
+                                                    class="align-middle me-1">
+                                            {% else %}
+                                                <div class="d-inline-block align-middle me-1" style="width: 20px; height: 14px; background-color: #f8f9fa; border: 1px solid #dee2e6;"></div>
+                                            {% endif %}
                                             {{ tasa.moneda.simbolo }} {{ tasa.moneda.codigo }}
                                         </h5>
                                     </div>

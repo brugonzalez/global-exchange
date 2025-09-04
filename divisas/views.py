@@ -1065,9 +1065,17 @@ class VistaEditarMoneda(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         moneda = self.get_object()
+        
+        # Obtener el precio base actual desde PrecioBase
+        precio_base_actual = None
+        precio_base_obj = moneda.obtener_precio_base()
+        if precio_base_obj:
+            precio_base_actual = precio_base_obj.precio_base
+        
         contexto.update({
             'stats': moneda.obtener_estadisticas_uso(),
             'puede_eliminarse': moneda.puede_ser_eliminada(),
+            'precio_base_actual': precio_base_actual,
         })
         return contexto
 

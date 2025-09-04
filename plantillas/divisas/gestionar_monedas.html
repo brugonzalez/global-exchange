@@ -142,6 +142,9 @@
                                                     <img src="{{ moneda.pais.flag }}" 
                                                         alt="{{ moneda.pais.name }}" 
                                                         class="me-2" width="20" height="14">
+                                                {% else %}
+                                                    <!-- Bandera blanca por defecto para monedas personalizadas -->
+                                                    <div class="me-2 d-inline-block" style="width: 20px; height: 14px; background-color: #f8f9fa; border: 1px solid #dee2e6;"></div>
                                                 {% endif %}
                                                 <strong class="me-2">{{ moneda.simbolo }}</strong>
                                                 <span class="me-2 fw-bold">{{ moneda.codigo }}</span>
