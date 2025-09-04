@@ -155,25 +155,50 @@ function obtenerStepSegunPrecision(precision) {
 
 // Aplicar formato de precisión decimal a los campos de parámetros de moneda
 function aplicarPrecisionDecimalCampos(precision) {
-    const camposParametros = [
-        'id_precio_base_inicial',
+    // Campos que siempre son enteros (sin decimales)
+    const camposEnteros = [
         'id_denominacion_minima', 
         'id_stock_inicial'
     ];
     
-    const step = obtenerStepSegunPrecision(precision);
+    // Campos que usan la precisión definida
+    const camposPrecision = [
+        'id_precio_base_inicial'
+    ];
     
-    camposParametros.forEach(function(campoId) {
+    // Configurar campos enteros
+    camposEnteros.forEach(function(campoId) {
         const campo = document.getElementById(campoId);
         if (campo) {
-            // Actualizar el step del campo
+            campo.setAttribute('step', '1');
+            
+            // Ajustar min según el campo
+            if (campoId === 'id_denominacion_minima') {
+                campo.setAttribute('min', '1');  // Denominación mínima debe ser >= 1
+            } else {
+                campo.setAttribute('min', '0');  // Stock inicial puede ser 0
+            }
+            
+            // Reformatear valor actual como entero
+            const valorActual = campo.value;
+            if (valorActual && valorActual !== '') {
+                const valorEntero = Math.floor(parseFloat(valorActual) || 0);
+                campo.value = valorEntero.toString();
+            }
+        }
+    });
+    
+    // Configurar campos con precisión
+    const step = obtenerStepSegunPrecision(precision);
+    camposPrecision.forEach(function(campoId) {
+        const campo = document.getElementById(campoId);
+        if (campo) {
             campo.setAttribute('step', step);
             
-            // Actualizar el min para que sea compatible con el step
             if (precision <= 0) {
                 campo.setAttribute('min', '1');
             } else {
-                campo.setAttribute('min', step);  // Min debe ser múltiplo del step
+                campo.setAttribute('min', step);
             }
             
             // Reformatear el valor actual si existe

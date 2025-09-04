@@ -68,7 +68,7 @@
         <div class="col-lg-3 col-md-6 mb-3">
             <div class="card border-info">
                 <div class="card-body text-center">
-                    <i class="fas fa-star text-info mb-2" style="font-size: 2rem;"></i>
+                    <i class="fas fa-globe text-info mb-2" style="font-size: 2rem;"></i>
                     <h4 class="text-info">1</h4>
                     <p class="mb-0">Moneda Base</p>
                 </div>
@@ -179,8 +179,8 @@
                                     <td>
                                         <div class="small">
                                             <div><strong>Decimales:</strong> {{ moneda.lugares_decimales }}</div>
-                                            <div><strong>Min:</strong> {{ moneda.denominacion_minima|formatear_decimal_con_precision:moneda.lugares_decimales }}</div>
-                                            <div><strong>Stock:</strong> {{ moneda.stock_inicial|formatear_decimal_con_precision:moneda.lugares_decimales }}</div>
+                                            <div><strong>Min:</strong> {{ moneda.denominacion_minima|floatformat:0 }}</div>
+                                            <div><strong>Stock:</strong> {{ moneda.stock_inicial|floatformat:0 }}</div>
                                         </div>
                                     </td>
                                     <td>
