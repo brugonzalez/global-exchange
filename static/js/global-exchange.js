@@ -169,6 +169,13 @@ function aplicarPrecisionDecimalCampos(precision) {
             // Actualizar el step del campo
             campo.setAttribute('step', step);
             
+            // Actualizar el min para que sea compatible con el step
+            if (precision <= 0) {
+                campo.setAttribute('min', '1');
+            } else {
+                campo.setAttribute('min', step);  // Min debe ser múltiplo del step
+            }
+            
             // Reformatear el valor actual si existe
             const valorActual = campo.value;
             if (valorActual && valorActual !== '') {
