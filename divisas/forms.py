@@ -175,19 +175,19 @@ class FormularioMoneda(forms.ModelForm):
                 'class': 'form-check-input'
             }),
             'precio_base_inicial': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'form-control parametro-moneda',
                 'step': '0.00000001',
                 'min': '0',
                 'placeholder': 'Precio base inicial'
             }),
             'denominacion_minima': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'form-control parametro-moneda',
                 'step': '0.00000001',
                 'min': '0.00000001',
                 'placeholder': 'Denominación mínima'
             }),
             'stock_inicial': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'form-control parametro-moneda',
                 'step': '0.00000001',
                 'min': '0',
                 'placeholder': 'Stock inicial'
@@ -195,7 +195,8 @@ class FormularioMoneda(forms.ModelForm):
             'lugares_decimales': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
-                'max': '8'
+                'max': '8',
+                'onchange': 'IG.aplicarPrecisionDecimalCampos(this.value);'
             }),
             'disponible_para_compra': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
@@ -230,6 +231,60 @@ class FormularioMoneda(forms.ModelForm):
             'comision_compra': 'Comisión de Compra',
             'comision_venta': 'Comisión de Venta'
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Si estamos editando una moneda existente, aplicar la precisión actual
+        if self.instance and self.instance.pk:
+            precision = self.instance.lugares_decimales or 2
+            
+            # Formatear los valores de los campos según la precisión actual
+            campos_parametros = ['precio_base_inicial', 'denominacion_minima', 'stock_inicial']
+            for nombre_campo in campos_parametros:
+                campo = self.fields[nombre_campo]
+                valor_actual = getattr(self.instance, nombre_campo, None)
+                
+                if valor_actual is not None:
+                    # Actualizar el step según la precisión
+                    step = self._obtener_step_segun_precision(precision)
+                    campo.widget.attrs['step'] = step
+                    
+                    # Formatear valor inicial
+                    valor_formateado = self._formatear_valor_con_precision(valor_actual, precision)
+                    self.initial[nombre_campo] = valor_formateado
+                else:
+                    # Establecer step por defecto
+                    step = self._obtener_step_segun_precision(precision)
+                    campo.widget.attrs['step'] = step
+        
+        # Agregar clase CSS para identificar campos de parámetros
+        for nombre_campo in ['precio_base_inicial', 'denominacion_minima', 'stock_inicial']:
+            if nombre_campo in self.fields:
+                clases_existentes = self.fields[nombre_campo].widget.attrs.get('class', '')
+                if 'parametro-moneda' not in clases_existentes:
+                    self.fields[nombre_campo].widget.attrs['class'] = clases_existentes + ' parametro-moneda'
+    
+    def _obtener_step_segun_precision(self, precision):
+        """Obtiene el step apropiado para un campo según la precisión decimal."""
+        if precision <= 0:
+            return '1'
+        # Crear step como 0.0...01 con precision decimales
+        return '0.' + '0' * (precision - 1) + '1'
+    
+    def _formatear_valor_con_precision(self, valor, precision):
+        """Formatea un valor decimal con la precisión especificada."""
+        if valor is None:
+            return None
+        try:
+            from decimal import Decimal
+            if isinstance(valor, Decimal):
+                # Convertir Decimal a float y luego formatear
+                return f"{float(valor):.{precision}f}"
+            else:
+                return f"{float(valor):.{precision}f}"
+        except (ValueError, TypeError):
+            return valor
     
     def clean_codigo(self):
         codigo = self.cleaned_data['codigo'].upper()

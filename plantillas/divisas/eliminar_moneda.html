@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load formateo_divisas %}
 
 {% block title %}Eliminar Moneda {{ object.codigo }} - Global Exchange{% endblock %}
 
@@ -93,6 +94,26 @@
                             </div>
                         </div>
 
+                        <!-- Parámetros de Moneda -->
+                        {% formatear_parametros_moneda object as parametros %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6>Parámetros de Moneda:</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><strong>Precio Base Inicial:</strong> {{ parametros.precio_base_inicial }}</li>
+                                    <li><strong>Denominación Mínima:</strong> {{ parametros.denominacion_minima }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><strong>Stock Inicial:</strong> {{ parametros.stock_inicial }}</li>
+                                    <li><strong>Precisión Decimal:</strong> {{ object.lugares_decimales }} decimales</li>
+                                </ul>
+                            </div>
+                        </div>
+
                         <form method="post">
                             {% csrf_token %}
                             <div class="d-flex justify-content-between">
@@ -142,6 +163,25 @@
                                     <li><strong>Monto origen:</strong> {{ stats.monto_total_origen|floatformat:2 }}</li>
                                     <li><strong>Monto destino:</strong> {{ stats.monto_total_destino|floatformat:2 }}</li>
                                     <li><strong>Fecha creación:</strong> {{ object.fecha_creacion|date:"d/m/Y H:i" }}</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Parámetros de Moneda -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6>Parámetros de Moneda:</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><strong>Precio Base Inicial:</strong> {{ parametros.precio_base_inicial }}</li>
+                                    <li><strong>Denominación Mínima:</strong> {{ parametros.denominacion_minima }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><strong>Stock Inicial:</strong> {{ parametros.stock_inicial }}</li>
+                                    <li><strong>Precisión Decimal:</strong> {{ object.lugares_decimales }} decimales</li>
                                 </ul>
                             </div>
                         </div>

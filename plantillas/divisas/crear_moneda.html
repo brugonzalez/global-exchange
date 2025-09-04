@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load formateo_divisas %}
 
 {% block title %}Registrar Nueva Moneda - Global Exchange{% endblock %}
 
@@ -243,4 +244,49 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Aplicar la precisión inicial (por defecto 2)
+    const campoPrecision = document.getElementById('{{ form.lugares_decimales.id_for_label }}');
+    if (campoPrecision) {
+        const precisionInicial = campoPrecision.value || 2;
+        IG.aplicarPrecisionDecimalCampos(precisionInicial);
+    }
+    
+    // Agregar información dinámica sobre la precisión
+    const precisionField = document.getElementById('{{ form.lugares_decimales.id_for_label }}');
+    if (precisionField) {
+        const helpText = precisionField.parentNode.querySelector('.form-text');
+        if (helpText) {
+            // Función para actualizar texto de ayuda
+            function actualizarTextoAyuda(precision) {
+                const ejemplos = {
+                    0: 'Ejemplo: 1 (sin decimales)',
+                    1: 'Ejemplo: 0.1',
+                    2: 'Ejemplo: 0.01', 
+                    3: 'Ejemplo: 0.001',
+                    4: 'Ejemplo: 0.0001',
+                    5: 'Ejemplo: 0.00001',
+                    6: 'Ejemplo: 0.000001',
+                    7: 'Ejemplo: 0.0000001',
+                    8: 'Ejemplo: 0.00000001'
+                };
+                
+                const ejemplo = ejemplos[precision] || ejemplos[2];
+                helpText.innerHTML = `Número de decimales (0-8). ${ejemplo}`;
+            }
+            
+            // Actualizar al cambiar la precisión
+            precisionField.addEventListener('change', function() {
+                const precision = parseInt(this.value) || 2;
+                actualizarTextoAyuda(precision);
+            });
+            
+            // Inicializar texto
+            actualizarTextoAyuda(parseInt(precisionField.value) || 2);
+        }
+    }
+});
+</script>
 {% endblock %}

@@ -128,6 +128,57 @@ function formatearMoneda(monto, decimales = 4) {
     });
 }
 
+// Formatear valor decimal para parámetros de moneda según precisión
+function formatearValorParametroMoneda(valor, precision) {
+    if (valor === null || valor === undefined || valor === '') {
+        return '';
+    }
+    
+    // Convertir a número y aplicar la precisión
+    const numero = parseFloat(valor);
+    if (isNaN(numero)) {
+        return '';
+    }
+    
+    // Formatear con la precisión especificada, evitando notación científica
+    return numero.toFixed(precision);
+}
+
+// Obtener el step apropiado para un campo según la precisión decimal
+function obtenerStepSegunPrecision(precision) {
+    if (precision <= 0) {
+        return '1';
+    }
+    // Crear step como 0.0...01 con precision decimales
+    return '0.' + '0'.repeat(precision - 1) + '1';
+}
+
+// Aplicar formato de precisión decimal a los campos de parámetros de moneda
+function aplicarPrecisionDecimalCampos(precision) {
+    const camposParametros = [
+        'id_precio_base_inicial',
+        'id_denominacion_minima', 
+        'id_stock_inicial'
+    ];
+    
+    const step = obtenerStepSegunPrecision(precision);
+    
+    camposParametros.forEach(function(campoId) {
+        const campo = document.getElementById(campoId);
+        if (campo) {
+            // Actualizar el step del campo
+            campo.setAttribute('step', step);
+            
+            // Reformatear el valor actual si existe
+            const valorActual = campo.value;
+            if (valorActual && valorActual !== '') {
+                const valorFormateado = formatearValorParametroMoneda(valorActual, precision);
+                campo.value = valorFormateado;
+            }
+        }
+    });
+}
+
 // Funcionalidad de actualización de tasas
 function refrescarTasas() {
     const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
@@ -273,6 +324,9 @@ window.IG = {
     refrescarTasas: refrescarTasas,
     simularConversion: simularConversion,
     formatearMoneda: formatearMoneda,
+    formatearValorParametroMoneda: formatearValorParametroMoneda,
+    obtenerStepSegunPrecision: obtenerStepSegunPrecision,
+    aplicarPrecisionDecimalCampos: aplicarPrecisionDecimalCampos,
     ajax: ajax,
     obtenerCookie: obtenerCookie,
     crearGrafico: crearGrafico
