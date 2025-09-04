@@ -53,13 +53,13 @@ def generar_reporte_sincrono(id_reporte):
             # Generar contenido basado en el formato
             if reporte.formato == 'PDF':
                 contenido = generador._generar_pdf_transacciones(
-                    transacciones, reporte.fecha_desde, reporte.fecha_hasta
+                    transacciones, reporte.fecha_desde, reporte.fecha_hasta, reporte
                 )
                 nombre_archivo = f'{reporte.nombre_reporte}.pdf'
                 
             elif reporte.formato == 'EXCEL':
                 contenido = generador._generar_excel_transacciones(
-                    transacciones, reporte.fecha_desde, reporte.fecha_hasta
+                    transacciones, reporte.fecha_desde, reporte.fecha_hasta, reporte
                 )
                 nombre_archivo = f'{reporte.nombre_reporte}.xlsx'
                 

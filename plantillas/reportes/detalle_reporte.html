@@ -86,7 +86,7 @@
                                     </td>
                                     <td>
                                         {% if reporte.cliente %}
-                                        <strong>{{ reporte.cliente.nombre_empresa|default:reporte.cliente.nombre_persona }}</strong>
+                                        <strong>{{ reporte.cliente.nombre_empresa | default:reporte.cliente.nombre }}</strong>
                                         <br><small class="text-muted">{{ reporte.cliente.get_tipo_cliente_display }}</small>
                                         {% else %}
                                         <span class="text-muted">Todos los clientes</span>

@@ -268,7 +268,7 @@ class APIVistaGenerarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
                 'error': 'Error interno del servidor'
             })
 
-    def _generar_pdf_transacciones(self, transacciones, fecha_desde, fecha_hasta):
+    def _generar_pdf_transacciones(self, transacciones, fecha_desde, fecha_hasta, reporte):
         """Genera un reporte en PDF para transacciones"""
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -294,21 +294,31 @@ class APIVistaGenerarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
 
         # Resumen
         total_transacciones = transacciones.count()
+        cliente_transaccion = transacciones.filter(cliente = reporte.cliente)
         try:
             volumen_total = transacciones.aggregate(total=Sum('monto_origen'))['total'] or Decimal('0')
         except (TypeError, ValueError) as e:
             logger.warning(f"Error al calcular volumen total: {e}")
             volumen_total = Decimal('0')
-        
-        datos_resumen = [
-            ['Total de Transacciones:', str(total_transacciones)],
-            ['Volumen Total:', f'{volumen_total:,.2f}'],
-            ['Fecha de Generación:', timezone.now().strftime('%d/%m/%Y %H:%M')]
-        ]
-        
-        tabla_resumen = Table(datos_resumen, colWidths=[3*inch, 2*inch])
+        if cliente_transaccion.values_list().first() is None:
+            datos_resumen = [
+                ['Nombre del cliente: ', 'Todos los clientes'],
+                ['Volumen Total:', f'{volumen_total:,.2f}','Total de transacciones:', str(total_transacciones)],
+                ['Fecha de Generación:', timezone.now().strftime('%d/%m/%Y %H:%M')]
+            ]
+        else:
+            datos_resumen = [
+                ['Nombre del cliente: ', str(cliente_transaccion.values_list('cliente__nombre', flat=True).first()), 
+                'Apellido del cliente', cliente_transaccion.values_list('cliente__apellido', flat=True).first()],
+                ['Numero Cedula :', cliente_transaccion.values_list('cliente__numero_identificacion', flat=True).first(), 
+                'Telefono: ',cliente_transaccion.values_list('cliente__telefono', flat=True).first()],
+                ['Volumen Total:', f'{volumen_total:,.2f}','Total de transacciones:', str(total_transacciones)],
+                ['Fecha de Generación:', timezone.now().strftime('%d/%m/%Y %H:%M')]
+            ]
+
+        tabla_resumen = Table(datos_resumen, colWidths=[2*inch, 2*inch])
         tabla_resumen.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.transparent),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
@@ -381,7 +391,7 @@ class APIVistaGenerarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
         buffer.seek(0)
         return buffer.getvalue()
 
-    def _generar_excel_transacciones(self, transacciones, fecha_desde, fecha_hasta):
+    def _generar_excel_transacciones(self, transacciones, fecha_desde, fecha_hasta, reporte):
         """Genera un reporte en Excel para transacciones"""
         salida = io.BytesIO()
         libro = xlsxwriter.Workbook(salida, {'in_memory': True})
@@ -423,23 +433,69 @@ class APIVistaGenerarReporte(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
             formato_titulo)
 
         # Resumen
-        fila = 4
-        hoja.write(fila, 0, 'Total de Transacciones:', formato_encabezado)
-        hoja.write(fila, 1, transacciones.count(), formato_celda)
-        
-        fila += 1
+        cliente_transaccion = transacciones.filter(cliente = reporte.cliente)
         try:
             volumen_total = transacciones.aggregate(total=Sum('monto_origen'))['total'] or Decimal('0')
         except (TypeError, ValueError) as e:
             logger.warning(f"Error al calcular volumen total en Excel: {e}")
             volumen_total = Decimal('0')
-        
-        hoja.write(fila, 0, 'Volumen Total:', formato_encabezado)
-        hoja.write(fila, 1, float(volumen_total), formato_numero)
-        
-        fila += 1
-        hoja.write(fila, 0, 'Fecha de Generación:', formato_encabezado)
-        hoja.write(fila, 1, timezone.now().strftime('%d/%m/%Y %H:%M'), formato_celda)
+        if cliente_transaccion.values_list().first() is None:
+            fila = 4
+            hoja.write(fila, 0, 'Nombre del cliente:', formato_encabezado)
+            hoja.write(fila, 1, 'Todos los clientes', formato_titulo)
+
+            fila += 1
+            hoja.write(fila, 0, 'Total de Transacciones:', formato_encabezado)
+            hoja.write(fila, 1, transacciones.count(), formato_celda)
+            
+            fila += 1
+            try:
+                volumen_total = transacciones.aggregate(total=Sum('monto_origen'))['total'] or Decimal('0')
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Error al calcular volumen total en Excel: {e}")
+                volumen_total = Decimal('0')
+            
+            hoja.write(fila, 0, 'Volumen Total:', formato_encabezado)
+            hoja.write(fila, 1, float(volumen_total), formato_numero)
+            
+            fila += 1
+            hoja.write(fila, 0, 'Fecha de Generación:', formato_encabezado)
+            hoja.write(fila, 1, timezone.now().strftime('%d/%m/%Y %H:%M'), formato_celda)
+
+        else:
+            fila = 4
+            hoja.write(fila, 0, 'Nombre del cliente:', formato_encabezado)
+            hoja.write(fila, 1, cliente_transaccion.values_list('cliente__nombre', flat=True).first(), formato_titulo)
+
+            fila += 1
+            hoja.write(fila, 0, 'Apellido del cliente:', formato_encabezado)
+            hoja.write(fila, 1, cliente_transaccion.values_list('cliente__apellido', flat=True).first(), formato_titulo)
+
+            fila += 1
+            hoja.write(fila, 0, 'Numero de Cedula:', formato_encabezado)
+            hoja.write(fila, 1, cliente_transaccion.values_list('cliente__numero_identificacion', flat=True).first(), formato_titulo)
+
+            fila += 1
+            hoja.write(fila, 0, 'Tefono: ', formato_encabezado)
+            hoja.write(fila, 1, cliente_transaccion.values_list('cliente__telefono', flat=True).first(), formato_titulo)
+
+            fila += 1
+            hoja.write(fila, 0, 'Total de Transacciones:', formato_encabezado)
+            hoja.write(fila, 1, transacciones.count(), formato_celda)
+            
+            fila += 1
+            try:
+                volumen_total = transacciones.aggregate(total=Sum('monto_origen'))['total'] or Decimal('0')
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Error al calcular volumen total en Excel: {e}")
+                volumen_total = Decimal('0')
+            
+            hoja.write(fila, 0, 'Volumen Total:', formato_encabezado)
+            hoja.write(fila, 1, float(volumen_total), formato_numero)
+            
+            fila += 1
+            hoja.write(fila, 0, 'Fecha de Generación:', formato_encabezado)
+            hoja.write(fila, 1, timezone.now().strftime('%d/%m/%Y %H:%M'), formato_celda)
 
         # Encabezados
         fila += 3

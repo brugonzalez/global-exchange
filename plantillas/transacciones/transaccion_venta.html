@@ -4,6 +4,28 @@
 {% block title %}Vender Moneda - Global Exchange{% endblock %}
 
 {% block content %}
+<!-- Selector de Cliente (mostrado siempre para usuarios autenticados) -->
+{% if user.is_authenticated %}
+    <div class="container mt-3">
+        <div class="client-selector">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <strong>Cliente Activo:</strong>
+                    {% if user.ultimo_cliente_seleccionado %}
+                        {{ user.ultimo_cliente_seleccionado.obtener_nombre_completo }}
+                    {% else %}
+                        <span class="text-muted">Ningún cliente seleccionado</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'cuentas:seleccionar_cliente' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-exchange-alt me-1"></i>Cambiar Cliente
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-8">
