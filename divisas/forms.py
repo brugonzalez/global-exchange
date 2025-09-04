@@ -152,7 +152,7 @@ class FormularioMoneda(forms.ModelForm):
     """
     class Meta:
         model = Moneda
-        fields = ['codigo', 'nombre', 'simbolo', 'esta_activa', 'es_moneda_base', 
+        fields = ['codigo', 'nombre', 'simbolo', 'esta_activa', 
                  'precio_base_inicial', 'denominacion_minima', 'stock_inicial', 
                  'lugares_decimales', 'disponible_para_compra', 'disponible_para_venta',
                  'comision_compra', 'comision_venta']
@@ -172,9 +172,6 @@ class FormularioMoneda(forms.ModelForm):
                 'maxlength': '10'
             }),
             'esta_activa': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            }),
-            'es_moneda_base': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
             'precio_base_inicial': forms.NumberInput(attrs={
@@ -224,7 +221,6 @@ class FormularioMoneda(forms.ModelForm):
             'nombre': 'Nombre',
             'simbolo': 'Símbolo',
             'esta_activa': 'Habilitada',
-            'es_moneda_base': 'Moneda Base',
             'precio_base_inicial': 'Precio Base Inicial',
             'denominacion_minima': 'Denominación Mínima',
             'stock_inicial': 'Stock Inicial',
@@ -241,15 +237,4 @@ class FormularioMoneda(forms.ModelForm):
     
     def clean(self):
         datos_limpios = super().clean()
-        es_moneda_base = datos_limpios.get('es_moneda_base')
-        
-        # Asegurar que solo exista una moneda base
-        if es_moneda_base:
-            base_existente = Moneda.objects.filter(es_moneda_base=True)
-            if self.instance.pk:
-                base_existente = base_existente.exclude(pk=self.instance.pk)
-            
-            if base_existente.exists():
-                raise forms.ValidationError('Ya existe una moneda base. Solo puede haber una moneda base.')
-        
         return datos_limpios

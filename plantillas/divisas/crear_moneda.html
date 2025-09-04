@@ -185,15 +185,6 @@
                                     <div class="form-text">La moneda estará disponible para usar inmediatamente</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check mb-3">
-                                    {{ form.es_moneda_base }}
-                                    <label class="form-check-label" for="{{ form.es_moneda_base.id_for_label }}">
-                                        {{ form.es_moneda_base.label }}
-                                    </label>
-                                    <div class="form-text">Solo puede haber una moneda base en el sistema</div>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Errores generales del formulario -->
@@ -208,7 +199,7 @@
                         <!-- Botones de acción -->
                         <div class="d-flex justify-content-between">
                             <a href="{% url 'divisas:gestionar_monedas' %}" class="btn btn-secondary">
-                                <i class="fas fa-times me-1"></i>Cancelar
+                                <i class="fas fa-arrow-left me-1"></i>Volver
                             </a>
                             <button type="submit" class="btn btn-success">
                                 <i class="fas fa-save me-1"></i>Registrar Moneda
@@ -241,7 +232,6 @@
                     <ul class="small">
                         <li><strong>Precio Base Inicial:</strong> Si se especifica, se creará automáticamente el precio base para esta moneda</li>
                         <li><strong>Disponibilidad:</strong> Puede configurar independientemente la compra y venta</li>
-                        <li><strong>Moneda Base:</strong> Solo puede haber una en el sistema</li>
                     </ul>
 
                     <div class="alert alert-info small">

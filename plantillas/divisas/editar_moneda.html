@@ -200,7 +200,7 @@
                         <!-- Botones de acción -->
                         <div class="d-flex justify-content-between">
                             <a href="{% url 'divisas:gestionar_monedas' %}" class="btn btn-secondary">
-                                <i class="fas fa-times me-1"></i>Cancelar
+                                <i class="fas fa-arrow-left me-1"></i>Volver
                             </a>
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-1"></i>Guardar Cambios
@@ -241,40 +241,6 @@
                         <div class="small">
                             <div><strong>Total origen:</strong> {{ stats.monto_total_origen }}</div>
                             <div><strong>Total destino:</strong> {{ stats.monto_total_destino }}</div>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Acciones rápidas -->
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-tools me-1"></i>
-                        Acciones Rápidas
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        {% if not object.es_moneda_base %}
-                            {% if puede_eliminarse %}
-                                <a href="{% url 'divisas:eliminar_moneda' object.id %}" class="btn btn-outline-danger btn-sm">
-                                    <i class="fas fa-trash me-1"></i>
-                                    Eliminar Moneda
-                                </a>
-                            {% else %}
-                                <a href="{% url 'divisas:eliminar_moneda' object.id %}" class="btn btn-outline-warning btn-sm">
-                                    <i class="fas fa-ban me-1"></i>
-                                    Deshabilitar Moneda
-                                </a>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                    
-                    {% if object.es_moneda_base %}
-                        <div class="alert alert-warning small mt-3">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Esta es la moneda base del sistema y no puede eliminarse.
                         </div>
                     {% endif %}
                 </div>
