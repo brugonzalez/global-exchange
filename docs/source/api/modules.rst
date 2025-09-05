@@ -1,5 +1,5 @@
-global-exchange
-===============
+app
+===
 
 .. toctree::
    :maxdepth: 2

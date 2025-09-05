@@ -9,6 +9,22 @@ from decimal import Decimal
 
 @receiver(post_save, sender=PrecioBase)
 def crear_actualizar_tasas_cambio(sender, instance, created, **kwargs):
+	"""
+	Crea o actualiza las tasas de cambio cada vez que se guarda un PrecioBase.
+
+	Parameters
+	----------
+	sender : Model
+		Modelo que dispara la señal (:class:`PrecioBase`).
+	instance : PrecioBase
+		Instancia del PrecioBase recién guardado.
+	created : bool
+		``True`` si se acaba de crear el PrecioBase, ``False`` si fue una actualización.
+
+	Notes
+	-----
+	- Solo se ejecuta si el ``PrecioBase`` está activo.
+	"""
 	if instance.esta_activa:
 		with transaction.atomic():
 			categorias = CategoriaCliente.objects.all()
@@ -41,6 +57,26 @@ def crear_actualizar_tasas_cambio(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Moneda)
 def crear_precio_base_al_crear_moneda(sender, instance, created, **kwargs):
+	"""
+	Crea un PrecioBase para la nueva moneda si no es la moneda base.
+
+	Cada vez que se crea una moneda que no sea la base, se asegura que
+	exista un registro de ``PrecioBase`` para esa moneda.
+
+	Parameters
+	----------
+	sender : Model
+		Modelo que dispara la señal (:class:`Moneda`).
+	instance : Moneda
+		Instancia de la moneda recién guardada.
+	created : bool
+		``True`` si se acaba de crear la moneda, ``False`` si fue una actualización.
+
+	Notes
+	-----
+	- Si la moneda ya tiene un PrecioBase, no se crea uno nuevo.
+	- El valor inicial por defecto del PrecioBase es 0
+	"""
 	if created:
 		# Buscar la moneda base (es_moneda_base=True)
 		moneda_base = Moneda.objects.filter(es_moneda_base=True).first()
