@@ -14,22 +14,24 @@ class CategoriaCliente(models.Model):
     """
     Modelo para las categorías de clientes.
 
-    Define diferentes categorías de clientes con limites de transacción, 
-    margenes preferenciales y niveles de prioridad específicos.
+    Define diferentes categorías de clientes con límites de transacción, márgenes preferenciales y niveles de prioridad específicos.
 
-    Attributes:
-        nombre (CharField): Tipo de categoría (Minorista, Corporativo, VIP)
-        descripcion (TextField): Descripción de la categoría
-        limite_transaccion_diario (DecimalField): Límite diario de transacciones
-        limite_transaccion_mensual (DecimalField): Límite mensual de transacciones
-        margen_tasa_preferencial (DecimalField): Margen preferencial de tasa de cambio
-        nivel_prioridad (PositiveIntegerField): Nivel de prioridad de la categoría (1=más alta, 5=más baja)
-        fecha_creacion (DateTimeField): Fecha de creación del registro
-        fecha_actualizacion (DateTimeField): Fecha de última actualización del registro
-
-    Notes:
-        - tabla: `clientes_categoria`
-
+    Attributes
+    ----------
+    nombre : CharField
+        Tipo de categoría (Minorista, Corporativo, VIP).
+    descripcion : TextField
+        Descripción de la categoría.
+    limite_transaccion_diario : DecimalField
+        Límite diario de transacciones.
+    limite_transaccion_mensual : DecimalField
+        Límite mensual de transacciones.
+    margen_tasa_preferencial : DecimalField
+        Margen preferencial de tasa de cambio.
+    fecha_creacion : DateTimeField
+        Fecha de creación del registro.
+    fecha_actualizacion : DateTimeField
+        Fecha de última actualización del registro.
     """
     TIPOS_CATEGORIA = [
         ('RETAIL', 'Minorista'),
@@ -74,8 +76,10 @@ class CategoriaCliente(models.Model):
         """
         Representación en cadena de la categoría de cliente.
 
-        Returns:
-            str: Nombre de la categoría
+        Returns
+        -------
+        str
+            Nombre de la categoría.
         """
         return self.get_nombre_display()
 
@@ -84,22 +88,29 @@ class PreferenciaCliente(models.Model):
     """
     Preferencias específicas y límites personalizados para un cliente.
 
-    Permite establecer límites de compra  y venta individualizados y configuraciones específicas
-    que **sobreescriben** los valores por defecto de la categoría del cliente.
+    Permite establecer límites de compra y venta individualizados y configuraciones específicas
+    que sobreescriben los valores por defecto de la categoría del cliente.
 
-    Attributes:
-        cliente (Cliente): Relación con el cliente
-        limite_compra (DecimalField): Límite máximo de compra en gs
-        limite_venta (DecimalField): Límite máximo de venta en gs
-        frecuencia_maxima (PositiveIntegerField): Frecuencia máxima de transacciones por día
-        fecha_creacion (DateTimeField): Fecha de creación del registro
-        fecha_actualizacion (DateTimeField): Fecha de última actualización del registro
+    Attributes
+    ----------
+    cliente : Cliente
+        Relación con el cliente.
+    limite_compra : DecimalField
+        Límite máximo de compra en gs.
+    limite_venta : DecimalField
+        Límite máximo de venta en gs.
+    frecuencia_maxima : PositiveIntegerField
+        Frecuencia máxima de transacciones por día.
+    fecha_creacion : DateTimeField
+        Fecha de creación del registro.
+    fecha_actualizacion : DateTimeField
+        Fecha de última actualización del registro.
 
-    Notes: 
-        - Los límites definidos acá sobreescriben los valores por defecto de la categoría del cliente.
-        - Tabla: `clientes_preferencia_cliente`
-        - Restricciones:
-            - Un cliente puede tener solo una preferencia personalizada.S
+    Notes
+    -----
+    - Los límites definidos aquí sobreescriben los valores por defecto de la categoría del cliente.
+    - Tabla: `clientes_preferencia_cliente`.
+    - Un cliente puede tener solo una preferencia personalizada.
     """
     cliente = models.OneToOneField('Cliente', on_delete=models.CASCADE, related_name='preferencias')
     limite_compra = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'), help_text="Límite máximo de compra")
@@ -118,8 +129,10 @@ class PreferenciaCliente(models.Model):
         """
         Representación en cadena de las preferencias del cliente.
 
-        Returns:
-            str: Formato "Preferencias de {Nombre Completo del Cliente}"
+        Returns
+        -------
+        str
+            Formato "Preferencias de {Nombre Completo del Cliente}".
         """
         return f"Preferencias de {self.cliente.obtener_nombre_completo()}"
 
@@ -128,29 +141,40 @@ class Cliente(models.Model):
     """
     Modelo que representa a un cliente de la casa de cambio.
 
-    Attributes:
-        # Atributos para personas físicas
-        nombre (str): Nombre completo del cliente.
-        apellido (str): Apellido del cliente.
-
-        # Atributos para personas jurídicas
-        nombre_empresa (str): Nombre de la empresa.
-        representante_legal (str): Nombre del representante legal.
-
-        # Atributos Generales
-        email (str): Correo electrónico del cliente.
-        telefono (str): Número de teléfono del cliente.
-        direccion (str): Dirección del cliente.
-        fecha_registro (date): Fecha en que el cliente se registró.
-        tipo_cliente (str): Tipo de cliente (física o jurídica).
-        estado (str): Estado del cliente (Activo, Inactivo, Suspendido, Pendiente).
-        categoria (CategoriaCliente): Categoría a la que pertenece el cliente.
-        numero_identificacion (str): Número de identificación (CI, RUC).
-        usuarios (list[Usuario]): Usuarios asociados al cliente.
-        creado_por (Usuario): Usuario que creó el registro.
-    
-    Notes:
-        - Tabla: `clientes_saldo`
+    Attributes
+    ----------
+    nombre : CharField
+        Nombre completo del cliente (personas físicas).
+    apellido : CharField
+        Apellido del cliente (personas físicas).
+    nombre_empresa : CharField
+        Nombre de la empresa (personas jurídicas).
+    representante_legal : CharField
+        Nombre del representante legal (personas jurídicas).
+    email : EmailField
+        Correo electrónico del cliente.
+    telefono : CharField
+        Número de teléfono del cliente.
+    direccion : TextField
+        Dirección del cliente.
+    tipo_cliente : CharField
+        Tipo de cliente (física o jurídica).
+    estado : CharField
+        Estado del cliente (Activo, Inactivo, Suspendido, Pendiente).
+    categoria : CategoriaCliente
+        Categoría a la que pertenece el cliente.
+    numero_identificacion : CharField
+        Número de identificación (CI, RUC).
+    usuarios : ManyToManyField[Usuario]
+        Usuarios asociados al cliente.
+    creado_por : Usuario
+        Usuario que creó el registro.
+    fecha_creacion : DateTimeField
+        Fecha de creación del registro.
+    fecha_actualizacion : DateTimeField
+        Fecha de última actualización del registro.
+    saldo_cuenta : DecimalField
+        Saldo de la cuenta principal del cliente.
     """
     TIPOS_CLIENTE = [
         ('FISICA', 'Persona Física'),
@@ -228,12 +252,14 @@ class Cliente(models.Model):
         ordering = ['-fecha_creacion']
 
     def __str__(self):
-        """Representación en cadena del cliente.
-        Returns:
-            # Para personas físicas
-            str: Formato "Nombre Apellido (Número Identificación)"
-            # Para personas jurídicas
-            str: Formato "Nombre Empresa (Número Identificación)"
+        """
+        Representación en cadena del cliente.
+
+        Returns
+        -------
+        str
+            Formato "Nombre Apellido (Número Identificación)" (para personas físicas) o
+            "Nombre Empresa (Número Identificación)" (para personas jurídicas).
         """
         if self.tipo_cliente == 'FISICA':
             return f"{self.nombre} {self.apellido} ({self.numero_identificacion})"
@@ -241,10 +267,13 @@ class Cliente(models.Model):
             return f"{self.nombre_empresa} ({self.numero_identificacion})"
 
     def obtener_nombre_completo(self):
-        """Obtiene el nombre completo o nombre de la empresa del cliente.
+        """
+        Obtiene el nombre completo o nombre de la empresa del cliente.
 
-        Returns:
-            str: Nombre completo (para personas físicas) o nombre de la empresa (para personas jurídicas)
+        Returns
+        -------
+        str
+            Nombre completo (para personas físicas) o nombre de la empresa (para personas jurídicas).
         """
         if self.tipo_cliente == 'FISICA':
             return f"{self.nombre} {self.apellido}".strip()
@@ -253,21 +282,26 @@ class Cliente(models.Model):
 
 
     def puede_realizar_transaccion(self, monto):
-        """Verifica si el cliente puede realizar la transacción según los límites establecidos.
+        """
+        Verifica si el cliente puede realizar la transacción según los límites establecidos.
 
-        Evalua los límites diarios y mensuales de transacción basandose en la categoría del cliente y
+        Evalúa los límites diarios y mensuales de transacción basándose en la categoría del cliente y
         las transacciones ya realizadas.
 
-        Args:
-            monto (Decimal): Monto de la transacción a verificar.
+        Parameters
+        ----------
+        monto : Decimal
+            Monto de la transacción a verificar.
 
-        Returns:
-            bool: True si la transacción puede realizarse sin exceder los límites, False en caso contrario.
+        Returns
+        -------
+        bool
+            True si la transacción puede realizarse sin exceder los límites, False en caso contrario.
 
-        Notas:
-            - Este método considera los límites establecidos en la categoría del cliente.
-            - Solo considera transacciones con estado 'COMPLETADA' o 'PAGADA' para el cálculo de los límites.
-
+        Notes
+        -----
+        - Este método considera los límites establecidos en la categoría del cliente.
+        - Solo considera transacciones con estado 'COMPLETADA' o 'PAGADA' para el cálculo de los límites.
         """
         from django.utils import timezone
         from datetime import timedelta
@@ -305,15 +339,23 @@ class ClienteUsuario(models.Model):
     """
     Modelo intermedio para la relación muchos a muchos entre Cliente y Usuario.
 
-    Attributes:
-        cliente (Cliente): Relación con el cliente.
-        usuario (Usuario): Relación con el usuario.
-        esta_activo (bool): Indica si la relación está activa.
-        fecha_asignacion (datetime): Fecha de asignación del rol.
-        asignado_por (Usuario): Usuario que asignó el rol.
+    Attributes
+    ----------
+    cliente : Cliente
+        Relación con el cliente.
+    usuario : Usuario
+        Relación con el usuario.
+    rol : str
+        Rol asignado al usuario para este cliente.
+    esta_activo : bool
+        Indica si la relación está activa.
+    fecha_asignacion : datetime
+        Fecha de asignación del rol.
+    asignado_por : Usuario
+        Usuario que asignó el rol.
+    permisos : dict
+        Permisos específicos para este usuario en este cliente.
 
-    Notes:
-        - Tabla: `clientes_cliente_usuario`
     """
     ROLES = [
         ('PROPIETARIO', 'Propietario'),
@@ -347,8 +389,11 @@ class ClienteUsuario(models.Model):
     def __str__(self):
         """
         Representación en cadena de la relación usuario-cliente.
-        Returns:
-            str: Formato "Nombre Usuario - Nombre Cliente (Rol)"
+
+        Returns
+        -------
+        str
+            Formato "Nombre Usuario - Nombre Cliente (Rol)".
         """
         return f"{self.usuario.nombre_completo} - {self.cliente.obtener_nombre_completo()} ({self.get_rol_display()})"
 
@@ -357,7 +402,17 @@ class ClienteUsuario(models.Model):
 class MonedaFavorita(models.Model):
     """
     Modelo para las monedas favoritas de un cliente.
-   Attributes:
+
+    Attributes
+    ----------
+    cliente : Cliente
+        Relación con el cliente.
+    moneda : Moneda
+        Relación con la moneda.
+    fecha_creacion : DateTimeField
+        Fecha de creación del registro.
+    orden : PositiveIntegerField
+        Orden de preferencia de la moneda para el cliente.
     """
     cliente = models.ForeignKey(
         Cliente, 
@@ -386,20 +441,24 @@ class MonedaFavorita(models.Model):
 class SaldoCliente(models.Model):
     """
     Modelo para rastrear los saldos disponibles para retiro de los clientes por moneda.
-        
+
     Permite gestionar múltiples saldos en diferentes monedas para cada cliente.
 
-    Attributes:
-        cliente (Cliente): Relación con el cliente.
-        moneda (Moneda): Relación con la moneda.
-        saldo (DecimalField): Saldo disponible para retiro.
-        ultima_actualizacion (DateTimeField): Fecha de la última actualización del saldo.
-    
-    Notes:
-        - Tabla: `clientes_saldo`
-        - Restricciones:
-            - Un cliente puede tener múltiples saldos, uno por cada moneda.
-            - La combinación de cliente y moneda debe ser única.
+    Attributes
+    ----------
+    cliente : Cliente
+        Relación con el cliente.
+    moneda : Moneda
+        Relación con la moneda.
+    saldo : DecimalField
+        Saldo disponible para retiro.
+    ultima_actualizacion : DateTimeField
+        Fecha de la última actualización del saldo.
+
+    Notes
+    -----
+    - Un cliente puede tener múltiples saldos, uno por cada moneda.
+    - La combinación de cliente y moneda debe ser única.
     """
     cliente = models.ForeignKey(
         Cliente, 
@@ -421,8 +480,12 @@ class SaldoCliente(models.Model):
         unique_together = ['cliente', 'moneda']
 
     def __str__(self):
-        """Representación en cadena del saldo del cliente.
-        Returns:
-            str: Formato "Nombre Cliente - Código Moneda: Saldo"
+        """
+        Representación en cadena del saldo del cliente.
+
+        Returns
+        -------
+        str
+            Formato "Nombre Cliente - Código Moneda: Saldo".
         """
         return f"{self.cliente.obtener_nombre_completo()} - {self.moneda.codigo}: {self.saldo}"

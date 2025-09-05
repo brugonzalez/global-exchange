@@ -24,6 +24,17 @@ class FormularioPreferenciaCliente(forms.ModelForm):
     """
     Formulario para la gestión de preferencias de clientes.
     Permite establecer límites y preferencias personalizadas que sobrescriben los valores por defecto de la categoría del cliente.
+
+    Attributes
+    -------------
+    limite_compra : NumberInput
+        Límite de compra personalizado.
+    limite_venta : NumberInput
+        Límite de venta personalizado.
+    frecuencia_maxima : NumberInput
+        Frecuencia máxima de operaciones diarias.
+    preferencia_tipo_cambio : TextInput
+        Preferencia de tipo de cambio.
     """
     class Meta:
         model = PreferenciaCliente
@@ -45,6 +56,31 @@ class FormularioCliente(forms.ModelForm):
     - ``JURIDICA``: requiere nombre de empresa y representante legal, y limpia nombre/apellido.
 
     Además agrega un comportamiento dinámico para alternar campos en la interfaz.
+
+    Attributes
+    -------------
+    tipo_cliente : Select
+        Tipo de cliente (FISICA o JURIDICA).
+    estado : Select
+        Estado del cliente (activo, inactivo, etc.).
+    categoria : Select
+        Categoría del cliente.
+    nombre : TextInput
+        Nombre del cliente (caso persona física).
+    apellido : TextInput
+        Apellido del cliente (caso persona física).
+    nombre_empresa : TextInput
+        Nombre de la empresa (caso persona jurídica).
+    representante_legal : TextInput
+        Nombre del representante legal (caso persona jurídica).
+    numero_identificacion : TextInput
+        Número de identificación del cliente.
+    email : EmailInput
+        Correo electrónico del cliente.
+    telefono : TextInput
+        Número de teléfono del cliente.
+    direccion : Textarea
+        Dirección del cliente.
     """
     class Meta:
         model = Cliente
@@ -69,9 +105,12 @@ class FormularioCliente(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         """
-        Inicializa el formulario y aplica reglas dinámicas a los campos.
-        Notes:
-            - Si hay edicion, se establecen los requerimientos por tipo de cliente.
+        Inicializa el formulario y aplica reglas dinámicas a los campos 
+        (se requieren los campos según el tipo de cliente).
+        
+        Notes
+        -----
+        - Si hay edicion, se establecen los requerimientos por tipo de cliente.
         """
         super().__init__(*args, **kwargs)
         
@@ -86,11 +125,15 @@ class FormularioCliente(forms.ModelForm):
         """
         Valida los campos según el tipo de cliente y limpia los no aplicables.
 
-        Returns:
-            dict: Datos limpios después de la validación con campos no aplicables vaciados.
+        Returns
+        -------
+        dict
+            Datos limpios después de la validación con campos no aplicables vaciados.
         
-        Raises:
-            ValidationError: Si faltan campos requeridos por tipo de cliente.
+        Raises
+        -------
+        ValidationError
+            Si faltan campos requeridos por tipo de cliente.
         """
         datos_limpios = super().clean()
         tipo_cliente = datos_limpios.get('tipo_cliente')
@@ -119,7 +162,13 @@ class FormularioCliente(forms.ModelForm):
 
     def _establecer_requerimientos_campos(self):
         """Establece los requerimientos de los campos según el tipo de cliente.
-        Evita requerir campos que no aplican al tipo seleccionado"""
+        Evita requerir campos que no aplican al tipo seleccionado
+
+        Para personas físicas:
+            - Se requiere el nombre y apellido.
+        Para personas jurídicas:
+            - Se requiere el nombre de la empresa y el representante legal
+        """
         if self.instance.tipo_cliente == 'FISICA':
             self.fields['nombre'].required = True
             self.fields['apellido'].required = True
@@ -136,6 +185,15 @@ class FormularioClienteUsuario(forms.ModelForm):
     Formulario para gestionar las asociaciones usuario-cliente con sus estados.
 
     Permite asignar un usuario activo a un cliente.
+
+    Attributes
+    ----------
+    usuario : Usuario
+        El usuario activo que se asignará al cliente.
+    permisos : dict
+        Permisos específicos para este usuario en este cliente.
+    esta_activo : bool
+        Indica si la asociación usuario-cliente está activa.
     """
     usuario = forms.ModelChoiceField(
         queryset=Usuario.objects.filter(is_active=True),
@@ -162,6 +220,10 @@ class FormularioClienteUsuario(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        Inicializa el formulario.
+        Excluye del queryset los usuarios ya asociados al cliente.
+        """
         self.cliente = kwargs.pop('cliente', None)
         super().__init__(*args, **kwargs)
         
@@ -177,7 +239,13 @@ class FormularioClienteUsuario(forms.ModelForm):
             ).exclude(id__in=usuarios_existentes)
 
     def clean_permisos(self):
-        """Valida que el campo de permisos contenga JSON válido."""
+        """Valida que el campo de permisos contenga JSON válido.
+        
+        Returns
+        -------
+        dict
+            Un diccionario con los permisos válidos o un diccionario vacío si no se especifican permisos.
+        """
         permisos = self.cleaned_data.get('permisos', '').strip()
         if permisos:
             try:
@@ -194,12 +262,18 @@ class FormularioBusquedaCliente(forms.Form):
     """
     Formulario para búsqueda y filtrado de clientes (solo lectura)
 
-   Incluye los siguientes criterios opcionales:
-
-    - ``busqueda``: texto libre que puede coincidir con nombre, empresa, email o identificación.
-    - ``tipo_cliente``: restringe la búsqueda por tipo de cliente (FISICA/JURIDICA).
-    - ``estado``: filtra por estado actual del cliente.
-    - ``categoria``: limita la búsqueda a una categoría específica.
+    Permite buscar clientes según diversos criterios.
+    
+    Attributes
+    ----------
+    busqueda : str
+        Texto libre que puede coincidir con nombre, empresa, email o identificación.
+    tipo_cliente : str
+        Tipo de cliente (FISICA/JURIDICA).
+    estado : str
+        Estado actual del cliente.
+    categoria : CategoriaCliente
+        Categoría específica del cliente.
     """
     busqueda = forms.CharField(
         max_length=100,
@@ -237,12 +311,11 @@ class FormularioAnadirMonedaFavorita(forms.ModelForm):
     Este formulario permite seleccionar una moneda activa y asignarle un orden
     de preferencia dentro de la lista de monedas favoritas del cliente.
 
+    Notes
+    -----
     - Evita que se dupliquen monedas ya asociadas al cliente.
     - Requiere un valor de orden numérico (entero ≥ 0).
 
-    Args:
-        cliente (Cliente, opcional): instancia de cliente para filtrar las monedas
-            disponibles. Si no se proporciona, mostrará todas las monedas activas.
     """
     class Meta:
         model = MonedaFavorita
@@ -271,9 +344,15 @@ class FormularioAnadirMonedaFavorita(forms.ModelForm):
 class FormularioAsignarUsuarioACliente(forms.Form):
     """
     Formulario para asignar un usuario a un cliente con un rol específico y permisos opcionales.
-    Args:
-        cliente (Cliente, opcional): instancia de cliente para filtrar los usuarios
-            disponibles. Si no se proporciona, mostrará todos los usuarios.
+
+    Attributes
+    ----------
+    cliente : Cliente
+        El cliente al que se asignará el usuario.
+    rol : Rol
+        El rol que se asignará al usuario en el cliente.
+    permisos : dict
+        Permisos específicos para el usuario en el cliente.
     """
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.filter(estado='ACTIVO'),
@@ -298,7 +377,13 @@ class FormularioAsignarUsuarioACliente(forms.Form):
     )
 
     def clean_permisos(self):
-        """Valida que el campo de permisos contenga JSON válido."""
+        """Valida que el campo de permisos contenga JSON válido.
+
+        Returns
+        -------
+        dict
+            Un diccionario con los permisos válidos o un diccionario vacío si no se especifican permisos.
+        """
         permisos = self.cleaned_data.get('permisos')
         if permisos:
             try:
@@ -311,7 +396,20 @@ class FormularioAsignarUsuarioACliente(forms.Form):
 
 class FormularioCategoriaCliente(forms.ModelForm):
     """
-    Formulario para gestionar las categorías de clientes (límites y márgenes).
+    Formulario para gestionar las categorías de clientes con sus preferencias exclusivas de la categoría.
+
+    Attributes
+    ----------
+    nombre : str
+        Nombre de la categoría.
+    descripcion : str
+        Descripción de la categoría.
+    limite_transaccion_diario : float
+        Límite de transacción diario para la categoría.
+    limite_transaccion_mensual : float
+        Límite de transacción mensual para la categoría.
+    margen_tasa_preferencial : float
+        Margen de tasa preferencial para la categoría.
     """
     class Meta:
         model = CategoriaCliente

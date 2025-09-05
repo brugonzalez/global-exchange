@@ -28,7 +28,9 @@ extensions = [
     "sphinx.ext.autodoc", # Documentación automática
     "sphinx.ext.viewcode", # Vista del código fuente
     "sphinx.ext.napoleon", # Google y NumPy style
-    "sphinx.ext.autosummary" # Resumen automático de módulos
+    "sphinx.ext.autosummary", # Resumen automático de módulos
+    "sphinx_togglebutton",
+    "sphinx-autobuild"
 ]
 autosummary_generate = True
 
@@ -36,9 +38,9 @@ autodoc_default_options = {
     'members': True, 
     'undoc-members': True,
     'private-members': False,
-    'show-inheritance': True,
+    'show-inheritance': False,
     'inherited-members': False,
-    'exclude-members': 'DoesNotExist , MultipleObjectsReturned, add_note, with_traceback, args'
+    'exclude-members': 'DoesNotExist , MultipleObjectsReturned, add_note, with_traceback, args, base_fields, declared_fields, media'
 }
 autodoc_typehints = "description"
 autodoc_class_signature = "separated"   # saca el (*args, **kwargs) del título
@@ -55,6 +57,8 @@ exclude_patterns = [
    "api/*admin*",
    "api/*tests*",
    "api/*settings*",
+   "api/*apps*",
+   "api/*urls*",
    "**/management/*",
    "api/*management*"
 ]

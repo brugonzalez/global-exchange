@@ -12,15 +12,20 @@ def asignar_rol_usuario_por_defecto(sender, instance, created, **kwargs):
     del modelo :class:`Usuario` y, cuando se crea un nuevo usuario, intenta
     asignarle el rol básico de la aplicación.
 
-    Args:
-        sender (Model): Modelo que dispara la señal (:class:`Usuario`).
-        instance (Usuario): Instancia de usuario recién guardada.
-        created (bool): ``True`` si el usuario fue creado, ``False`` si se actualizó.
-        **kwargs: Argumentos adicionales provistos por la señal.
+    Parameters
+    ----------
+    sender : Model
+        Modelo que disparó la señal (:class:`Usuario`).
+    instance : Usuario
+        Instancia del usuario recién guardado.
+    created : bool
+        ``True`` si se acaba de crear el usuario, ``False`` si fue una actualización.
 
-    Notas:
-        - Si el rol ``Usuario`` no existe (p. ej., durante migraciones iniciales),
-          no se realiza ninguna acción.
+    Notes
+    -----
+    - Si el rol "Usuario" no existe en la base de datos (ejemplo: migraciones iniciales),
+      no se hace nada para evitar errores.
+    - El rol se agrega usando ``instance.roles.add()`` inmediatamente después de la creación.
     """
     if created:
         try:
