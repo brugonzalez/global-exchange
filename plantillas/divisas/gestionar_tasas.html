@@ -203,8 +203,6 @@
                                                             type="number" inputmode="numeric"
                                                             class="form-control text-end precio-base-field"
                                                             data-precision="{{ info_tasa.moneda.lugares_decimales }}"
-                                                            step="any"
-                                                            min="0"
                                                             placeholder="0"
                                                             value="{{ info_tasa.precio_actual|unlocalize }}"
                                                             required
@@ -652,6 +650,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 campo.setAttribute('step', step);
                 campo.setAttribute('min', step);
             }
+            
+            // Formatear el valor actual según la precisión
+            const valorActual = campo.value;
+            if (valorActual && valorActual !== '') {
+                const numero = parseFloat(valorActual);
+                if (!isNaN(numero)) {
+                    campo.value = numero.toFixed(precision);
+                }
+            }
+            
+            // Agregar evento para formatear el valor cuando el usuario termine de escribir
+            campo.addEventListener('blur', function() {
+                const valor = parseFloat(this.value);
+                if (!isNaN(valor)) {
+                    this.value = valor.toFixed(precision);
+                }
+            });
+            
+            // Agregar evento para validar en tiempo real
+            campo.addEventListener('input', function() {
+                const valor = this.value;
+                if (valor && !valor.includes('.')) return; // Solo validar si hay decimales
+                
+                const partes = valor.split('.');
+                if (partes.length > 1 && partes[1].length > precision) {
+                    // Truncar a la precisión permitida
+                    this.value = parseFloat(valor).toFixed(precision);
+                }
+            });
         });
     }
     
