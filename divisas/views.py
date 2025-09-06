@@ -804,7 +804,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
                 'fecha_actualizacion': tasa_actual.fecha_actualizacion if tasa_actual else None,
                 'actualizado_por': tasa_actual.actualizado_por if tasa_actual else None,
                 'historial_reciente': historial_reciente,
-                'formulario': FormularioActualizacionTasa(moneda=moneda) if tasa_actual else None,
+                'formulario': FormularioActualizacionTasa() if tasa_actual else None,
                 'tasas_actuales': tasas_actuales
             })
 
@@ -838,11 +838,25 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
         try:
             moneda_id = request.POST.get('moneda_id')
-            moneda = get_object_or_404(Moneda, id=moneda_id) if moneda_id else None
-            form = FormularioActualizacionTasa(request.POST, moneda=moneda)
+            form = FormularioActualizacionTasa(request.POST)
             if form.is_valid() and moneda_id:
                 nuevo_precio_base = form.cleaned_data['precio_base']
-                # No need to get moneda again since we already have it above
+                moneda = get_object_or_404(Moneda, id=moneda_id)
+                
+                # Validar que el precio base respete la precisión decimal de la moneda
+                from decimal import Decimal
+                precision = moneda.lugares_decimales
+                precio_decimal = Decimal(str(nuevo_precio_base))
+                decimales_valor = abs(precio_decimal.as_tuple().exponent)
+                
+                if decimales_valor > precision:
+                    msg = f'El precio base no puede tener más de {precision} decimal{"es" if precision != 1 else ""} para esta moneda.'
+                    if ajax:
+                        return JsonResponse({'success': False, 'message': msg})
+                    else:
+                        messages.error(request, msg)
+                        return redirect('divisas:gestionar_tasas')
+                
                 # Guardar actualizado_por si el modelo lo soporta
                 defaults = {'precio_base': nuevo_precio_base}
                 if hasattr(PrecioBase, 'actualizado_por'):
@@ -874,7 +888,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
                         "message": "Precio base actualizado correctamente.",
                         "moneda_id": moneda.id,
                         "precio_base_raw": float(nuevo_precio_base),
-                        "precio_base_html": f"{number_format(nuevo_precio_base, 0, use_l10n=True, force_grouping=True)} PYG",
+                        "precio_base_html": f"{number_format(nuevo_precio_base, moneda.lugares_decimales, use_l10n=True, force_grouping=True)} PYG",
                         "fecha_actualizacion_str": fecha_str,
                         "actualizado_por": (
                             getattr(request.user, "nombre_completo", None)

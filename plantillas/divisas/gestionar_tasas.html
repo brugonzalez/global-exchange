@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% load humanize %}
 {% load l10n %}
-{% load formateo_divisas %}
 
 {% block title %}Gestión de Tasas - Global Exchange{% endblock %}
 
@@ -142,7 +141,7 @@
                                     <span class="me-3 text-info precio-base-wrap" style="width: 200px;">
                                         Precio Base:
                                         <span class="badge bg-info precio-base-badge">
-                                            {{ info_tasa.precio_actual|formatear_precio_base:info_tasa.moneda|intcomma }} PYG
+                                            {{ info_tasa.precio_actual|floatformat:0|intcomma }} PYG
                                         </span>
                                     </span>
 
@@ -198,33 +197,24 @@
                                                 <div class="col-12 col-md-8">
                                                     <label for="precio-base-{{ info_tasa.moneda.id }}" class="form-label mb-1">Monto</label>
                                                     <div class="input-group input-group-sm">
-                                                        {% if info_tasa.formulario %}
-                                                            {{ info_tasa.formulario.precio_base }}
-                                                        {% else %}
-                                                            <input
-                                                                id="precio-base-{{ info_tasa.moneda.id }}"
-                                                                name="precio_base"
-                                                                type="number" inputmode="numeric"
-                                                                class="form-control text-end"
-                                                                step="{{ info_tasa.moneda.lugares_decimales|obtener_step_precision }}"
-                                                                {% if info_tasa.moneda.lugares_decimales <= 0 %}min="1"{% else %}min="{{ info_tasa.moneda.lugares_decimales|obtener_step_precision }}"{% endif %}
-                                                                placeholder="0"
-                                                                value="{{ info_tasa.precio_actual|formatear_precio_base:info_tasa.moneda }}"
-                                                                required
-                                                            >
-                                                        {% endif %}
+                                                        <input
+                                                            id="precio-base-{{ info_tasa.moneda.id }}"
+                                                            name="precio_base"
+                                                            type="number" inputmode="numeric"
+                                                            class="form-control text-end precio-base-field"
+                                                            data-precision="{{ info_tasa.moneda.lugares_decimales }}"
+                                                            step="any"
+                                                            min="0"
+                                                            placeholder="0"
+                                                            value="{{ info_tasa.precio_actual|unlocalize }}"
+                                                            required
+                                                        >
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
                                                     <div class="form-text mt-1">
-                                                        {% if info_tasa.formulario and info_tasa.formulario.precio_base.help_text %}
-                                                            {{ info_tasa.formulario.precio_base.help_text }}
-                                                        {% else %}
-                                                            {% if info_tasa.moneda.lugares_decimales <= 0 %}
-                                                                Enteros (sin decimales). Se guarda como precio base.
-                                                            {% else %}
-                                                                Hasta {{ info_tasa.moneda.lugares_decimales }} decimales. Se guarda como precio base.
-                                                            {% endif %}
-                                                        {% endif %}
+                                                        <span class="precision-help-text" data-precision="{{ info_tasa.moneda.lugares_decimales }}">
+                                                            {% if info_tasa.moneda.lugares_decimales == 0 %}Enteros (sin decimales).{% else %}Hasta {{ info_tasa.moneda.lugares_decimales }} decimal{{ info_tasa.moneda.lugares_decimales|pluralize:"es" }}.{% endif %}
+                                                        </span> Se guarda como precio base.
                                                     </div>
                                                 </div>
                                             </div>
@@ -263,23 +253,14 @@
                                                             id="comision-compra-{{ info_tasa.moneda.id }}"
                                                             name="comision_compra"
                                                             type="number" inputmode="numeric"
-                                                            class="form-control text-end{% if not info_tasa.moneda.disponible_para_compra %} bg-light{% endif %}"
-                                                            step="{{ info_tasa.moneda.lugares_decimales|obtener_step_precision }}"
-                                                            {% if info_tasa.moneda.lugares_decimales <= 0 %}min="0"{% else %}min="0"{% endif %}
-                                                            placeholder="0"
-                                                            value="{{ info_tasa.moneda.comision_compra|formatear_precio_base:info_tasa.moneda }}"
-                                                            {% if not info_tasa.moneda.disponible_para_compra %}disabled{% endif %}
-                                                            {% if info_tasa.moneda.disponible_para_compra %}required{% endif %}
+                                                            class="form-control text-end"
+                                                            step="1" min="0" placeholder="0"
+                                                            value="{{ info_tasa.moneda.comision_compra|unlocalize|floatformat:0 }}"
+                                                            required
                                                         >
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
-                                                    <div class="form-text mt-1">
-                                                        {% if info_tasa.moneda.disponible_para_compra %}
-                                                            Enteros. Se aplica al comprar esta divisa.
-                                                        {% else %}
-                                                            <span class="text-muted">Campo deshabilitado - la moneda no está disponible para compra.</span>
-                                                        {% endif %}
-                                                    </div>
+                                                    <div class="form-text mt-1">Enteros. Se aplica al comprar esta divisa.</div>
                                                 </div>
 
                                                 <div class="col-12 col-md-6">
@@ -289,23 +270,14 @@
                                                             id="comision-venta-{{ info_tasa.moneda.id }}"
                                                             name="comision_venta"
                                                             type="number" inputmode="numeric"
-                                                            class="form-control text-end{% if not info_tasa.moneda.disponible_para_venta %} bg-light{% endif %}"
-                                                            step="{{ info_tasa.moneda.lugares_decimales|obtener_step_precision }}"
-                                                            {% if info_tasa.moneda.lugares_decimales <= 0 %}min="0"{% else %}min="0"{% endif %}
-                                                            placeholder="0"
-                                                            value="{{ info_tasa.moneda.comision_venta|formatear_precio_base:info_tasa.moneda }}"
-                                                            {% if not info_tasa.moneda.disponible_para_venta %}disabled{% endif %}
-                                                            {% if info_tasa.moneda.disponible_para_venta %}required{% endif %}
+                                                            class="form-control text-end"
+                                                            step="1" min="0" placeholder="0"
+                                                            value="{{ info_tasa.moneda.comision_venta|unlocalize|floatformat:0 }}"
+                                                            required
                                                         >
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
-                                                    <div class="form-text mt-1">
-                                                        {% if info_tasa.moneda.disponible_para_venta %}
-                                                            Enteros. Se aplica cuando vendés esta divisa.
-                                                        {% else %}
-                                                            <span class="text-muted">Campo deshabilitado - la moneda no está disponible para venta.</span>
-                                                        {% endif %}
-                                                    </div>
+                                                    <div class="form-text mt-1">Enteros. Se aplica cuando vendés esta divisa.</div>
                                                 </div>
                                             </div>
 
@@ -360,10 +332,10 @@
                                                             </span>
                                                         </td>
                                                         <td class="text-end text-success fw-semibold">
-                                                            {{ tasa.tasa_compra|formatear_precio_base:info_tasa.moneda|intcomma }} PYG
+                                                            {{ tasa.tasa_compra|floatformat:0|intcomma }} PYG
                                                         </td>
                                                         <td class="text-end text-danger fw-semibold">
-                                                            {{ tasa.tasa_venta|formatear_precio_base:info_tasa.moneda|intcomma }} PYG
+                                                            {{ tasa.tasa_venta|floatformat:0|intcomma }} PYG
                                                         </td>
                                                     </tr>
                                                     {% empty %}
@@ -535,17 +507,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 mostrarAlerta('success', data.message || 'Comisiones actualizadas correctamente');
                 const inputCompra = formulario.querySelector('input[name="comision_compra"]');
                 if (inputCompra && data.comision_compra_raw != null) {
-                    // Obtener la precision del step del input
-                    const step = parseFloat(inputCompra.getAttribute('step')) || 1;
-                    const precision = step < 1 ? -Math.log10(step) : 0;
-                    inputCompra.value = parseFloat(data.comision_compra_raw).toFixed(precision);
+                    inputCompra.value = Math.trunc(data.comision_compra_raw);
                 }
                 const inputVenta = formulario.querySelector('input[name="comision_venta"]');
                 if (inputVenta && data.comision_venta_raw != null) {
-                    // Obtener la precision del step del input
-                    const step = parseFloat(inputVenta.getAttribute('step')) || 1;
-                    const precision = step < 1 ? -Math.log10(step) : 0;
-                    inputVenta.value = parseFloat(data.comision_venta_raw).toFixed(precision);
+                    inputVenta.value = Math.trunc(data.comision_venta_raw);
                 }
                 const item = formulario.closest('.accordion-item');
                 const tbody = item.querySelector('.js-tasas-body');
@@ -671,6 +637,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         document.getElementById('horaUltimaActualizacion').textContent = cadenaTiempo;
     }
+    
+    // Configurar precisión decimal para campos de precio base
+    function configurarPrecisionPrecioBase() {
+        document.querySelectorAll('.precio-base-field').forEach(function(campo) {
+            const precision = parseInt(campo.getAttribute('data-precision')) || 0;
+            
+            // Configurar el step basado en la precisión
+            if (precision <= 0) {
+                campo.setAttribute('step', '1');
+                campo.setAttribute('min', '1');
+            } else {
+                const step = '0.' + '0'.repeat(precision - 1) + '1';
+                campo.setAttribute('step', step);
+                campo.setAttribute('min', step);
+            }
+        });
+    }
+    
+    // Ejecutar configuración al cargar la página
+    configurarPrecisionPrecioBase();
 });
 </script>
 {% endblock %}
