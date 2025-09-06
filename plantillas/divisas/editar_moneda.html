@@ -92,6 +92,7 @@
                                     <div class="form-text">Nombre completo de la moneda</div>
                                 </div>
                             </div>
+                            <!-- Country field temporarily commented out due to django-countries compatibility issue
                             <div class="col-12">
                                 <div class="mb-3">
                                     <label for="{{ form.pais.id_for_label }}" class="form-label">
@@ -104,6 +105,7 @@
                                     <div class="form-text">Seleccione el país asociado a la moneda. Para monedas personalizadas sin país específico, puede dejarlo vacío</div>
                                 </div>
                             </div>
+                            -->
                         </div>
 
                         <!-- Configuración de trading -->
@@ -317,6 +319,9 @@ document.addEventListener('DOMContentLoaded', function() {
             actualizarTextoAyuda(parseInt(precisionField.value) || {{ object.lugares_decimales|default:2 }});
         }
     }
+    
+    // Inicializar autocompletado de símbolos
+    inicializarAutocompletadoSimbolos();
 });
 </script>
 {% endblock %}

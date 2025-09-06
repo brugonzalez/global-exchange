@@ -92,6 +92,7 @@
                                 </div>
                             </div>
                             <div class="col-12">
+                                <!-- Country field temporarily commented out due to django-countries compatibility issue
                                 <div class="mb-3">
                                     <label for="{{ form.pais.id_for_label }}" class="form-label">
                                         {{ form.pais.label }}
@@ -102,6 +103,7 @@
                                     {% endif %}
                                     <div class="form-text">Seleccione el país asociado a la moneda. Para monedas personalizadas sin país específico, puede dejarlo vacío</div>
                                 </div>
+                                -->
                             </div>
                         </div>
 
@@ -299,6 +301,9 @@ document.addEventListener('DOMContentLoaded', function() {
             actualizarTextoAyuda(parseInt(precisionField.value) || 2);
         }
     }
+    
+    // Inicializar autocompletado de símbolos
+    inicializarAutocompletadoSimbolos();
 });
 </script>
 {% endblock %}
