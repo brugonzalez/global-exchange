@@ -488,6 +488,8 @@ class RegistroAuditoria(models.Model):
         ('ROLE_CREATED', 'Rol Creado'),
         ('ROLE_UPDATED', 'Rol Actualizado'),
         ('ROLE_DELETED', 'Rol Eliminado'),
+        ('MEDIO_PAGO_CREATE', 'Medio de pago Asociado'),
+        ('MEDIO_PAGO_DELETED', 'Medio de pago desvinculado'),
     ]
 
     usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, blank=True, null=True)

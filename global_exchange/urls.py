@@ -25,6 +25,7 @@ urlpatterns = [
     
     path('', lambda solicitud: redirect('divisas:panel_de_control')),  # Redirigir al panel de control
     path('tauser/', include('tauser.urls')),
+    path('pagos/', include('pagos.urls')),
 ]
 
 # Servir archivos de medios en desarrollo
