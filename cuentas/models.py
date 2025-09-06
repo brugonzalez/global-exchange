@@ -280,7 +280,7 @@ class Usuario(AbstractUser):
                 usuario=ejecutor,
                 accion='USER_BLOCKED',
                 descripcion=f'Bloqueó al usuario: {self.email}',
-                direccion_ip='N/A',  # si se pasa desde la vista, se puede usar request.META.get('REMOTE_ADDR')
+                #direccion_ip='N/A',   si se pasa desde la vista, se puede usar request.META.get('REMOTE_ADDR')
                 agente_usuario='N/A',
                 datos_adicionales={
                     'usuario_id': self.id,
@@ -305,7 +305,7 @@ class Usuario(AbstractUser):
                 usuario=ejecutor,
                 accion='USER_UNBLOCKED',
                 descripcion=f'Desbloqueó al usuario: {self.email}',
-                direccion_ip='N/A',
+                #direccion_ip='N/A',
                 agente_usuario='N/A',
                 datos_adicionales={
                     'usuario_id': self.id,
