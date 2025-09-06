@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'reportes.apps.ConfiguracionReportes',
     'notificaciones.apps.ConfiguracionNotificaciones',
     'tauser.apps.TauserConfig',
+    'pagos.apps.PagosConfig',
 ]
 
 MIDDLEWARE = [
