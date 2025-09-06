@@ -311,6 +311,8 @@ document.addEventListener('DOMContentLoaded', function() {
             precisionField.addEventListener('change', function() {
                 const precision = parseInt(this.value) || 2;
                 actualizarTextoAyuda(precision);
+                // Aplicar la nueva precisión a los campos
+                IG.aplicarPrecisionDecimalCampos(precision);
             });
             
             // Inicializar texto

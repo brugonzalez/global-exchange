@@ -57,6 +57,19 @@ def obtener_step_precision(precision):
     except (ValueError, TypeError):
         return '0.01'
 
+@register.filter
+def formatear_precio_base(valor, moneda):
+    """
+    Formatea un precio base según la precisión de la moneda.
+    
+    Uso: {{ precio|formatear_precio_base:moneda }}
+    """
+    if not moneda:
+        return formatear_decimal_con_precision(valor, 2)
+    
+    precision = getattr(moneda, 'lugares_decimales', 2)
+    return formatear_decimal_con_precision(valor, precision)
+
 @register.simple_tag
 def formatear_parametros_moneda(moneda):
     """

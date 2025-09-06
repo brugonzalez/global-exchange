@@ -184,6 +184,12 @@ if not EMAIL_HOST_USER:
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
+# Configuración de django-countries
+# Agregar "Euro" como opción especial para la moneda EUR
+COUNTRIES_OVERRIDE = {
+    'EU': 'Euro',
+}
+
 # Configuración de Seguridad
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True

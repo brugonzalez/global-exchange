@@ -201,15 +201,20 @@
                                                             id="precio-base-{{ info_tasa.moneda.id }}"
                                                             name="precio_base"
                                                             type="number" inputmode="numeric"
-                                                            class="form-control text-end"
-                                                            step="1" min="0" placeholder="0"
-                                                            value="{{ info_tasa.precio_actual|unlocalize|floatformat:0 }}"
+                                                            class="form-control text-end precio-base-field"
+                                                            data-precision="{{ info_tasa.moneda.lugares_decimales }}"
+                                                            step="any"
+                                                            min="0"
+                                                            placeholder="0"
+                                                            value="{{ info_tasa.precio_actual|unlocalize }}"
                                                             required
                                                         >
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
                                                     <div class="form-text mt-1">
-                                                        Enteros (sin puntos). Se guarda como precio base.
+                                                        <span class="precision-help-text" data-precision="{{ info_tasa.moneda.lugares_decimales }}">
+                                                            {% if info_tasa.moneda.lugares_decimales == 0 %}Enteros (sin decimales).{% else %}Hasta {{ info_tasa.moneda.lugares_decimales }} decimal{{ info_tasa.moneda.lugares_decimales|pluralize:"es" }}.{% endif %}
+                                                        </span> Se guarda como precio base.
                                                     </div>
                                                 </div>
                                             </div>
@@ -248,14 +253,22 @@
                                                             id="comision-compra-{{ info_tasa.moneda.id }}"
                                                             name="comision_compra"
                                                             type="number" inputmode="numeric"
-                                                            class="form-control text-end"
+                                                            class="form-control text-end comision-compra-field"
                                                             step="1" min="0" placeholder="0"
                                                             value="{{ info_tasa.moneda.comision_compra|unlocalize|floatformat:0 }}"
+                                                            {% if not info_tasa.moneda.disponible_para_compra %}disabled{% endif %}
+                                                            data-moneda-id="{{ info_tasa.moneda.id }}"
                                                             required
                                                         >
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
-                                                    <div class="form-text mt-1">Enteros. Se aplica al comprar esta divisa.</div>
+                                                    <div class="form-text mt-1">
+                                                        {% if info_tasa.moneda.disponible_para_compra %}
+                                                            Enteros. Se aplica al comprar esta divisa.
+                                                        {% else %}
+                                                            <span class="text-muted">Compra no disponible para esta moneda.</span>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
 
                                                 <div class="col-12 col-md-6">
@@ -265,14 +278,22 @@
                                                             id="comision-venta-{{ info_tasa.moneda.id }}"
                                                             name="comision_venta"
                                                             type="number" inputmode="numeric"
-                                                            class="form-control text-end"
+                                                            class="form-control text-end comision-venta-field"
                                                             step="1" min="0" placeholder="0"
                                                             value="{{ info_tasa.moneda.comision_venta|unlocalize|floatformat:0 }}"
+                                                            {% if not info_tasa.moneda.disponible_para_venta %}disabled{% endif %}
+                                                            data-moneda-id="{{ info_tasa.moneda.id }}"
                                                             required
                                                         >
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
-                                                    <div class="form-text mt-1">Enteros. Se aplica cuando vendés esta divisa.</div>
+                                                    <div class="form-text mt-1">
+                                                        {% if info_tasa.moneda.disponible_para_venta %}
+                                                            Enteros. Se aplica cuando vendés esta divisa.
+                                                        {% else %}
+                                                            <span class="text-muted">Venta no disponible para esta moneda.</span>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -632,6 +653,94 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         document.getElementById('horaUltimaActualizacion').textContent = cadenaTiempo;
     }
+    
+    // Configurar precisión decimal para campos de precio base
+    function configurarPrecisionPrecioBase() {
+        document.querySelectorAll('.precio-base-field').forEach(function(campo) {
+            const precision = parseInt(campo.getAttribute('data-precision')) || 0;
+            
+            // Configurar el step basado en la precisión
+            if (precision <= 0) {
+                campo.setAttribute('step', '1');
+                campo.setAttribute('min', '1');
+            } else {
+                const step = '0.' + '0'.repeat(precision - 1) + '1';
+                campo.setAttribute('step', step);
+                campo.setAttribute('min', step);
+            }
+            
+            // Formatear el valor actual según la precisión
+            const valorActual = campo.value;
+            if (valorActual && valorActual !== '') {
+                const numero = parseFloat(valorActual);
+                if (!isNaN(numero)) {
+                    campo.value = numero.toFixed(precision);
+                }
+            }
+            
+            // Agregar evento para formatear el valor cuando el usuario termine de escribir
+            campo.addEventListener('blur', function() {
+                const valor = parseFloat(this.value);
+                if (!isNaN(valor)) {
+                    this.value = valor.toFixed(precision);
+                }
+            });
+            
+            // Agregar evento para validar en tiempo real
+            campo.addEventListener('input', function() {
+                const valor = this.value;
+                if (valor && !valor.includes('.')) return; // Solo validar si hay decimales
+                
+                const partes = valor.split('.');
+                if (partes.length > 1 && partes[1].length > precision) {
+                    // Truncar a la precisión permitida
+                    this.value = parseFloat(valor).toFixed(precision);
+                }
+            });
+        });
+    }
+    
+    // Configurar control de disponibilidad de comisiones
+    function configurarControlDisponibilidadComisiones() {
+        // Revisar localStorage para configuraciones de disponibilidad
+        document.querySelectorAll('.comision-compra-field, .comision-venta-field').forEach(campo => {
+            const monedaId = campo.dataset.monedaId;
+            if (monedaId) {
+                const config = localStorage.getItem('disponibilidadMoneda_' + monedaId);
+                if (config) {
+                    try {
+                        const disponibilidad = JSON.parse(config);
+                        
+                        if (campo.classList.contains('comision-compra-field')) {
+                            campo.disabled = !disponibilidad.disponibleCompra;
+                            actualizarTextoAyudaComision(campo, 'compra', disponibilidad.disponibleCompra);
+                        } else if (campo.classList.contains('comision-venta-field')) {
+                            campo.disabled = !disponibilidad.disponibleVenta;
+                            actualizarTextoAyudaComision(campo, 'venta', disponibilidad.disponibleVenta);
+                        }
+                    } catch (e) {
+                        console.warn('Error parsing availability config:', e);
+                    }
+                }
+            }
+        });
+    }
+
+    // Actualizar texto de ayuda para campos de comisión
+    function actualizarTextoAyudaComision(campo, tipo, disponible) {
+        const formText = campo.parentNode.parentNode.querySelector('.form-text');
+        if (formText) {
+            if (disponible) {
+                formText.innerHTML = `Enteros. Se aplica al ${tipo === 'compra' ? 'comprar' : 'vender'} esta divisa.`;
+            } else {
+                formText.innerHTML = `<span class="text-muted">${tipo.charAt(0).toUpperCase() + tipo.slice(1)} no disponible para esta moneda.</span>`;
+            }
+        }
+    }
+    
+    // Ejecutar configuración al cargar la página
+    configurarPrecisionPrecioBase();
+    configurarControlDisponibilidadComisiones();
 });
 </script>
 {% endblock %}
