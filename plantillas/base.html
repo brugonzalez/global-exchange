@@ -156,6 +156,7 @@
                                     <li><a class="dropdown-item" href="{% url 'divisas:gestionar_tasas' %}">Gestionar Tasas</a></li>
                                     <li><a class="dropdown-item" href="{% url 'clientes:lista_clientes' %}">Gestionar Clientes</a></li>
                                     <li><a class="dropdown-item" href="{% url 'cuentas:gestionar_usuarios' %}">Gestionar Usuarios</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'pagos:gestion_metodos_pago' %}">Gestión de Métodos de Pago</a></li>
                                     <li><a class="dropdown-item" href="{% url 'reportes:panel_analiticas' %}">Panel Analítico</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="{% url 'cuentas:gestionar_roles' %}">Gestión de Roles</a></li>
@@ -178,7 +179,7 @@
                                 {% if user.clientes.exists %}
                                     <li><a class="dropdown-item" href="{% url 'cuentas:seleccionar_cliente' %}">Cambiar Cliente</a></li>
                                 {% endif %}
-                                {% if not user.is_superuser %}
+                                {% if not user.is_superuser and user.ultimo_cliente_seleccionado %}
                                     <li>
                                         <a class="dropdown-item" href="{% url 'pagos:medios_pago' user.ultimo_cliente_seleccionado.id %}">
                                             Mis Medios de pago

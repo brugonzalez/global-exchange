@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import DetailView, ListView, TemplateView
 
@@ -7,6 +8,7 @@ from clientes.models import Cliente
 from clientes.views import MixinStaffRequerido
 from cuentas.models import Usuario, RegistroAuditoria
 from cuentas.views import MixinPermisosAdmin
+from divisas.models import MetodoPago
 from global_exchange import settings
 from pagos.forms import FormularioMedioPago
 from pagos.models import MedioPago
@@ -180,3 +182,61 @@ def desvincular_medio_pago(request, pk):
         messages.success(request, "Tarjeta desactivada correctamente.")
 
     return redirect('pagos:medios_pago', id_cliente=request.user.ultimo_cliente_seleccionado.id)
+
+
+class VistaGestionMetodosPago(MixinStaffRequerido, TemplateView):
+    """
+    Vista para gestionar métodos de pago del sistema.
+    Solo accesible para administradores.
+    """
+    template_name = 'pagos/gestion_metodos_pago.html'
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+
+        # Obtener todos los métodos de pago ordenados por nombre
+        metodos_pago = MetodoPago.objects.all().order_by('nombre')
+
+        contexto.update({
+            'metodos_pago': metodos_pago,
+            'total_metodos': metodos_pago.count(),
+            'metodos_activos': metodos_pago.filter(esta_activo=True).count(),
+            'metodos_inactivos': metodos_pago.filter(esta_activo=False).count(),
+        })
+
+        return contexto
+
+
+class VistaToggleMetodoPago(MixinStaffRequerido, TemplateView):
+    """
+    Vista para cambiar el estado activo/inactivo de un método de pago.
+    """
+
+    def post(self, request, metodo_id):
+        metodo = get_object_or_404(MetodoPago, id=metodo_id)
+
+        # Cambiar el estado
+        estado_anterior = metodo.esta_activo
+        metodo.esta_activo = not metodo.esta_activo
+        metodo.save()
+
+        # Preparar respuesta con mensajes más específicos
+        if metodo.esta_activo:
+            mensaje = f'Método de pago "{metodo.nombre}" habilitado correctamente.'
+            accion_contraria = 'Deshabilitar'
+            clase_boton = 'btn-warning'
+            icono = 'fa-eye-slash'
+        else:
+            mensaje = f'Método de pago "{metodo.nombre}" deshabilitado correctamente.'
+            accion_contraria = 'Habilitar'
+            clase_boton = 'btn-success'
+            icono = 'fa-eye'
+
+        return JsonResponse({
+            'success': True,
+            'nuevo_estado': metodo.esta_activo,
+            'mensaje': mensaje,
+            'accion_contraria': accion_contraria,
+            'clase_boton': clase_boton,
+            'icono': icono
+        })
