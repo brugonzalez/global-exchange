@@ -74,18 +74,79 @@ class FormularioActualizacionTasa(forms.ModelForm):
         widgets = {
             'precio_base': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '1',
-                'min': '0',
-                'placeholder': 'Tasa de compra'
+                'placeholder': 'Precio base'
+                # step y min se configuran dinámicamente en __init__
             }),
         }
         labels = {
             'precio_base': 'Precio Base'
         }
+
+    def __init__(self, *args, **kwargs):
+        # Extraer la moneda si se pasa como kwarg
+        self.moneda = kwargs.pop('moneda', None)
+        super().__init__(*args, **kwargs)
+        
+        # Determinar la precisión decimal de la moneda
+        if self.moneda:
+            precision = self.moneda.lugares_decimales or 2
+        elif self.instance and self.instance.pk and self.instance.moneda:
+            precision = self.instance.moneda.lugares_decimales or 2
+        else:
+            precision = 2  # Valor por defecto
+        
+        # Configurar el campo precio_base según la precisión
+        campo = self.fields['precio_base']
+        step = self._obtener_step_segun_precision(precision)
+        campo.widget.attrs['step'] = step
+        campo.widget.attrs['class'] = 'form-control text-end'
+        campo.widget.attrs['inputmode'] = 'numeric'
+        campo.widget.attrs['placeholder'] = '0'
+        campo.widget.attrs['required'] = 'required'
+        
+        # Agregar id dinámico si tenemos moneda
+        if self.moneda:
+            campo.widget.attrs['id'] = f'precio-base-{self.moneda.id}'
+        
+        # Ajustar el min para que sea compatible con el step
+        if precision <= 0:
+            campo.widget.attrs['min'] = '1'
+        else:
+            campo.widget.attrs['min'] = step
+        
+        # Actualizar el texto de ayuda según la precisión
+        if precision <= 0:
+            campo.help_text = 'Enteros (sin decimales). Se guarda como precio base.'
+        else:
+            campo.help_text = f'Hasta {precision} decimales. Se guarda como precio base.'
+
+    def _obtener_step_segun_precision(self, precision):
+        """Obtiene el step apropiado para un campo según la precisión decimal."""
+        if precision <= 0:
+            return '1'
+        # Crear step como 0.0...01 con precision decimales
+        return '0.' + '0' * (precision - 1) + '1'
     
     def clean(self):
         datos_limpios = super().clean()
         precio_base = datos_limpios.get('precio_base')
+        
+        # Validar que el precio_base respete la precisión de la moneda
+        if precio_base is not None and self.moneda:
+            precision = self.moneda.lugares_decimales or 2
+            from decimal import Decimal
+            try:
+                valor_decimal = Decimal(str(precio_base))
+                # Obtener el número de decimales del valor
+                decimales_valor = abs(valor_decimal.as_tuple().exponent)
+                
+                if decimales_valor > precision:
+                    self.add_error('precio_base', 
+                        f'El valor no puede tener más de {precision} decimales según la configuración de la moneda.')
+                    
+            except (ValueError, TypeError):
+                # Si no se puede convertir a decimal, Django ya validará esto
+                pass
 
         return datos_limpios
 

@@ -197,19 +197,27 @@
                                                 <div class="col-12 col-md-8">
                                                     <label for="precio-base-{{ info_tasa.moneda.id }}" class="form-label mb-1">Monto</label>
                                                     <div class="input-group input-group-sm">
-                                                        <input
-                                                            id="precio-base-{{ info_tasa.moneda.id }}"
-                                                            name="precio_base"
-                                                            type="number" inputmode="numeric"
-                                                            class="form-control text-end"
-                                                            step="1" min="0" placeholder="0"
-                                                            value="{{ info_tasa.precio_actual|unlocalize|floatformat:0 }}"
-                                                            required
-                                                        >
+                                                        {% if info_tasa.formulario %}
+                                                            {{ info_tasa.formulario.precio_base }}
+                                                        {% else %}
+                                                            <input
+                                                                id="precio-base-{{ info_tasa.moneda.id }}"
+                                                                name="precio_base"
+                                                                type="number" inputmode="numeric"
+                                                                class="form-control text-end"
+                                                                step="1" min="0" placeholder="0"
+                                                                value="{{ info_tasa.precio_actual|unlocalize|floatformat:0 }}"
+                                                                required
+                                                            >
+                                                        {% endif %}
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
                                                     <div class="form-text mt-1">
-                                                        Enteros (sin puntos). Se guarda como precio base.
+                                                        {% if info_tasa.formulario and info_tasa.formulario.precio_base.help_text %}
+                                                            {{ info_tasa.formulario.precio_base.help_text }}
+                                                        {% else %}
+                                                            Enteros (sin puntos). Se guarda como precio base.
+                                                        {% endif %}
                                                     </div>
                                                 </div>
                                             </div>
@@ -248,14 +256,21 @@
                                                             id="comision-compra-{{ info_tasa.moneda.id }}"
                                                             name="comision_compra"
                                                             type="number" inputmode="numeric"
-                                                            class="form-control text-end"
+                                                            class="form-control text-end{% if not info_tasa.moneda.disponible_para_compra %} bg-light{% endif %}"
                                                             step="1" min="0" placeholder="0"
                                                             value="{{ info_tasa.moneda.comision_compra|unlocalize|floatformat:0 }}"
-                                                            required
+                                                            {% if not info_tasa.moneda.disponible_para_compra %}disabled{% endif %}
+                                                            {% if info_tasa.moneda.disponible_para_compra %}required{% endif %}
                                                         >
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
-                                                    <div class="form-text mt-1">Enteros. Se aplica al comprar esta divisa.</div>
+                                                    <div class="form-text mt-1">
+                                                        {% if info_tasa.moneda.disponible_para_compra %}
+                                                            Enteros. Se aplica al comprar esta divisa.
+                                                        {% else %}
+                                                            <span class="text-muted">Campo deshabilitado - la moneda no está disponible para compra.</span>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
 
                                                 <div class="col-12 col-md-6">
@@ -265,14 +280,21 @@
                                                             id="comision-venta-{{ info_tasa.moneda.id }}"
                                                             name="comision_venta"
                                                             type="number" inputmode="numeric"
-                                                            class="form-control text-end"
+                                                            class="form-control text-end{% if not info_tasa.moneda.disponible_para_venta %} bg-light{% endif %}"
                                                             step="1" min="0" placeholder="0"
                                                             value="{{ info_tasa.moneda.comision_venta|unlocalize|floatformat:0 }}"
-                                                            required
+                                                            {% if not info_tasa.moneda.disponible_para_venta %}disabled{% endif %}
+                                                            {% if info_tasa.moneda.disponible_para_venta %}required{% endif %}
                                                         >
                                                         <span class="input-group-text">PYG</span>
                                                     </div>
-                                                    <div class="form-text mt-1">Enteros. Se aplica cuando vendés esta divisa.</div>
+                                                    <div class="form-text mt-1">
+                                                        {% if info_tasa.moneda.disponible_para_venta %}
+                                                            Enteros. Se aplica cuando vendés esta divisa.
+                                                        {% else %}
+                                                            <span class="text-muted">Campo deshabilitado - la moneda no está disponible para venta.</span>
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             </div>
 

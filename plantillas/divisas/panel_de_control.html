@@ -1,3 +1,4 @@
+
 {% extends 'base.html' %}
 {% load humanize %}
 
@@ -50,7 +51,7 @@
                             <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                         </a>
                     </div>
-                {% elif not puede_operar %}
+                {% elif not puede_operar and not user.is_superuser %}
                     <div class="mt-4">
                         <div class="alert alert-warning d-inline-block">
                             <i class="fas fa-info-circle me-2"></i>

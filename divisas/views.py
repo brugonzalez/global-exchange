@@ -804,7 +804,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
                 'fecha_actualizacion': tasa_actual.fecha_actualizacion if tasa_actual else None,
                 'actualizado_por': tasa_actual.actualizado_por if tasa_actual else None,
                 'historial_reciente': historial_reciente,
-                'formulario': FormularioActualizacionTasa() if tasa_actual else None,
+                'formulario': FormularioActualizacionTasa(moneda=moneda) if tasa_actual else None,
                 'tasas_actuales': tasas_actuales
             })
 
@@ -838,10 +838,11 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
         try:
             moneda_id = request.POST.get('moneda_id')
-            form = FormularioActualizacionTasa(request.POST)
+            moneda = get_object_or_404(Moneda, id=moneda_id) if moneda_id else None
+            form = FormularioActualizacionTasa(request.POST, moneda=moneda)
             if form.is_valid() and moneda_id:
                 nuevo_precio_base = form.cleaned_data['precio_base']
-                moneda = get_object_or_404(Moneda, id=moneda_id)
+                # No need to get moneda again since we already have it above
                 # Guardar actualizado_por si el modelo lo soporta
                 defaults = {'precio_base': nuevo_precio_base}
                 if hasattr(PrecioBase, 'actualizado_por'):
