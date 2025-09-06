@@ -178,6 +178,13 @@
                                 {% if user.clientes.exists %}
                                     <li><a class="dropdown-item" href="{% url 'cuentas:seleccionar_cliente' %}">Cambiar Cliente</a></li>
                                 {% endif %}
+                                {% if not user.is_superuser %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'pagos:medios_pago' user.ultimo_cliente_seleccionado.id %}">
+                                            Mis Medios de pago
+                                        </a>
+                                    </li>
+                                {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'notificaciones:lista_notificaciones' %}">Notificaciones</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'cuentas:cerrar_sesion' %}">Cerrar Sesión</a></li>
