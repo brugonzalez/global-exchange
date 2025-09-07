@@ -128,10 +128,16 @@ class Usuario(AbstractUser):
             - Incrementa ``intentos_fallidos_login``.
             - Si supera el máximo, define ``cuenta_bloqueada_hasta`` y pone ``is_active = False``.
         """
-        from django.conf import settings
-        max_intentos = getattr(settings, 'INTENTOS_MAX_BLOQUEO_CUENTA', 5)
-        duracion_bloqueo = getattr(settings, 'DURACION_BLOQUEO_CUENTA', 1800)  # 30 minutos
-        
+        # from django.conf import settings
+        # max_intentos = getattr(settings, 'INTENTOS_MAX_BLOQUEO_CUENTA', 5)
+        # duracion_bloqueo = getattr(settings, 'DURACION_BLOQUEO_CUENTA', 1800)  # 30 minutos
+
+        valor = Configuracion.obtener_valor("activar_pagos", valor_por_defecto=False)
+        max_intentos = Configuracion.obtener_valor('INTENTOS_MAX_BLOQUEO_CUENTA', valor_por_defecto=5)
+        duracion_bloqueo = Configuracion.obtener_valor('DURACION_BLOQUEO_CUENTA', valor_por_defecto=1800)  # en segundos
+
+        max_intentos = max_intentos
+
         self.intentos_fallidos_login += 1
         if self.intentos_fallidos_login >= max_intentos:
             self.cuenta_bloqueada_hasta = timezone.now() + timedelta(seconds=duracion_bloqueo)
@@ -270,7 +276,8 @@ class Usuario(AbstractUser):
         Returns:
             None
         """
-        duracion_bloqueo = getattr(settings, 'DURACION_BLOQUEO_CUENTA', 1800)  # 30 minutos
+        #duracion_bloqueo = getattr(settings, 'DURACION_BLOQUEO_CUENTA', 1800)  # 30 minutos
+        duracion_bloqueo = Configuracion.obtener_valor('DURACION_BLOQUEO_CUENTA', valor_por_defecto=1800)  # en segundos
         if self.is_active:
             self.is_active = False
             self.cuenta_bloqueada_hasta = timezone.now() + timedelta(seconds=duracion_bloqueo)
@@ -514,3 +521,73 @@ class RegistroAuditoria(models.Model):
         """
         nombre_usuario = self.usuario.username if self.usuario else 'Usuario Anónimo'
         return f"{nombre_usuario} - {self.get_accion_display()} - {self.marca_de_tiempo}"
+
+class Configuracion (models.Model):
+    """
+    Modelo para almacenar configuraciones del sistema.
+    Permite gestionar parámetros configurables de la aplicación.
+    """
+    TIPOS_VALOR = [
+        ('TEXT', 'Texto'),
+        ('NUMBER', 'Número'),
+        ('BOOLEAN', 'Booleano'),
+        ('EMAIL', 'Email'),
+        ('URL', 'URL'),
+    ]
+
+    clave = models.CharField(max_length=50, unique=True)
+    valor = models.TextField()  # Cambiado a TextField para valores largos
+    tipo_valor = models.CharField(max_length=10, choices=TIPOS_VALOR, default='TEXT')
+    descripcion = models.CharField(max_length=255, blank=True)
+    categoria = models.CharField(max_length=50, default='General')
+    es_editable = models.BooleanField(default=True,
+                                      help_text="Si la configuración puede ser editada por el usuario")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cuentas_configuracion'
+        verbose_name = 'Configuración'
+        verbose_name_plural = 'Configuraciones'
+        ordering = ['categoria', 'clave']
+
+    def __str__(self):
+        return f"{self.clave}: {self.valor}"
+
+    @staticmethod
+    def obtener_valor(clave, valor_por_defecto=None):
+        """Obtiene el valor de una configuración por su clave."""
+        try:
+            config = Configuracion.objects.get(clave=clave)
+            return config.convertir_valor()
+        except Configuracion.DoesNotExist:
+            return valor_por_defecto
+
+    @staticmethod
+    def establecer_valor(clave, valor, tipo_valor='TEXT', descripcion='', categoria='General'):
+        """Establece o actualiza el valor de una configuración."""
+        config, creado = Configuracion.objects.get_or_create(
+            clave=clave,
+            defaults={
+                'valor': str(valor),
+                'tipo_valor': tipo_valor,
+                'descripcion': descripcion,
+                'categoria': categoria
+            }
+        )
+        if not creado:
+            config.valor = str(valor)
+            config.save()
+        return config
+
+    def convertir_valor(self):
+        """Convierte el valor string al tipo apropiado según tipo_valor."""
+        if self.tipo_valor == 'NUMBER':
+            try:
+                return int(self.valor) if '.' not in self.valor else float(self.valor)
+            except ValueError:
+                return 0
+        elif self.tipo_valor == 'BOOLEAN':
+            return self.valor.lower() in ['true', '1', 'yes', 'on']
+        else:
+            return self.valor
