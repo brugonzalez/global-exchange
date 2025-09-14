@@ -467,14 +467,14 @@ function crearGrafico(idCanvas, datos, opciones = {}) {
     for (let i = 0; i <= pasosY; i++) {
         const valor = minY + (maxY - minY) * (i / pasosY);
         const y = obtenerY(valor);
-        ctx.fillText(valor.toFixed(4), areaGrafico.left - 10, y + 4);
+        ctx.fillText(valor.toFixed(0), areaGrafico.left - 10, y + 4);
     }
     
     // Dibujar etiquetas del eje X
     ctx.textAlign = 'center';
-    for (let i = 0; i < datos.labels.length; i += Math.ceil(datos.labels.length / 8)) {
-        const x = obtenerX(i);
-        ctx.fillText(datos.labels[i], x, areaGrafico.bottom + 20);
+    for (let j = datos.labels.length - 1; j >= 0; j -= Math.ceil(datos.labels.length / 8)) {
+        const x = obtenerX(j);
+        ctx.fillText(datos.labels[j], x, areaGrafico.bottom + 20);
     }
     
     // Dibujar título
