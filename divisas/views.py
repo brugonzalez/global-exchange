@@ -1142,8 +1142,9 @@ class VistaEliminarMoneda(LoginRequiredMixin, DeleteView):
             )
             return redirect('divisas:gestionar_monedas')
         
-        # Si puede eliminarse completamente
+        # Decidir automáticamente si eliminar o deshabilitar
         if moneda.puede_ser_eliminada():
+            # Eliminar completamente
             codigo = moneda.codigo
             nombre = moneda.nombre
             moneda.delete()
@@ -1152,15 +1153,16 @@ class VistaEliminarMoneda(LoginRequiredMixin, DeleteView):
                 f'Moneda {codigo} - {nombre} eliminada exitosamente.'
             )
         else:
-            # Solo deshabilitar
+            # Solo deshabilitar - mostrar mensaje explicativo específico
             moneda.esta_activa = False
             moneda.disponible_para_compra = False
             moneda.disponible_para_venta = False
             moneda.save()
             messages.warning(
                 request,
-                f'Moneda {moneda.codigo} - {moneda.nombre} deshabilitada temporalmente. '
-                'No puede eliminarse porque tiene transacciones asociadas.'
+                f'No se puede eliminar, solo deshabilitar. '
+                f'La moneda {moneda.codigo} - {moneda.nombre} tiene transacciones asociadas '
+                f'y ha sido deshabilitada temporalmente.'
             )
         
         return redirect('divisas:gestionar_monedas')

@@ -202,26 +202,10 @@
                                             </a>
                                             
                                             {% if not moneda.es_moneda_base %}
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-secondary toggle-estado-btn" 
-                                                        data-moneda-id="{{ moneda.id }}"
-                                                        data-estado-actual="{{ moneda.esta_activa|yesno:'true,false' }}"
-                                                        title="{% if moneda.esta_activa %}Deshabilitar{% else %}Habilitar{% endif %}">
-                                                    <i class="fas fa-{% if moneda.esta_activa %}pause{% else %}play{% endif %}"></i>
-                                                </button>
-                                            {% endif %}
-                                            
-                                            {% if puede_eliminarse and not moneda.es_moneda_base %}
                                                 <a href="{% url 'divisas:eliminar_moneda' moneda.id %}" 
-                                                   class="btn btn-sm btn-outline-danger" 
-                                                   title="Eliminar">
-                                                    <i class="fas fa-trash"></i>
-                                                </a>
-                                            {% elif not moneda.es_moneda_base %}
-                                                <a href="{% url 'divisas:eliminar_moneda' moneda.id %}" 
-                                                   class="btn btn-sm btn-outline-warning" 
-                                                   title="Deshabilitar (tiene transacciones)">
-                                                    <i class="fas fa-ban"></i>
+                                                   class="btn btn-sm {% if puede_eliminarse %}btn-outline-danger{% else %}btn-outline-warning{% endif %}" 
+                                                   title="{% if puede_eliminarse %}Eliminar{% else %}Deshabilitar (tiene transacciones){% endif %}">
+                                                    <i class="fas fa-{% if puede_eliminarse %}trash{% else %}ban{% endif %}"></i>
                                                 </a>
                                             {% endif %}
                                         </div>
@@ -249,39 +233,4 @@
     </div>
 </div>
 
-<!-- JavaScript para toggle de estado -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleButtons = document.querySelectorAll('.toggle-estado-btn');
-    
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const monedaId = this.dataset.monedaId;
-            const estadoActual = this.dataset.estadoActual === 'true';
-            
-            if (confirm(`¿Está seguro de que desea ${estadoActual ? 'deshabilitar' : 'habilitar'} esta moneda?`)) {
-                fetch(`/divisas/admin/monedas/${monedaId}/toggle-estado/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                        'Content-Type': 'application/json',
-                    },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert(data.message || 'Error al cambiar el estado');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error de conexión');
-                });
-            }
-        });
-    });
-});
-</script>
 {% endblock %}
