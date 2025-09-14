@@ -158,6 +158,30 @@
                                     <div class="form-text">Stock base de referencia</div>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.comision_compra.id_for_label }}" class="form-label">
+                                        {{ form.comision_compra.label }}
+                                    </label>
+                                    {{ form.comision_compra }}
+                                    {% if form.comision_compra.errors %}
+                                        <div class="text-danger small">{{ form.comision_compra.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Comisión aplicada en operaciones de compra</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.comision_venta.id_for_label }}" class="form-label">
+                                        {{ form.comision_venta.label }}
+                                    </label>
+                                    {{ form.comision_venta }}
+                                    {% if form.comision_venta.errors %}
+                                        <div class="text-danger small">{{ form.comision_venta.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Comisión aplicada en operaciones de venta</div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Disponibilidad -->

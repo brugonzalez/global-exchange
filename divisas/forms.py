@@ -154,7 +154,8 @@ class FormularioMoneda(forms.ModelForm):
         model = Moneda
         fields = ['codigo', 'nombre', 'simbolo', 'pais', 'esta_activa', 
                  'precio_base_inicial', 'denominacion_minima', 'stock_inicial', 
-                 'lugares_decimales', 'disponible_para_compra', 'disponible_para_venta']
+                 'lugares_decimales', 'comision_compra', 'comision_venta',
+                 'disponible_para_compra', 'disponible_para_venta']
         widgets = {
             'codigo': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -192,6 +193,16 @@ class FormularioMoneda(forms.ModelForm):
                 'placeholder': 'Stock inicial'
                 # step y min se configuran dinámicamente en __init__
             }),
+            'comision_compra': forms.NumberInput(attrs={
+                'class': 'form-control parametro-moneda',
+                'placeholder': 'Comisión para compra'
+                # step y min se configuran dinámicamente en __init__
+            }),
+            'comision_venta': forms.NumberInput(attrs={
+                'class': 'form-control parametro-moneda',
+                'placeholder': 'Comisión para venta'
+                # step y min se configuran dinámicamente en __init__
+            }),
             'lugares_decimales': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
@@ -214,6 +225,8 @@ class FormularioMoneda(forms.ModelForm):
             'precio_base_inicial': 'Precio Base Inicial',
             'denominacion_minima': 'Denominación Mínima',
             'stock_inicial': 'Stock Inicial',
+            'comision_compra': 'Comisión para Compra',
+            'comision_venta': 'Comisión para Venta',
             'lugares_decimales': 'Precisión Decimal',
             'disponible_para_compra': 'Disponible para Compra',
             'disponible_para_venta': 'Disponible para Venta'
@@ -243,27 +256,29 @@ class FormularioMoneda(forms.ModelForm):
                     if valor_actual is not None:
                         self.initial[nombre_campo] = int(valor_actual)
         
-        # precio_base_inicial usa la precisión definida por lugares_decimales
-        if 'precio_base_inicial' in self.fields:
-            campo = self.fields['precio_base_inicial']
-            step = self._obtener_step_segun_precision(precision)
-            campo.widget.attrs['step'] = step
-            
-            # Ajustar el min para que sea compatible con el step
-            if precision <= 0:
-                campo.widget.attrs['min'] = '1'
-            else:
-                campo.widget.attrs['min'] = step
-            
-            # Si estamos editando, formatear el valor actual
-            if self.instance and self.instance.pk:
-                valor_actual = getattr(self.instance, 'precio_base_inicial', None)
-                if valor_actual is not None:
-                    valor_formateado = self._formatear_valor_con_precision(valor_actual, precision)
-                    self.initial['precio_base_inicial'] = valor_formateado
+        # precio_base_inicial, comision_compra y comision_venta usan la precisión definida por lugares_decimales
+        campos_con_precision = ['precio_base_inicial', 'comision_compra', 'comision_venta']
+        for nombre_campo in campos_con_precision:
+            if nombre_campo in self.fields:
+                campo = self.fields[nombre_campo]
+                step = self._obtener_step_segun_precision(precision)
+                campo.widget.attrs['step'] = step
+                
+                # Ajustar el min para que sea compatible con el step
+                if precision <= 0:
+                    campo.widget.attrs['min'] = '0'
+                else:
+                    campo.widget.attrs['min'] = '0'
+                
+                # Si estamos editando, formatear el valor actual
+                if self.instance and self.instance.pk:
+                    valor_actual = getattr(self.instance, nombre_campo, None)
+                    if valor_actual is not None:
+                        valor_formateado = self._formatear_valor_con_precision(valor_actual, precision)
+                        self.initial[nombre_campo] = valor_formateado
         
         # Agregar clase CSS para identificar campos de parámetros
-        for nombre_campo in ['precio_base_inicial', 'denominacion_minima', 'stock_inicial']:
+        for nombre_campo in ['precio_base_inicial', 'denominacion_minima', 'stock_inicial', 'comision_compra', 'comision_venta']:
             if nombre_campo in self.fields:
                 clases_existentes = self.fields[nombre_campo].widget.attrs.get('class', '')
                 if 'parametro-moneda' not in clases_existentes:
@@ -326,22 +341,24 @@ class FormularioMoneda(forms.ModelForm):
                     # Si no se puede convertir a decimal, Django ya validará esto
                     pass
         
-        # Validar precio_base_inicial con la precisión definida
-        if 'precio_base_inicial' in datos_limpios:
-            valor = datos_limpios.get('precio_base_inicial')
-            if valor is not None:
-                from decimal import Decimal
-                try:
-                    valor_decimal = Decimal(str(valor))
-                    # Obtener el número de decimales del valor
-                    decimales_valor = abs(valor_decimal.as_tuple().exponent)
-                    
-                    if decimales_valor > precision:
-                        self.add_error('precio_base_inicial', 
-                            f'El valor no puede tener más de {precision} decimales.')
+        # Validar precio_base_inicial, comision_compra y comision_venta con la precisión definida
+        campos_con_precision = ['precio_base_inicial', 'comision_compra', 'comision_venta']
+        for nombre_campo in campos_con_precision:
+            if nombre_campo in datos_limpios:
+                valor = datos_limpios.get(nombre_campo)
+                if valor is not None:
+                    from decimal import Decimal
+                    try:
+                        valor_decimal = Decimal(str(valor))
+                        # Obtener el número de decimales del valor
+                        decimales_valor = abs(valor_decimal.as_tuple().exponent)
                         
-                except (ValueError, TypeError):
-                    # Si no se puede convertir a decimal, Django ya validará esto
-                    pass
+                        if decimales_valor > precision:
+                            self.add_error(nombre_campo, 
+                                f'El valor no puede tener más de {precision} decimales.')
+                            
+                    except (ValueError, TypeError):
+                        # Si no se puede convertir a decimal, Django ya validará esto
+                        pass
         
         return datos_limpios
