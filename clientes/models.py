@@ -224,6 +224,9 @@ class Cliente(models.Model):
         blank=True
     )
 
+    # customer_id para integración con Stripe
+    stripe_customer_id = models.CharField(max_length=100, default="")
+
     # Información Financiera
     saldo_cuenta = models.DecimalField(
         max_digits=15, 

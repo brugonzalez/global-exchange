@@ -64,5 +64,6 @@ urlpatterns = [
     path('admin/usuarios/<int:usuario_id>/cambiar_estado/', CambiarEstadoUsuarioView.as_view(), name='cambiar_estado_usuario'),
     path('usuarios/crear/', views.VistaRegistroUsuario.as_view(), name='crear_usuario'),
     path('usuarios/<int:usuario_id>/eliminar/', views.eliminar_usuario, name='eliminar_usuario'),
-
+    path('configuracion-sistema/', views.VistaConfiguracionSistema.as_view(), name='configuracion_sistema'),
+    path('configuracion-sistema/editar/<int:config_id>/', views.VistaEditarConfiguracion.as_view(), name='editar_configuracion'),
 ]

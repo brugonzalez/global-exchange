@@ -1,0 +1,204 @@
+<!-- pagos/asociar_medio_pago.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Asociar Medio de Pago{% endblock %}
+
+{% block extra_css %}
+<script src="https://js.stripe.com/v3/"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Asociar Nuevo Medio de Pago</h4>
+                    {% if cliente_activo %}
+                        <small class="text-muted">Cliente: {{ user.ultimo_cliente_seleccionado.obtener_nombre_completo }}</small>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if advertencia_sin_cliente %}
+                        <div class="alert alert-warning">
+                            <strong>Atención:</strong> Debe tener un cliente asignado para asociar medios de pago.
+                            <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-primary btn-sm ml-2">
+                                Seleccionar Cliente
+                            </a>
+                        </div>
+                    {% else %}
+                        <form method="post" id="form-medio-pago">
+                            {% csrf_token %}
+
+                            <!-- Selector de tipo de medio de pago -->
+                            <div class="form-group mb-3">
+                                <label for="tipo_medio_pago" class="mb-3">Tipo de Medio de Pago</label>
+                                <select class="form-select" id="tipo_medio_pago" name="tipo" required>
+                                    <option value="">Seleccione un tipo</option>
+                                    {% for codigo, nombre in tipos_medio_pago %}
+                                        <option value="{{ codigo }}">{{ nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Campos específicos para tarjeta de crédito/débito -->
+                            <div id="campos-tarjeta" class="d-none">
+                                <div class="form-group">
+                                    <label>Información de la Tarjeta</label>
+                                    <div id="card-element" class="form-control">
+                                        <!-- Stripe Elements insertará aquí el formulario de tarjeta -->
+                                    </div>
+                                    <div id="card-errors" class="text-danger mt-2"></div>
+                                </div>
+                                <!-- Nombre del titular -->
+                                <div class="form-group mb-3">
+                                    <label for="titular">Nombre del titular</label>
+                                    <input type="text" class="form-control" id="titular" name="titular" required
+                                           placeholder="Ej: Juan Pérez">
+                                </div>
+                            </div>
+
+                            <!-- Campos para cuenta bancaria -->
+                            <div id="campos-banco" class="d-none">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="banco">Banco</label>
+                                            <input type="text" class="form-control" id="banco" name="banco">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="numero_cuenta">Número de Cuenta</label>
+                                            <input type="text" class="form-control" id="numero_cuenta" name="numero_cuenta">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="tipo_cuenta">Tipo de Cuenta</label>
+                                    <select class="form-control" id="tipo_cuenta" name="tipo_cuenta">
+                                        <option value="AHORROS">Ahorros</option>
+                                        <option value="CORRIENTE">Corriente</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Campos para billetera digital -->
+                            <div id="campos-billetera" class="d-none">
+                                <div class="form-group">
+                                    <label for="proveedor_billetera">Proveedor</label>
+                                    <select class="form-control" id="proveedor_billetera" name="proveedor_billetera">
+                                        <option value="PAYPAL">PayPal</option>
+                                        <option value="SIPAP">Sipap</option>
+                                        <option value="OTROS">Otros</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cuenta_billetera">Cuenta/Email</label>
+                                    <input type="email" class="form-control" id="cuenta_billetera" name="cuenta_billetera">
+                                </div>
+                            </div>
+
+                            <div class="form-check mb-3 d-none">
+                                <input type="checkbox" class="form-check-input" id="predeterminado" name="predeterminado">
+                                <label class="form-check-label" for="predeterminado">
+                                    Establecer como método predeterminado
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary" id="btn-guardar">
+                                    <i class="fas fa-save"></i> Asociar Medio de Pago
+                                </button>
+                                <a href="{% url 'pagos:medios_pago' id_cliente=cliente_activo.id %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Cancelar
+                                </a>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoMedioPago = document.getElementById('tipo_medio_pago');
+    const camposTarjeta = document.getElementById('campos-tarjeta');
+    const camposBanco = document.getElementById('campos-banco');
+    const camposBilletera = document.getElementById('campos-billetera');
+
+    // Inicializar Stripe si está disponible
+    let stripe = null;
+    let cardElement = null;
+
+    {% if stripe_clave_publicable %}
+    stripe = Stripe('{{ stripe_clave_publicable }}');
+    const elements = stripe.elements();
+
+    //deshabilitamos el campo postal code
+    cardElement = elements.create('card',{ hidePostalCode: true,  disableLink: true });
+    {% endif %}
+
+    tipoMedioPago.addEventListener('change', function() {
+        // Ocultar todos los campos específicos
+        camposTarjeta.classList.add('d-none');
+        camposBanco.classList.add('d-none');
+        camposBilletera.classList.add('d-none');
+
+        // Mostrar campos según el tipo seleccionado
+        switch(this.value) {
+            case 'tarjeta':
+                camposTarjeta.classList.remove('d-none');
+                if (cardElement) {
+                    cardElement.mount('#card-element');
+                }
+                break;
+            case 'transferencia':
+                camposBanco.classList.remove('d-none');
+                break;
+            case 'billetera':
+                camposBilletera.classList.remove('d-none');
+                break;
+            case 'efectivo':
+                camposBilletera.classList.remove('d-none');
+                break;
+            case 'cheque':
+                camposBilletera.classList.remove('d-none');
+                break;
+        }
+    });
+
+    // Manejar envío del formulario
+    document.getElementById('form-medio-pago').addEventListener('submit', function(e) {
+        const tipo = tipoMedioPago.value;
+
+        if ((tipo === 'tarjeta') && stripe && cardElement) {
+            e.preventDefault();
+            handleCardSubmission();
+        }
+    });
+
+    function handleCardSubmission() {
+        stripe.createToken(cardElement).then(function(result) {
+            if (result.error) {
+                document.getElementById('card-errors').textContent = result.error.message;
+            } else {
+                // Agregar el token al formulario y enviarlo
+                const form = document.getElementById('form-medio-pago');
+                const hiddenInput = document.createElement('input');
+                hiddenInput.setAttribute('type', 'hidden');
+                hiddenInput.setAttribute('name', 'stripe_token');
+                hiddenInput.setAttribute('value', result.token.id);
+                form.appendChild(hiddenInput);
+                form.submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

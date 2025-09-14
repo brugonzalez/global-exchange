@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import authenticate, get_user_model
-from .models import Usuario, Rol, Permiso
+from .models import Usuario, Rol, Permiso, Configuracion
 
 
 class FormularioLogin(forms.Form):
@@ -750,3 +750,74 @@ class FormularioRegistroUsuario(UserCreationForm):
     class Meta:
         model = Usuario  # tu modelo de usuario custom
         fields = ["full_name", "email", "username", "password1", "password2", "rol"]
+
+
+class FormularioConfiguracion(forms.ModelForm):
+    """Formulario para editar configuraciones del sistema."""
+
+    class Meta:
+        model = Configuracion
+        fields = ['valor', 'descripcion']
+        widgets = {
+            'valor': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ingrese el valor'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción de la configuración'
+            })
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Adaptar el widget según el tipo de valor
+        if self.instance and self.instance.pk:
+            tipo_valor = self.instance.tipo_valor
+
+            if tipo_valor == 'BOOLEAN':
+                self.fields['valor'] = forms.ChoiceField(
+                    choices=[('true', 'Verdadero'), ('false', 'Falso')],
+                    widget=forms.Select(attrs={'class': 'form-control'})
+                )
+                self.fields['valor'].initial = 'true' if self.instance.convertir_valor() else 'false'
+
+            elif tipo_valor == 'NUMBER':
+                self.fields['valor'].widget = forms.NumberInput(attrs={
+                    'class': 'form-control',
+                    'step': 'any'
+                })
+
+            elif tipo_valor == 'EMAIL':
+                self.fields['valor'].widget = forms.EmailInput(attrs={
+                    'class': 'form-control'
+                })
+
+            elif tipo_valor == 'URL':
+                self.fields['valor'].widget = forms.URLInput(attrs={
+                    'class': 'form-control'
+                })
+
+    def clean_valor(self):
+        valor = self.cleaned_data['valor']
+
+        if self.instance and self.instance.pk:
+            tipo_valor = self.instance.tipo_valor
+
+            if tipo_valor == 'NUMBER':
+                try:
+                    float(valor)
+                except ValueError:
+                    raise forms.ValidationError('Debe ingresar un número válido.')
+
+            elif tipo_valor == 'EMAIL':
+                from django.core.validators import validate_email
+                from django.core.exceptions import ValidationError as DjangoValidationError
+                try:
+                    validate_email(valor)
+                except DjangoValidationError:
+                    raise forms.ValidationError('Debe ingresar un email válido.')
+
+        return valor

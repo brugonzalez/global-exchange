@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'reportes.apps.ConfiguracionReportes',
     'notificaciones.apps.ConfiguracionNotificaciones',
     'tauser.apps.TauserConfig',
+    'pagos.apps.PagosConfig',
 ]
 
 MIDDLEWARE = [
@@ -183,6 +184,12 @@ if not EMAIL_HOST_USER:
 # Formularios Crispy
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
+
+# Configuración de django-countries
+# Agregar "Euro" como opción especial para la moneda EUR
+COUNTRIES_OVERRIDE = {
+    'EU': 'Euro',
+}
 
 # Configuración de Seguridad
 SECURE_BROWSER_XSS_FILTER = True

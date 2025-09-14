@@ -268,6 +268,12 @@ class FormularioMoneda(forms.ModelForm):
                 clases_existentes = self.fields[nombre_campo].widget.attrs.get('class', '')
                 if 'parametro-moneda' not in clases_existentes:
                     self.fields[nombre_campo].widget.attrs['class'] = clases_existentes + ' parametro-moneda'
+        
+        # Configurar campos de disponibilidad con JavaScript para control dinámico
+        if 'disponible_para_compra' in self.fields:
+            self.fields['disponible_para_compra'].widget.attrs['onchange'] = 'controlarDisponibilidadComisiones();'
+        if 'disponible_para_venta' in self.fields:
+            self.fields['disponible_para_venta'].widget.attrs['onchange'] = 'controlarDisponibilidadComisiones();'
     
     def _obtener_step_segun_precision(self, precision):
         """Obtiene el step apropiado para un campo según la precisión decimal."""

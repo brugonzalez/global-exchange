@@ -17,10 +17,10 @@ from django.conf import settings
 import uuid
 
 from clientes.views import MixinStaffRequerido
-from .models import Usuario, VerificacionEmail, RestablecimientoContrasena, RegistroAuditoria, Rol, Permiso
+from .models import Usuario, VerificacionEmail, RestablecimientoContrasena, RegistroAuditoria, Rol, Permiso, Configuracion
 from .forms import FormularioLogin, FormularioRegistro, FormularioPerfil, FormularioCambioContrasena, \
     FormularioSolicitudDesbloqueoCuenta, FormularioVerificacionCodigoDesbloqueo, EditarUsuarioForm, \
-    FormularioRegistroUsuario
+    FormularioRegistroUsuario, FormularioConfiguracion
 from clientes.models import Cliente
 from django.utils import timezone
 
@@ -2053,3 +2053,55 @@ def eliminar_usuario(request, usuario_id):
     usuario.delete()
     messages.success(request, f"Usuario {usuario.email} eliminado correctamente.")
     return redirect('cuentas:gestionar_usuarios')
+
+
+class VistaConfiguracionSistema(MixinStaffRequerido, TemplateView):
+    """Vista para gestionar configuraciones del sistema."""
+    template_name = 'cuentas/configuracion_sistema.html'
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+
+        # Agrupar configuraciones por categoría
+        configuraciones = Configuracion.objects.filter(es_editable=True)
+        configuraciones_por_categoria = {}
+
+        for config in configuraciones:
+            categoria = config.categoria
+            if categoria not in configuraciones_por_categoria:
+                configuraciones_por_categoria[categoria] = []
+            configuraciones_por_categoria[categoria].append(config)
+
+        contexto.update({
+            'configuraciones_por_categoria': configuraciones_por_categoria,
+            'total_configuraciones': configuraciones.count(),
+        })
+
+        return contexto
+
+
+class VistaEditarConfiguracion(MixinStaffRequerido, View):
+    """Vista para editar una configuración específica."""
+
+    def get(self, request, config_id):
+        configuracion = get_object_or_404(Configuracion, id=config_id, es_editable=True)
+        formulario = FormularioConfiguracion(instance=configuracion)
+
+        return render(request, 'cuentas/editar_configuracion.html', {
+            'formulario': formulario,
+            'configuracion': configuracion
+        })
+
+    def post(self, request, config_id):
+        configuracion = get_object_or_404(Configuracion, id=config_id, es_editable=True)
+        formulario = FormularioConfiguracion(request.POST, instance=configuracion)
+
+        if formulario.is_valid():
+            formulario.save()
+            messages.success(request, f'Configuración "{configuracion.clave}" actualizada correctamente.')
+            return redirect('cuentas:configuracion_sistema')
+
+        return render(request, 'cuentas/editar_configuracion.html', {
+            'formulario': formulario,
+            'configuracion': configuracion
+        })

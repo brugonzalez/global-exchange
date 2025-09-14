@@ -542,3 +542,231 @@ function crearGrafico(idCanvas, datos, opciones = {}) {
         });
     }
 }
+
+// =================================
+// AUTOCOMPLETADO DE SÍMBOLOS DE MONEDA
+// =================================
+
+/**
+ * Mapeo de códigos ISO de moneda a sus símbolos
+ */
+const MAPEO_SIMBOLOS_MONEDA = {
+    // Monedas principales
+    'USD': '$',        // Dólar Estadounidense
+    'EUR': '€',        // Euro
+    'GBP': '£',        // Libra Esterlina
+    'JPY': '¥',        // Yen Japonés
+    'CHF': '₣',        // Franco Suizo
+    'CAD': 'C$',       // Dólar Canadiense
+    'AUD': 'A$',       // Dólar Australiano
+    'CNY': '¥',        // Yuan Chino
+    'INR': '₹',        // Rupia India
+    'KRW': '₩',        // Won Surcoreano
+    'SEK': 'kr',       // Corona Sueca
+    'NOK': 'kr',       // Corona Noruega
+    'DKK': 'kr',       // Corona Danesa
+    'PLN': 'zł',       // Zloty Polaco
+    'RUB': '₽',        // Rublo Ruso
+    'TRY': '₺',        // Lira Turca
+    'ZAR': 'R',        // Rand Sudafricano
+    'SGD': 'S$',       // Dólar de Singapur
+    'HKD': 'HK$',      // Dólar de Hong Kong
+    'NZD': 'NZ$',      // Dólar Neozelandés
+    'ILS': '₪',        // Shekel Israelí
+    'THB': '฿',        // Baht Tailandés
+    'MYR': 'RM',       // Ringgit Malayo
+    'PHP': '₱',        // Peso Filipino
+    'TWD': 'NT$',      // Dólar Taiwanés
+    
+    // Monedas de América Latina
+    'ARS': '$',        // Peso Argentino
+    'BRL': 'R$',       // Real Brasileño
+    'CLP': '$',        // Peso Chileno
+    'COP': '$',        // Peso Colombiano
+    'PEN': 'S/',       // Nuevo Sol Peruano
+    'UYU': '$',        // Peso Uruguayo
+    'PYG': '₲',        // Guaraní Paraguayo
+    'BOB': 'Bs',       // Boliviano
+    'VES': 'Bs',       // Bolívar Venezolano
+    'CRC': '₡',        // Colón Costarricense
+    'GTQ': 'Q',        // Quetzal Guatemalteco
+    'HNL': 'L',        // Lempira Hondureño
+    'NIO': 'C$',       // Córdoba Nicaragüense
+    'PAB': 'B/.',      // Balboa Panameño
+    'DOP': 'RD$',      // Peso Dominicano
+    'JMD': 'J$',       // Dólar Jamaiquino
+    'TTD': 'TT$',      // Dólar de Trinidad y Tobago
+    'BBD': 'Bds$',     // Dólar de Barbados
+    'XCD': 'EC$',      // Dólar del Caribe Oriental
+    'AWG': 'ƒ',        // Florín Arubeño
+    'MXN': '$',        // Peso Mexicano
+    'CUP': '$',        // Peso Cubano
+    'HTG': 'G',        // Gourde Haitiano
+    
+    // Monedas de Europa
+    'CZK': 'Kč',       // Corona Checa
+    'HUF': 'Ft',       // Forint Húngaro
+    'RON': 'lei',      // Leu Rumano
+    'BGN': 'лв',       // Lev Búlgaro
+    'HRK': 'kn',       // Kuna Croata
+    'ISK': 'kr',       // Corona Islandesa
+    'UAH': '₴',        // Grivna Ucraniana
+    'BYN': 'Br',       // Rublo Bielorruso
+    'MKD': 'ден',      // Denar Macedonio
+    'RSD': 'дин',      // Dinar Serbio
+    'BAM': 'KM',       // Marco Convertible de Bosnia
+    'ALL': 'L',        // Lek Albanés
+    'MDL': 'L',        // Leu Moldavo
+    'GEL': '₾',        // Lari Georgiano
+    'AMD': '֏',        // Dram Armenio
+    'AZN': '₼',        // Manat Azerbaiyano
+    
+    // Monedas de África
+    'NGN': '₦',        // Naira Nigeriana
+    'EGP': '£',        // Libra Egipcia
+    'KES': 'KSh',      // Chelín Keniano
+    'GHS': '₵',        // Cedi Ghanés
+    'UGX': 'USh',      // Chelín Ugandés
+    'TZS': 'TSh',      // Chelín Tanzano
+    'ETB': 'Br',       // Birr Etíope
+    'MAD': 'DH',       // Dirham Marroquí
+    'TND': 'د.ت',      // Dinar Tunecino
+    'DZD': 'د.ج',      // Dinar Argelino
+    'XOF': 'CFA',      // Franco CFA de África Occidental
+    'XAF': 'FCFA',     // Franco CFA de África Central
+    'BWP': 'P',        // Pula de Botsuana
+    'NAD': 'N$',       // Dólar Namibio
+    'SZL': 'L',        // Lilangeni de Suazilandia
+    'LSL': 'L',        // Loti de Lesoto
+    'MWK': 'MK',       // Kwacha Malauí
+    'ZMW': 'ZK',       // Kwacha Zambiano
+    'MZN': 'MT',       // Metical Mozambiqueño
+    'AOA': 'Kz',       // Kwanza Angoleño
+    
+    // Monedas de Asia
+    'SAR': '﷼',        // Riyal Saudí
+    'AED': 'د.إ',       // Dirham de EAU
+    'QAR': '﷼',        // Riyal Qatarí
+    'KWD': 'د.ك',       // Dinar Kuwaití
+    'BHD': '.د.ب',      // Dinar Bahreiní
+    'OMR': '﷼',        // Rial Omaní
+    'JOD': 'د.ا',       // Dinar Jordano
+    'LBP': '£',        // Libra Libanesa
+    'SYP': '£',        // Libra Siria
+    'IQD': 'ع.د',       // Dinar Iraquí
+    'IRR': '﷼',        // Rial Iraní
+    'AFN': '؋',        // Afgani
+    'PKR': '₨',        // Rupia Pakistaní
+    'LKR': '₨',        // Rupia de Sri Lanka
+    'BDT': '৳',        // Taka de Bangladesh
+    'NPR': '₨',        // Rupia Nepalí
+    'BTN': 'Nu.',      // Ngultrum Butanés
+    'MVR': '.ރ',       // Rufiyaa Maldiva
+    'MMK': 'K',        // Kyat Birmano
+    'LAK': '₭',        // Kip Laosiano
+    'KHR': '៛',        // Riel Camboyano
+    'VND': '₫',        // Dong Vietnamita
+    'IDR': 'Rp',       // Rupia Indonesia
+    'BND': 'B$',       // Dólar de Brunéi
+    'KZT': '₸',        // Tenge Kazajo
+    'KGS': 'лв',       // Som Kirguís
+    'TJS': 'SM',       // Somoni Tayiko
+    'TMT': 'T',        // Manat Turkmeno
+    'UZS': 'лв',       // Som Uzbeko
+    'MNT': '₮',        // Tugrik Mongol
+    'KPW': '₩',        // Won Norcoreano
+    
+    // Monedas de Oceanía
+    'FJD': 'FJ$',      // Dólar Fiyiano
+    'TOP': 'T$',       // Pa'anga Tongano
+    'WST': 'WS$',      // Tala Samoano
+    'VUV': 'VT',       // Vatu de Vanuatu
+    'SBD': 'SI$',      // Dólar de las Islas Salomón
+    'PGK': 'K',        // Kina de Papúa Nueva Guinea
+    'XPF': '₣',        // Franco CFP
+    
+    // Criptomonedas principales
+    'BTC': '₿',        // Bitcoin
+    'ETH': 'Ξ',        // Ethereum
+    'LTC': 'Ł',        // Litecoin
+    'BCH': '₿',        // Bitcoin Cash
+    'XRP': 'XRP',      // Ripple
+    'ADA': '₳',        // Cardano
+    'DOT': '●',        // Polkadot
+    'DOGE': 'Ð',       // Dogecoin
+};
+
+/**
+ * Autocompletar símbolo de moneda basado en el código ingresado
+ * @param {string} codigo - Código de moneda (ej: "USD", "EUR")
+ * @returns {string} - Símbolo correspondiente o cadena vacía si no se encuentra
+ */
+function autocompletarSimboloMoneda(codigo) {
+    if (!codigo || typeof codigo !== 'string') {
+        return '';
+    }
+    
+    // Convertir a mayúsculas y limpiar espacios
+    const codigoLimpio = codigo.trim().toUpperCase();
+    
+    // Buscar en el mapeo
+    return MAPEO_SIMBOLOS_MONEDA[codigoLimpio] || '';
+}
+
+/**
+ * Inicializar autocompletado de símbolos para formularios de moneda
+ */
+function inicializarAutocompletadoSimbolos() {
+    // Buscar el campo de código de moneda
+    const campoCodigo = document.querySelector('input[name="codigo"]');
+    const campoSimbolo = document.querySelector('input[name="simbolo"]');
+    
+    if (!campoCodigo || !campoSimbolo) {
+        return; // No hay formulario de moneda en esta página
+    }
+    
+    // Agregar evento de input al campo código
+    campoCodigo.addEventListener('input', function(e) {
+        const codigo = e.target.value;
+        const simbolo = autocompletarSimboloMoneda(codigo);
+        
+        // Solo autocompletar si el campo símbolo está vacío o si el usuario lo prefiere
+        if (simbolo && (!campoSimbolo.value || campoSimbolo.dataset.autocompletado === 'true')) {
+            campoSimbolo.value = simbolo;
+            campoSimbolo.dataset.autocompletado = 'true';
+            
+            // Mostrar un pequeño indicador visual
+            campoSimbolo.style.backgroundColor = '#e8f5e8';
+            setTimeout(() => {
+                campoSimbolo.style.backgroundColor = '';
+            }, 1000);
+        }
+    });
+    
+    // Manejar cuando el usuario modifica manualmente el símbolo
+    campoSimbolo.addEventListener('input', function() {
+        // Marcar que el usuario ha modificado manualmente el símbolo
+        campoSimbolo.dataset.autocompletado = 'false';
+    });
+    
+    // Agregar tooltip con información
+    if (campoCodigo.parentNode) {
+        const tooltipTexto = campoCodigo.parentNode.querySelector('.form-text');
+        if (tooltipTexto) {
+            tooltipTexto.innerHTML += '<br><small class="text-info"><i class="fas fa-magic me-1"></i>El símbolo se autocompletará automáticamente para códigos ISO conocidos.</small>';
+        }
+    }
+}
+
+// Exponer funciones al objeto global IG
+if (typeof IG !== 'undefined') {
+    IG.autocompletarSimboloMoneda = autocompletarSimboloMoneda;
+    IG.inicializarAutocompletadoSimbolos = inicializarAutocompletadoSimbolos;
+}
+
+// Auto-inicializar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarAutocompletadoSimbolos);
+} else {
+    inicializarAutocompletadoSimbolos();
+}
