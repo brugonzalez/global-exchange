@@ -1,3 +1,14 @@
+"""
+URLs de la aplicación de pagos.
+
+Este módulo define las rutas principales relacionadas con:
+
+- Gestión de métodos de pago (asociar, desvincular, activar/desactivar).
+- Visualización de medios de pago asociados a un cliente.
+- Administración de métodos de pago disponibles.
+
+Cada ruta está asociada a una vista basada en clase (CBV) o función de la app ``pagos.views``.
+"""
 from django.urls import path
 from . import views
 
