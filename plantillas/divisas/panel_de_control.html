@@ -85,11 +85,16 @@
                         </a>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <a href="#modalSimulacion" class="btn btn-info btn-lg w-100" data-bs-toggle="modal">
+                        <button onclick="openModal()" class="btn btn-info btn-lg w-100">
                             <i class="fas fa-calculator me-2"></i>
                             <div>Simular</div>
                             <small>Calcular conversiones</small>
-                        </a>
+                        </button>
+                        <!--<a href="#modalSimulacion" class="btn btn-info btn-lg w-100" data-bs-toggle="modal">
+                            <i class="fas fa-calculator me-2"></i>
+                            <div>Simular</div>
+                            <small>Calcular conversiones</small>
+                        </a>-->
                     </div>
                     <div class="col-md-3 mb-3">
                         <a href="{% url 'transacciones:lista_transacciones' %}" class="btn btn-outline-primary btn-lg w-100">
@@ -118,65 +123,71 @@
             {% if datos_tasas %}
                 <div class="row">
                     {% for tasa in datos_tasas %}
-                        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                            <div class="card currency-card h-100" data-currency="{{ tasa.moneda.codigo }}">
-                                <div class="card-body text-center">
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <h5 class="card-title mb-0">
-                                            {% if tasa.moneda.pais %}
-                                                <img src="{{ tasa.moneda.pais.flag }}" 
-                                                    alt="{{ tasa.moneda.pais.name }}" 
-                                                    width="20" height="14"
-                                                    class="align-middle me-1">
-                                            {% else %}
-                                                <div class="d-inline-block align-middle me-1" style="width: 20px; height: 14px; background-color: #f8f9fa; border: 1px solid #dee2e6;"></div>
-                                            {% endif %}
-                                            {{ tasa.moneda.simbolo }} {{ tasa.moneda.codigo }}
-                                        </h5>
-                                    </div>
-                                    
-                                    <h6 class="text-muted">{{ tasa.moneda.nombre }}</h6>
-                                    
-                                    <div class="row mt-3">
-                                        <div class="col-6">
-                                            <div class="border-end">
-                                                <strong class="text-success">Compra</strong>
-                                                <div class="h5 tasa-compra">{{ tasa.tasa_compra|floatformat:0 }} PYG </div>
+                        {% if not tasa.moneda.es_moneda_base %}
+                            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                <div class="card currency-card h-100" data-currency="{{ tasa.moneda.codigo }}">
+                                    <div class="card-body text-center">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <h5 class="card-title mb-0">
+                                                {% if tasa.moneda.pais %}
+                                                    <img src="{{ tasa.moneda.pais.flag }}"
+                                                        alt="{{ tasa.moneda.pais.name }}"
+                                                        width="20" height="14"
+                                                        class="align-middle me-1">
+                                                {% else %}
+                                                    <div class="d-inline-block align-middle me-1" style="width: 20px; height: 14px; background-color: #f8f9fa; border: 1px solid #dee2e6;"></div>
+                                                {% endif %}
+                                                {{ tasa.moneda.simbolo }} {{ tasa.moneda.codigo }}
+                                            </h5>
+                                        </div>
+
+                                        <h6 class="text-muted">{{ tasa.moneda.nombre }}</h6>
+
+                                        <div class="row mt-3">
+                                            <div class="col-6">
+                                                <div class="border-end">
+                                                    <strong class="text-success">Compra</strong>
+                                                    <div class="h5 tasa-compra">{{ tasa.tasa_compra|floatformat:0 }} PYG </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <strong class="text-danger">Venta</strong>
+                                                <div class="h5 tasa-venta">{{ tasa.tasa_venta|floatformat:0 }} PYG</div>
                                             </div>
                                         </div>
-                                        <div class="col-6">
-                                            <strong class="text-danger">Venta</strong>
-                                            <div class="h5 tasa-venta">{{ tasa.tasa_venta|floatformat:0 }} PYG</div>
+
+                                        <div class="mt-3">
+                                            <small class="text-muted ultima-actualizacion">
+                                                Actualizado: {{ tasa.ultima_actualizacion|date:"H:i" }}
+                                            </small>
                                         </div>
-                                    </div>
-                                    
-                                    <div class="mt-3">
-                                        <small class="text-muted ultima-actualizacion">
-                                            Actualizado: {{ tasa.ultima_actualizacion|date:"H:i" }}
-                                        </small>
-                                    </div>
-                                    
-                                    <div class="mt-3">
-                                        <div class="btn-group w-100" role="group">
-                                            <a href="{% url 'divisas:historial_tasa' tasa.moneda.codigo %}" 
-                                               class="btn btn-outline-primary btn-sm">
-                                                <i class="fas fa-chart-area me-1"></i>Historial
-                                            </a>
-                                            {% if user.is_authenticated and puede_operar %}
-                                                <button class="btn btn-outline-success btn-sm" 
-                                                        onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'COMPRA')">
-                                                    <i class="fas fa-arrow-down me-1"></i>Comprar
-                                                </button>
-                                                <button class="btn btn-outline-warning btn-sm" 
-                                                        onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'VENTA')">
-                                                    <i class="fas fa-arrow-up me-1"></i>Vender
-                                                </button>
-                                            {% endif %}
+
+                                        <div class="mt-3">
+                                            <div class="btn-group w-100" role="group">
+                                                <a href="{% url 'divisas:historial_tasa' tasa.moneda.codigo %}"
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-chart-area me-1"></i>Historial
+                                                </a>
+                                                {% if user.is_authenticated and puede_operar %}
+                                                    {% if tasa.moneda.disponible_para_compra %}
+                                                        <button class="btn btn-outline-success btn-sm"
+                                                                onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'COMPRA')">
+                                                            <i class="fas fa-arrow-down me-1"></i>Comprar
+                                                        </button>
+                                                    {% endif %}
+                                                    {% if tasa.moneda.disponible_para_venta %}
+                                                        <button class="btn btn-outline-warning btn-sm"
+                                                                onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'VENTA')">
+                                                            <i class="fas fa-arrow-up me-1"></i>Vender
+                                                        </button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
             {% else %}
@@ -530,22 +541,83 @@
         const elTipoTransaccion = document.getElementById('tipo_transaccion');
         const opcionesMonedaDestino = document.querySelectorAll('#moneda_destino option');
         const opcionesMonedaOrigen = document.querySelectorAll('#moneda_origen option');
+        const selectMonedaOrigen = document.getElementById("moneda_origen");
+        const selectMonedaDestino = document.getElementById("moneda_destino");
+        const datosTasas = JSON.parse('{{ datos_tasas_json|escapejs }}');
+        const resultadoSimulacion = document.getElementById('resultadoSimulacion');
+        const errorSimulacion = document.getElementById('errorSimulacion');
+        const inputMonto = document.getElementById('monto');
         
         if (elTipoTransaccion) elTipoTransaccion.value = tipo;
         
         if (tipo === 'COMPRA') {
-            opcionesMonedaDestino.forEach(opcion => {
-                if (opcion.textContent.indexOf(codigoMoneda) !== -1) {
-                    opcion.selected = true;
+
+            console.log("Selecciono compra");
+            // Habilitar moneda destino y deshabilitar moneda origen
+            selectMonedaDestino.disabled = false;
+            selectMonedaOrigen.disabled = true;
+
+            // Limpiar ambos selects
+            selectMonedaDestino.innerHTML = "";
+            selectMonedaOrigen.innerHTML = "";
+
+            // Agregar la moneda base al select origen
+            const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
+            if (monedaBase) {
+                const opcionBase = document.createElement("option");
+                opcionBase.value = monedaBase.moneda.id;
+                opcionBase.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
+                opcionBase.selected = true;
+                selectMonedaOrigen.appendChild(opcionBase);
+            }
+
+            // Agregar las monedas NO base al select destino
+            datosTasas.forEach(tasa => {
+                if (!tasa.moneda.moneda_base && tasa.moneda.disponible_compra) {
+                    const opcion = document.createElement("option");
+                    opcion.value = tasa.moneda.id;
+                    opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
+                    if(tasa.moneda.codigo === codigoMoneda) {
+                        opcion.selected = true;
+                    }
+                    selectMonedaDestino.appendChild(opcion);
                 }
             });
+
         } else {
-            opcionesMonedaOrigen.forEach(opcion => {
-                if (opcion.textContent.indexOf(codigoMoneda) !== -1) {
-                    opcion.selected = true;
+            console.log("Selecciono venta");
+            // Habilitar moneda origen y deshabilitar moneda destino
+            selectMonedaOrigen.disabled = false;
+            selectMonedaDestino.disabled = true;
+            // Primero vaciamos todas las opciones existentes
+            selectMonedaDestino.innerHTML = "";
+            selectMonedaOrigen.innerHTML = "";
+
+            const nuevaOpcion = document.createElement("option");
+            const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
+            nuevaOpcion.value = monedaBase.id;
+            nuevaOpcion.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
+             // Agregamos la nueva opción al select
+            selectMonedaDestino.appendChild(nuevaOpcion);
+
+            // Agregar las monedas NO base al select origen
+            datosTasas.forEach(tasa => {
+                if (!tasa.moneda.moneda_base && tasa.moneda.disponible_venta) {
+                    const opcion = document.createElement("option");
+                    opcion.value = tasa.moneda.id;
+                    opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
+                    if(tasa.moneda.codigo === codigoMoneda) {
+                        opcion.selected = true;
+                    }
+                    selectMonedaOrigen.appendChild(opcion);
                 }
             });
         }
+
+        // Limpiar resultados previos
+        if (resultadoSimulacion) resultadoSimulacion.style.display = 'none';
+        if (errorSimulacion) errorSimulacion.style.display = 'none';
+        if (inputMonto) inputMonto.value = '';
         
         // Mostrar modal (si la funcionalidad de modal de Bootstrap existe)
         const elModal = document.getElementById('modalSimulacion');
@@ -564,6 +636,21 @@
             } else {
                 window.location.href = '{% url "transacciones:vender" %}';
             }
+        }
+    }
+
+    function openModal() {
+        const elModal = document.getElementById('modalSimulacion');
+        const resultadoSimulacion = document.getElementById('resultadoSimulacion');
+        const errorSimulacion = document.getElementById('errorSimulacion');
+        const inputMonto = document.getElementById('monto');
+        // Limpiar resultados previos
+        if (resultadoSimulacion) resultadoSimulacion.style.display = 'none';
+        if (errorSimulacion) errorSimulacion.style.display = 'none';
+        if (inputMonto) inputMonto.value = '';
+
+        if (elModal && window.bootstrap) {
+            new bootstrap.Modal(elModal).show();
         }
     }
 </script>

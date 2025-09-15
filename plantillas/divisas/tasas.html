@@ -71,14 +71,18 @@
                                             
                                             {% if user.is_authenticated and puede_operar %}
                                                 <div class="btn-group" role="group">
-                                                    <button class="btn btn-success btn-sm" 
-                                                            onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'COMPRA')">
-                                                        <i class="fas fa-arrow-down me-1"></i>Comprar
-                                                    </button>
-                                                    <button class="btn btn-warning btn-sm" 
-                                                            onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'VENTA')">
-                                                        <i class="fas fa-arrow-up me-1"></i>Vender
-                                                    </button>
+                                                    {% if tasa.moneda.disponible_para_compra %}
+                                                        <button class="btn btn-success btn-sm"
+                                                                onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'COMPRA')">
+                                                            <i class="fas fa-arrow-down me-1"></i>Comprar
+                                                        </button>
+                                                    {% endif %}
+                                                    {% if tasa.moneda.disponible_para_venta %}
+                                                        <button class="btn btn-warning btn-sm"
+                                                                onclick="simulacionRapida('{{ tasa.moneda.codigo }}', 'VENTA')">
+                                                            <i class="fas fa-arrow-up me-1"></i>Vender
+                                                        </button>
+                                                    {% endif %}
                                                 </div>
                                             {% endif %}
                                         </div>
