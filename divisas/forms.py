@@ -52,6 +52,78 @@ class FormularioSimulacion(forms.Form):
         }),
         label='Monto'
     )
+
+    cantidad_entrega = forms.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'id': 'cantidad_entrega',
+            'step': '0.01',
+            'min': '0.01',
+            'placeholder': 'Ingrese la cantidad'
+        }),
+        label='Cantidad a Entregar',
+        required=False
+    )
+
+    cantidad_recibir = forms.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'id': 'cantidad_recibir',
+            'step': '0.01',
+            'min': '0.01',
+            'placeholder': 'Ingrese la cantidad'
+        }),
+        label='Cantidad a Recibir',
+        required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        moneda_origen = None
+        moneda_destino = None
+        # Buscar en initial, data o POST
+        if 'initial' in kwargs:
+            moneda_origen = kwargs['initial'].get('moneda_origen')
+            moneda_destino = kwargs['initial'].get('moneda_destino')
+        if 'data' in kwargs:
+            moneda_origen = kwargs['data'].get('moneda_origen') or moneda_origen
+            moneda_destino = kwargs['data'].get('moneda_destino') or moneda_destino
+        # Si es instancia de Moneda, usar directamente
+        if moneda_origen and not isinstance(moneda_origen, Moneda):
+            try:
+                moneda_origen = Moneda.objects.get(pk=moneda_origen)
+            except Exception:
+                moneda_origen = None
+        if moneda_destino and not isinstance(moneda_destino, Moneda):
+            try:
+                moneda_destino = Moneda.objects.get(pk=moneda_destino)
+            except Exception:
+                moneda_destino = None
+        # Configurar step/min para cantidad_entrega
+        if moneda_origen:
+            precision = moneda_origen.lugares_decimales or 2
+            step = self._obtener_step_segun_precision(precision)
+            self.fields['cantidad_entrega'].widget.attrs['step'] = step
+            self.fields['cantidad_entrega'].widget.attrs['min'] = step
+            self.fields['cantidad_entrega'].decimal_places = precision
+        # Configurar step/min para cantidad_recibir
+        if moneda_destino:
+            precision = moneda_destino.lugares_decimales or 2
+            step = self._obtener_step_segun_precision(precision)
+            self.fields['cantidad_recibir'].widget.attrs['step'] = step
+            self.fields['cantidad_recibir'].widget.attrs['min'] = step
+            self.fields['cantidad_recibir'].decimal_places = precision
+
+    def _obtener_step_segun_precision(self, precision):
+        if precision <= 0:
+            return '1'
+        return '0.' + '0' * (precision - 1) + '1'
     
     def clean(self):
         datos_limpios = super().clean()

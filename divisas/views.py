@@ -54,6 +54,7 @@ class VistaPanelControl(TemplateView):
                     'tasa_compra': tasa.tasa_compra,
                     'tasa_venta': tasa.tasa_venta,
                     'ultima_actualizacion': tasa.fecha_actualizacion,
+                    'lugares_decimales': moneda.lugares_decimales
                 })
 
         datos_tasas_js = []
@@ -68,6 +69,7 @@ class VistaPanelControl(TemplateView):
                     'moneda_base': moneda.es_moneda_base,
                     'disponible_compra': moneda.disponible_para_compra,
                     'disponible_venta': moneda.disponible_para_venta,
+                    'lugares_decimales': moneda.lugares_decimales
                 } if moneda else None,
                 'tasa_compra': float(item.get('tasa_compra')) if item.get('tasa_compra') else None,
                 'tasa_venta': float(item.get('tasa_venta')) if item.get('tasa_venta') else None,
