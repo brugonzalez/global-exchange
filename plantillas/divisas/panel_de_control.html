@@ -520,12 +520,108 @@
         reconstruirSelects(selectTipo.value);
         updateTasaAplicada();
 
-        // ...existing code...
         if (formularioSimulacion) {
-            formularioSimulacion.addEventListener('submit', function(e) {
-                e.preventDefault();
-                // ...existing code...
+        formularioSimulacion.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const tipo = selectTipo.value; // "COMPRA" | "VENTA"
+            const montoEntregar = document.getElementById('cantidad_entregar')?.value || '';
+            const montoRecibir  = document.getElementById('cantidad_recibir')?.value || '';
+            const amount = montoEntregar || montoRecibir || '0';
+
+            const datos = new FormData();
+            // Compat + campos que suelen necesitar los endpoints
+            datos.set('tipo_transaccion', tipo);
+            datos.set('transaction_type', tipo === 'COMPRA' ? 'BUY' : 'SELL');
+            datos.set('moneda_origen',  selectMonedaOrigen.value);
+            datos.set('moneda_destino', selectMonedaDestino.value);
+            if (tipo === 'COMPRA') {
+            // Cliente compra divisa: ORIGEN = PYG (base), DESTINO = divisa
+            datos.set('currency_to',   selectMonedaDestino.value);
+            } else {
+            // Cliente vende divisa: ORIGEN = divisa, DESTINO = PYG (base)
+            datos.set('currency_from', selectMonedaOrigen.value);
+            }
+            datos.set('amount', amount); // nombre “genérico”
+            datos.set('monto',  amount); // compat con tu render de resultado
+
+            const tokenCSRF =
+            document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+            document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
+            (document.cookie.split('; ').find(c=>c.startsWith('csrftoken='))||'').split('=')[1];
+
+            try {
+            const resp = await fetch('{% url "divisas:api_simular" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': tokenCSRF },
+                body: datos
             });
+            const respuesta = await resp.json();
+
+            const divError = document.getElementById('errorSimulacion');
+            const divResultado = document.getElementById('resultadoSimulacion');
+            const contenidoResultado = document.getElementById('contenidoResultado');
+            const contenidoError = document.getElementById('contenidoError');
+
+            if (respuesta.success) {
+                if (divError) divError.style.display = 'none';
+
+                const montoConv = (typeof respuesta.monto_convertido === 'number')
+                ? respuesta.monto_convertido.toFixed(4)
+                : respuesta.monto_convertido ?? '—';
+                const tasaTxt = (typeof respuesta.tasa === 'number')
+                ? respuesta.tasa.toFixed(8)
+                : respuesta.tasa ?? '—';
+
+                const htmlResultado = `
+                <div class="row">
+                    <div class="col-md-6">
+                    <strong>Cantidad a entregar:</strong> ${(() => {
+                        const origen = datosTasas.find(t => String(t.moneda.id) === String(selectMonedaOrigen.value));
+                        return isFinite(montoEntregar) && origen ? Number(montoEntregar).toLocaleString('es-ES', {minimumFractionDigits: origen.moneda.lugares_decimales, maximumFractionDigits: origen.moneda.lugares_decimales}) + ' ' + origen.moneda.codigo : '—';
+                    })()}<br>
+                    <strong>Cantidad a recibir:</strong> ${(() => {
+                        const destino = datosTasas.find(t => String(t.moneda.id) === String(selectMonedaDestino.value));
+                        return isFinite(montoRecibir) && destino ? Number(montoRecibir).toLocaleString('es-ES', {minimumFractionDigits: destino.moneda.lugares_decimales, maximumFractionDigits: destino.moneda.lugares_decimales}) + ' ' + destino.moneda.codigo : '—';
+                    })()}
+                    </div>
+                    <div class="col-md-6">
+                    <strong>Tasa Aplicada:</strong> ${(() => {
+                        let textoMoneda = '';
+                        const tipo = selectTipo.value;
+                        let tasa = null;
+                        if (tipo === 'COMPRA') {
+                            const destino = datosTasas.find(t => String(t.moneda.id) === String(selectMonedaDestino.value));
+                            textoMoneda = destino ? destino.moneda.codigo : '';
+                            tasa = destino ? destino.tasa_venta : null;
+                        } else {
+                            const origen = datosTasas.find(t => String(t.moneda.id) === String(selectMonedaOrigen.value));
+                            textoMoneda = origen ? origen.moneda.codigo : '';
+                            tasa = origen ? origen.tasa_compra : null;
+                        }
+                        return isFinite(tasa)
+                            ? Number(tasa).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 8}) + ' PYG = 1 ' + textoMoneda
+                            : tasaTxt;
+                    })()}
+                    </div>
+                </div>
+                `;
+                if (contenidoResultado) contenidoResultado.innerHTML = htmlResultado;
+                if (divResultado) divResultado.style.display = 'block';
+            } else {
+                if (divResultado) divResultado.style.display = 'none';
+                if (contenidoError) contenidoError.textContent = respuesta.error || 'Error desconocido';
+                if (divError) divError.style.display = 'block';
+            }
+            } catch {
+            const divError = document.getElementById('errorSimulacion');
+            const divResultado = document.getElementById('resultadoSimulacion');
+            const contenidoError = document.getElementById('contenidoError');
+            if (divResultado) divResultado.style.display = 'none';
+            if (contenidoError) contenidoError.textContent = 'Error de conexión. Intente nuevamente.';
+            if (divError) divError.style.display = 'block';
+            }
+        });
         }
     });
     
@@ -589,7 +685,7 @@
 
             const nuevaOpcion = document.createElement("option");
             const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
-            nuevaOpcion.value = monedaBase.id;
+            nuevaOpcion.value = monedaBase.moneda.id;
             nuevaOpcion.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
              // Agregamos la nueva opción al select
             selectMonedaDestino.appendChild(nuevaOpcion);
