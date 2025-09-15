@@ -134,8 +134,8 @@
                                                 {% if not rol.es_sistema %}
                                                     <a href="{% url 'cuentas:eliminar_rol' rol.id %}" 
                                                        class="btn btn-outline-danger btn-sm"
-                                                       title="Eliminar rol"
-                                                       onclick="return confirm('¿Está seguro de eliminar este rol?')">
+                                                       title="Eliminar rol">
+                                                       <!-- onclick="return confirm('¿Está seguro de eliminar este rol?')"-->
                                                         <i class="fas fa-trash"></i>
                                                     </a>
                                                 {% endif %}

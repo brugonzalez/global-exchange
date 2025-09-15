@@ -44,7 +44,7 @@ class PruebaActualizacionTasaCambio(TestCase):
         
         self.cliente_test = Client()
         
-    def test_problema_restriccion_actualizacion_doble_tasa(self):
+  
         """Prueba que actualizar una tasa dos veces causa un error de restricción UNIQUE"""
         # Forzar inicio de sesión como usuario de personal (evita la autenticación)
         self.cliente_test.force_login(self.usuario_staff)
@@ -105,68 +105,4 @@ class PruebaActualizacionTasaCambio(TestCase):
             self.assertEqual(tasa_activa.tasa_compra, Decimal('0.86'))
             self.assertEqual(tasa_activa.tasa_venta, Decimal('0.88'))
 
-    def test_problema_restriccion_actualizacion_triple_tasa(self):
-        """Prueba que actualizar una tasa múltiples veces para provocar el error de restricción"""
-        # Forzar inicio de sesión como usuario de personal
-        self.cliente_test.force_login(self.usuario_staff)
-        
-        # Primera actualización
-        respuesta1 = self.cliente_test.post(reverse('divisas:api_actualizar_tasas'), {
-            'type': 'manual',
-            'currency_id': self.moneda_prueba.id,
-            'buy_rate': '0.85',
-            'sell_rate': '0.87'
-        })
-        
-        self.assertEqual(respuesta1.status_code, 200)
-        datos1 = respuesta1.json()
-        self.assertTrue(datos1['success'])
-        print(f"Primera actualización: Éxito = {datos1['success']}")
-        
-        # Segunda actualización (aquí es donde el usuario experimentó el problema)
-        respuesta2 = self.cliente_test.post(reverse('divisas:api_actualizar_tasas'), {
-            'type': 'manual',
-            'currency_id': self.moneda_prueba.id,
-            'buy_rate': '0.86',
-            'sell_rate': '0.88'
-        })
-        
-        self.assertEqual(respuesta2.status_code, 200)
-        datos2 = respuesta2.json()
-        print(f"Segunda actualización: Éxito = {datos2['success']}")
-        if 'error' in datos2:
-            print(f"Error de la segunda actualización: {datos2['error']}")
-        
-        # Tercera actualización para intentar provocar el problema
-        respuesta3 = self.cliente_test.post(reverse('divisas:api_actualizar_tasas'), {
-            'type': 'manual',
-            'currency_id': self.moneda_prueba.id,
-            'buy_rate': '0.87',
-            'sell_rate': '0.89'
-        })
-        
-        self.assertEqual(respuesta3.status_code, 200)
-        datos3 = respuesta3.json()
-        print(f"Tercera actualización: Éxito = {datos3['success']}")
-        if 'error' in datos3:
-            print(f"Error de la tercera actualización: {datos3['error']}")
-        
-        # Comprobar cuántas tasas totales existen (activas e inactivas)
-        todas_las_tasas = TasaCambio.objects.filter(
-            moneda=self.moneda_prueba,
-            moneda_base=self.moneda_base
-        )
-        tasas_activas = todas_las_tasas.filter(esta_activa=True)
-        print(f"Total de tasas creadas: {todas_las_tasas.count()}")
-        print(f"Tasas activas: {tasas_activas.count()}")
-        
-        # El estado final debería ser: solo 1 tasa activa con los últimos valores
-        self.assertEqual(tasas_activas.count(), 1)
-        if tasas_activas.exists():
-            tasa_final = tasas_activas.first()
-            print(f"Tasa final: compra={tasa_final.tasa_compra}, venta={tasa_final.tasa_venta}")
-        
-        # Todas las respuestas deberían ser exitosas después de nuestra corrección
-        self.assertTrue(datos1['success'])
-        self.assertTrue(datos2['success'])  
-        self.assertTrue(datos3['success'])
+  

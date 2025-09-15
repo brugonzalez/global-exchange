@@ -53,7 +53,7 @@ class PruebaIntegracionAsociacionClienteUsuario(TestCase):
         respuesta = self.client.get(url)
         
         self.assertEqual(respuesta.status_code, 200)
-        self.assertContains(respuesta, 'Gestionar Usuarios')
+        self.assertContains(respuesta, 'Asociar Usuarios')
         self.assertContains(respuesta, self.objeto_cliente.obtener_nombre_completo())
     
     def test_carga_pagina_anadir_usuario_cliente(self):
