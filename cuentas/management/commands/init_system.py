@@ -61,14 +61,14 @@ class Command(BaseCommand):
         
         datos_categorias = [
             {
-                'nombre': 'RETAIL',
+                'nombre': 'Minorista',
                 'limite_diario': Decimal('50000.00'),
                 'limite_mensual': Decimal('500000.00'),
                 'margen': Decimal('0.0000'),  # 0%
                 'prioridad': 3
             },
             {
-                'nombre': 'CORPORATE',
+                'nombre': 'Corporativo',
                 'limite_diario': Decimal('500000.00'),
                 'limite_mensual': Decimal('5000000.00'),
                 'margen': Decimal('0.0500'),  # 5%
@@ -194,16 +194,6 @@ class Command(BaseCommand):
                 'grupo': 'DIGITAL_WALLETS'
             },
             {
-                'nombre': 'Tarjeta de Débito',
-                'tipo': 'DEBIT_CARD',
-                'soporta_compra': True,
-                'soporta_venta': False,
-                'monto_minimo': Decimal('100.00'),
-                'horas_procesamiento': 1,
-                'porcentaje_comision': Decimal('2.0000'),  # 2%
-                'grupo': 'CARDS'
-            },
-            {
                 'nombre': 'Tarjeta de Crédito (Stripe)',
                 'tipo': 'CREDIT_CARD',
                 'soporta_compra': True,
@@ -244,7 +234,7 @@ class Command(BaseCommand):
                 'grupo': 'INTERNATIONAL_WALLETS'
             },
             {
-                'nombre': 'Retiro en Caja - Peso Chileno',
+                'nombre': 'Efectivo',
                 'tipo': 'CASH',
                 'soporta_compra': False,
                 'soporta_venta': True,
