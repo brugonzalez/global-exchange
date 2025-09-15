@@ -146,18 +146,14 @@
                                     <th>Fecha y Hora</th>
                                     <th>Tasa de Compra</th>
                                     <th>Tasa de Venta</th>
-                                    <th>Diferencial</th>
-                                    <th>Volumen</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for tasa in historial_tasa %}
                                 <tr>
                                     <td>{{ tasa.marca_de_tiempo|date:"d/m/Y H:i" }}</td>
-                                    <td class="text-success">{{ tasa.tasa_compra|floatformat:4 }}</td>
-                                    <td class="text-danger">{{ tasa.tasa_venta|floatformat:4 }}</td>
-                                    <td><span class="diferencial" data-sell="{{ tasa.tasa_venta }}" data-buy="{{ tasa.tasa_compra }}">-</span></td>
-                                    <td>{{ tasa.volumen|floatformat:2|default:"-" }}</td>
+                                    <td class="text-success">{{ tasa.tasa_compra|floatformat:0 }}</td>
+                                    <td class="text-danger">{{ tasa.tasa_venta|floatformat:0 }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -221,16 +217,16 @@ document.addEventListener('DOMContentLoaded', function() {
             {
                 label: 'Tasa de Compra',
                 data: [
-                    {% for tasa in historial_tasa %}
-                        {{ tasa.tasa_compra }}{% if not forloop.last %},{% endif %}
+                    {% for tasa in historial_tasa|dictsort:"marca_de_tiempo" %}
+                        {{ tasa.tasa_compra|floatformat:0 }}{% if not forloop.last %},{% endif %}
                     {% endfor %}
                 ]
             },
             {
                 label: 'Tasa de Venta',
                 data: [
-                    {% for tasa in historial_tasa %}
-                        {{ tasa.tasa_venta }}{% if not forloop.last %},{% endif %}
+                    {% for tasa in historial_tasa|dictsort:"marca_de_tiempo" %}
+                        {{ tasa.tasa_venta|floatformat:0 }}{% if not forloop.last %},{% endif %}
                     {% endfor %}
                 ]
             }
@@ -257,9 +253,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const variacion = tasasCompra.length > 1 ? 
                 ((tasasCompra[tasasCompra.length - 1] - tasasCompra[0]) / tasasCompra[0] * 100) : 0;
 
-            document.getElementById('tasaMaxima').textContent = IG.formatearMoneda(tasaMaxCompra);
-            document.getElementById('tasaMinima').textContent = IG.formatearMoneda(tasaMinCompra);
-            document.getElementById('tasaPromedio').textContent = IG.formatearMoneda(tasaPromCompra);
+            document.getElementById('tasaMaxima').textContent = IG.formatearMoneda(tasaMaxCompra,0);
+            document.getElementById('tasaMinima').textContent = IG.formatearMoneda(tasaMinCompra,0);
+            document.getElementById('tasaPromedio').textContent = IG.formatearMoneda(tasaPromCompra,0);
             document.getElementById('variacion').textContent = variacion.toFixed(2) + '%';
             
             // Colorear variación según sea positiva/negativa
