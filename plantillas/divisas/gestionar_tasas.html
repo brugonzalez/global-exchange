@@ -202,6 +202,7 @@
                                                             name="precio_base"
                                                             type="number" inputmode="numeric"
                                                             class="form-control text-end precio-base-field"
+                                                            data-precision="{{ info_tasa.moneda.lugares_decimales }}"
                                                             step="any"
                                                             min="0"
                                                             placeholder="0"
@@ -590,8 +591,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const item = formulario.closest('.accordion-item');
                 const badge = item.querySelector('.precio-base-badge');
                 if (badge && data.precio_base_html) {
-                    const valor = parseFloat(data.precio_base_html.replace(/[^0-9.,]/g, ''));
-                    badge.textContent = isNaN(valor) ? data.precio_base_html : valor.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' PYG';
+                    badge.textContent = data.precio_base_html;
                 }
                 const fecha = item.querySelector('.fecha-actualizacion');
                 if (fecha && data.fecha_actualizacion_str) {

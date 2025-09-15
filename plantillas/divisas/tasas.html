@@ -30,6 +30,9 @@
                                         <h5 class="mb-0">
                                             {{ tasa.moneda.simbolo }} {{ tasa.moneda.codigo }}
                                         </h5>
+                                        {% if tasa.moneda.es_moneda_empresa %}
+                                            <span class="badge bg-light text-dark">Propia</span>
+                                        {% endif %}
                                     </div>
                                     <small>{{ tasa.moneda.nombre }}</small>
                                 </div>
@@ -39,14 +42,14 @@
                                             <div class="border-end">
                                                 <h6 class="text-success mb-1">Compra</h6>
                                                 <h4 class="tasa-compra text-success">
-                                                    {{ tasa.tasa_compra|floatformat:0 }}
+                                                    {{ tasa.tasa_compra|floatformat:4 }}
                                                 </h4>
                                             </div>
                                         </div>
                                         <div class="col-6">
                                             <h6 class="text-danger mb-1">Venta</h6>
                                             <h4 class="tasa-venta text-danger">
-                                                {{ tasa.tasa_venta|floatformat:0 }}
+                                                {{ tasa.tasa_venta|floatformat:4 }}
                                             </h4>
                                         </div>
                                     </div>

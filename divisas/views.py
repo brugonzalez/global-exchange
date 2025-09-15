@@ -170,16 +170,11 @@ class VistaHistorialTasa(TemplateView):
             # Todo el tiempo
             fecha_inicio = None
         
-        if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
-            categoria = self.request.user.ultimo_cliente_seleccionado.categoria
-        else:
-            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
-
-        consulta_historial = HistorialTasaCambio.objects.filter(moneda=moneda, categoria_cliente=categoria)
+        consulta_historial = HistorialTasaCambio.objects.filter(moneda=moneda)
         if fecha_inicio:
             consulta_historial = consulta_historial.filter(marca_de_tiempo__gte=fecha_inicio)
         
-        historial = consulta_historial.order_by('-marca_de_tiempo')
+        historial = consulta_historial.order_by('marca_de_tiempo')
         
         contexto.update({
             'moneda': moneda,
