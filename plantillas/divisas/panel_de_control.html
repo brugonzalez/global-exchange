@@ -333,7 +333,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="moneda_origen" class="form-label">Moneda Origen</label>
-                            <select class="form-select" id="moneda_origen" name="moneda_origen" disabled>
+                            <select class="form-select" id="moneda_origen" name="moneda_origen">
                                 {% for tasa in datos_tasas %}
                                     <option value="{{ tasa.moneda.id }}" {% if tasa.moneda.es_moneda_base %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
                                 {% endfor %}
@@ -419,6 +419,62 @@
         const selectMonedaDestino = document.getElementById("moneda_destino");
         const tasaAplicadaDiv = document.getElementById("tasa_aplicada");
 
+        function reconstruirSelects(tipo, codigoMoneda) {
+            if (tipo === 'COMPRA') {
+                selectMonedaDestino.disabled = false;
+                selectMonedaOrigen.disabled = true;
+                selectMonedaDestino.innerHTML = "";
+                selectMonedaOrigen.innerHTML = "";
+                // Moneda base en origen
+                const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
+                if (monedaBase) {
+                    const opcionBase = document.createElement("option");
+                    opcionBase.value = monedaBase.moneda.id;
+                    opcionBase.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
+                    opcionBase.selected = true;
+                    selectMonedaOrigen.appendChild(opcionBase);
+                }
+                // Monedas extranjeras en destino
+                datosTasas.forEach(tasa => {
+                    if (!tasa.moneda.moneda_base && tasa.moneda.disponible_compra) {
+                        const opcion = document.createElement("option");
+                        opcion.value = tasa.moneda.id;
+                        opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
+                        if (codigoMoneda && tasa.moneda.codigo === codigoMoneda) {
+                            opcion.selected = true;
+                        }
+                        selectMonedaDestino.appendChild(opcion);
+                    }
+                });
+            } else {
+                selectMonedaOrigen.disabled = false;
+                selectMonedaDestino.disabled = true;
+                selectMonedaDestino.innerHTML = "";
+                selectMonedaOrigen.innerHTML = "";
+                // Moneda base en destino
+                const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
+                if (monedaBase) {
+                    const opcionBase = document.createElement("option");
+                    opcionBase.value = monedaBase.moneda.id;
+                    opcionBase.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
+                    opcionBase.selected = true;
+                    selectMonedaDestino.appendChild(opcionBase);
+                }
+                // Monedas extranjeras en origen
+                datosTasas.forEach(tasa => {
+                    if (!tasa.moneda.moneda_base && tasa.moneda.disponible_venta) {
+                        const opcion = document.createElement("option");
+                        opcion.value = tasa.moneda.id;
+                        opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
+                        if (codigoMoneda && tasa.moneda.codigo === codigoMoneda) {
+                            opcion.selected = true;
+                        }
+                        selectMonedaOrigen.appendChild(opcion);
+                    }
+                });
+            }
+        }
+
         function getTasaAplicada() {
             const tipo = selectTipo.value;
             let tasa = null;
@@ -439,15 +495,28 @@
         function updateTasaAplicada() {
             const tasa = getTasaAplicada();
             if (tasaAplicadaDiv) {
-                tasaAplicadaDiv.textContent = tasa !== null && tasa !== undefined ? Number(tasa).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 8}) : '—';
+                let textoMoneda = '';
+                const tipo = selectTipo.value;
+                if (tipo === 'COMPRA') {
+                    // Moneda destino es la extranjera
+                    textoMoneda = selectMonedaDestino.options[selectMonedaDestino.selectedIndex]?.text || '';
+                } else {
+                    // Moneda origen es la extranjera
+                    textoMoneda = selectMonedaOrigen.options[selectMonedaOrigen.selectedIndex]?.text || '';
+                }
+                tasaAplicadaDiv.textContent = tasa !== null && tasa !== undefined ? Number(tasa).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 8}) + ' PYG = 1 ' + textoMoneda : '—';
             }
         }
 
-        selectTipo.addEventListener("change", updateTasaAplicada);
+        selectTipo.addEventListener("change", function() {
+            reconstruirSelects(selectTipo.value);
+            updateTasaAplicada();
+        });
         selectMonedaOrigen.addEventListener("change", updateTasaAplicada);
         selectMonedaDestino.addEventListener("change", updateTasaAplicada);
 
         // Inicializar al cargar
+        reconstruirSelects(selectTipo.value);
         updateTasaAplicada();
 
         // ...existing code...
