@@ -313,6 +313,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                Nota: Los resultados de la simulación son aproximados y no constituyen una oferta vinculante.
                 <form id="formularioSimulacion">
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -323,15 +324,17 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="monto" class="form-label">Monto</label>
-                            <input type="number" class="form-control" id="monto" name="monto" 
-                                   step="0.01" min="0.01" placeholder="Ingrese el monto">
+                            <label for="tasa_aplicada" class="form-label">Tasa de cambio aplicada</label>
+                            <div id="tasa_aplicada" class="form-control-plaintext fw-semibold">
+                                <!-- Si la operación es compra: mostrar la tasa de venta, si la operación es venta: mostrar la tasa de compra -->
+                                <!-- La tasa se actualizará dinámicamente por JS -->
+                            </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="moneda_origen" class="form-label">Moneda Origen</label>
-                            <select class="form-select" id="moneda_origen" name="moneda_origen" disabled>
+                            <select class="form-select" id="moneda_origen" name="moneda_origen">
                                 {% for tasa in datos_tasas %}
                                     <option value="{{ tasa.moneda.id }}" {% if tasa.moneda.es_moneda_base %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
                                 {% endfor %}
@@ -341,6 +344,11 @@
                                     <input type="hidden" name="pais" value="{{ tasa.moneda.id }}" id="moneda_origen_input">
                                 {% endif %}
                             {% endfor %}
+                            <div class="mt-2">
+                                <label for="cantidad_entregar" class="form-label">Cantidad a entregar</label>
+                                <input type="number" class="form-control" id="cantidad_entregar" name="cantidad_entregar"
+                                    step="1" min="0" placeholder="0" autocomplete="off">
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="moneda_destino" class="form-label">Moneda Destino</label>
@@ -359,6 +367,11 @@
                                     {% endif %}
                                 {% endfor %}
                             </select>
+                            <div class="mt-2">
+                                <label for="cantidad_recibir" class="form-label">Cantidad a recibir</label>
+                                <input type="number" class="form-control" id="cantidad_recibir" name="cantidad_recibir"
+                                    step="1" min="0" placeholder="0" autocomplete="off">
+                            </div>
                         </div>
                     </div>
                     <div class="row">
@@ -402,53 +415,18 @@
     document.addEventListener('DOMContentLoaded', function() {
         const formularioSimulacion = document.getElementById('formularioSimulacion');
         const datosTasas = JSON.parse('{{ datos_tasas_json|escapejs }}');
-        console.log("Tasas desde backend:", datosTasas);
-
         const selectTipo = document.getElementById("tipo_transaccion");
         const selectMonedaOrigen = document.getElementById("moneda_origen");
         const selectMonedaDestino = document.getElementById("moneda_destino");
+        const tasaAplicadaDiv = document.getElementById("tasa_aplicada");
 
-        // Escuchar el cambio en el select
-        selectTipo.addEventListener("change", function(event) {
-            const valorSeleccionado = event.target.value;
-            console.log("Nuevo valor:", valorSeleccionado);
-
-            if (valorSeleccionado === "VENTA") {
-                console.log("Selecciono venta");
-                // Habilitar moneda origen y deshabilitar moneda destino
-                selectMonedaOrigen.disabled = false;
-                selectMonedaDestino.disabled = true;
-                // Primero vaciamos todas las opciones existentes
-                selectMonedaDestino.innerHTML = "";
-                selectMonedaOrigen.innerHTML = "";
-
-                const nuevaOpcion = document.createElement("option");
-                const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
-                nuevaOpcion.value = monedaBase.id;
-                nuevaOpcion.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
-                 // Agregamos la nueva opción al select
-                selectMonedaDestino.appendChild(nuevaOpcion);
-
-                // Agregar las monedas NO base al select origen
-                datosTasas.forEach(tasa => {
-                    if (!tasa.moneda.moneda_base && tasa.moneda.disponible_venta) {
-                        const opcion = document.createElement("option");
-                        opcion.value = tasa.moneda.id;
-                        opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
-                        selectMonedaOrigen.appendChild(opcion);
-                    }
-                });
-            } else if (valorSeleccionado === "COMPRA") {
-                console.log("Selecciono compra");
-                // Habilitar moneda destino y deshabilitar moneda origen
+        function reconstruirSelects(tipo, codigoMoneda) {
+            if (tipo === 'COMPRA') {
                 selectMonedaDestino.disabled = false;
                 selectMonedaOrigen.disabled = true;
-
-                // Limpiar ambos selects
                 selectMonedaDestino.innerHTML = "";
                 selectMonedaOrigen.innerHTML = "";
-
-                // Agregar la moneda base al select origen
+                // Moneda base en origen
                 const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
                 if (monedaBase) {
                     const opcionBase = document.createElement("option");
@@ -457,81 +435,193 @@
                     opcionBase.selected = true;
                     selectMonedaOrigen.appendChild(opcionBase);
                 }
-
-                // Agregar las monedas NO base al select destino
+                // Monedas extranjeras en destino
                 datosTasas.forEach(tasa => {
                     if (!tasa.moneda.moneda_base && tasa.moneda.disponible_compra) {
                         const opcion = document.createElement("option");
                         opcion.value = tasa.moneda.id;
                         opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
+                        if (codigoMoneda && tasa.moneda.codigo === codigoMoneda) {
+                            opcion.selected = true;
+                        }
                         selectMonedaDestino.appendChild(opcion);
                     }
                 });
+            } else {
+                selectMonedaOrigen.disabled = false;
+                selectMonedaDestino.disabled = true;
+                selectMonedaDestino.innerHTML = "";
+                selectMonedaOrigen.innerHTML = "";
+                // Moneda base en destino
+                const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
+                if (monedaBase) {
+                    const opcionBase = document.createElement("option");
+                    opcionBase.value = monedaBase.moneda.id;
+                    opcionBase.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
+                    opcionBase.selected = true;
+                    selectMonedaDestino.appendChild(opcionBase);
+                }
+                // Monedas extranjeras en origen
+                datosTasas.forEach(tasa => {
+                    if (!tasa.moneda.moneda_base && tasa.moneda.disponible_venta) {
+                        const opcion = document.createElement("option");
+                        opcion.value = tasa.moneda.id;
+                        opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
+                        if (codigoMoneda && tasa.moneda.codigo === codigoMoneda) {
+                            opcion.selected = true;
+                        }
+                        selectMonedaOrigen.appendChild(opcion);
+                    }
+                });
             }
+        }
+
+        function getTasaAplicada() {
+            const tipo = selectTipo.value;
+            let tasa = null;
+            if (tipo === "COMPRA") {
+                // Usar tasa_venta de la moneda destino
+                const idDestino = selectMonedaDestino.value;
+                const objDestino = datosTasas.find(t => String(t.moneda.id) === String(idDestino));
+                tasa = objDestino ? objDestino.tasa_venta : null;
+            } else {
+                // Usar tasa_compra de la moneda origen
+                const idOrigen = selectMonedaOrigen.value;
+                const objOrigen = datosTasas.find(t => String(t.moneda.id) === String(idOrigen));
+                tasa = objOrigen ? objOrigen.tasa_compra : null;
+            }
+            return tasa;
+        }
+
+        function updateTasaAplicada() {
+            const tasa = getTasaAplicada();
+            if (tasaAplicadaDiv) {
+                let textoMoneda = '';
+                const tipo = selectTipo.value;
+                if (tipo === 'COMPRA') {
+                    // Moneda destino es la extranjera
+                    textoMoneda = selectMonedaDestino.options[selectMonedaDestino.selectedIndex]?.text || '';
+                } else {
+                    // Moneda origen es la extranjera
+                    textoMoneda = selectMonedaOrigen.options[selectMonedaOrigen.selectedIndex]?.text || '';
+                }
+                tasaAplicadaDiv.textContent = tasa !== null && tasa !== undefined ? Number(tasa).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 8}) + ' PYG = 1 ' + textoMoneda : '—';
+            }
+        }
+
+        selectTipo.addEventListener("change", function() {
+            reconstruirSelects(selectTipo.value);
+            updateTasaAplicada();
         });
+        selectMonedaOrigen.addEventListener("change", updateTasaAplicada);
+        selectMonedaDestino.addEventListener("change", updateTasaAplicada);
+
+        // Inicializar al cargar
+        reconstruirSelects(selectTipo.value);
+        updateTasaAplicada();
 
         if (formularioSimulacion) {
-            formularioSimulacion.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const datosFormulario = new FormData(this);
-                
-                // Añadir token CSRF
-                const tokenCSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                                 document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
-                                 IG.obtenerCookie('csrftoken');
-                
-                fetch('{% url "divisas:api_simular" %}', {
-                    method: 'POST',
-                    body: datosFormulario,
-                    headers: {
-                        'X-CSRFToken': tokenCSRF
-                    }
-                })
-                .then(response => response.json())
-                .then(function(respuesta) {
-                    const divError = document.getElementById('errorSimulacion');
-                    const divResultado = document.getElementById('resultadoSimulacion');
-                    const contenidoResultado = document.getElementById('contenidoResultado');
-                    const contenidoError = document.getElementById('contenidoError');
-                    
-                    if (respuesta.success) {
-                        if (divError) divError.style.display = 'none';
-                        
-                        const htmlResultado = `
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <strong>Monto Original:</strong> ${datosFormulario.get('monto')}
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Monto Convertido:</strong> ${respuesta.monto_convertido.toFixed(4)}
-                                </div>
-                            </div>
-                            <div class="row mt-2">
-                                <div class="col-12">
-                                    <strong>Tasa Aplicada:</strong> ${respuesta.tasa.toFixed(8)}
-                                </div>
-                            </div>
-                        `;
-                        
-                        if (contenidoResultado) contenidoResultado.innerHTML = htmlResultado;
-                        if (divResultado) divResultado.style.display = 'block';
-                    } else {
-                        if (divResultado) divResultado.style.display = 'none';
-                        if (contenidoError) contenidoError.textContent = respuesta.error || 'Error desconocido';
-                        if (divError) divError.style.display = 'block';
-                    }
-                })
-                .catch(function() {
-                    const divError = document.getElementById('errorSimulacion');
-                    const divResultado = document.getElementById('resultadoSimulacion');
-                    const contenidoError = document.getElementById('contenidoError');
-                    
-                    if (divResultado) divResultado.style.display = 'none';
-                    if (contenidoError) contenidoError.textContent = 'Error de conexión. Intente nuevamente.';
-                    if (divError) divError.style.display = 'block';
-                });
+        formularioSimulacion.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const tipo = selectTipo.value; // "COMPRA" | "VENTA"
+            const montoEntregar = document.getElementById('cantidad_entregar')?.value || '';
+            const montoRecibir  = document.getElementById('cantidad_recibir')?.value || '';
+            const amount = montoEntregar || montoRecibir || '0';
+
+            const datos = new FormData();
+            // Compat + campos que suelen necesitar los endpoints
+            datos.set('tipo_transaccion', tipo);
+            datos.set('transaction_type', tipo === 'COMPRA' ? 'BUY' : 'SELL');
+            datos.set('moneda_origen',  selectMonedaOrigen.value);
+            datos.set('moneda_destino', selectMonedaDestino.value);
+            if (tipo === 'COMPRA') {
+            // Cliente compra divisa: ORIGEN = PYG (base), DESTINO = divisa
+            datos.set('currency_to',   selectMonedaDestino.value);
+            } else {
+            // Cliente vende divisa: ORIGEN = divisa, DESTINO = PYG (base)
+            datos.set('currency_from', selectMonedaOrigen.value);
+            }
+            datos.set('amount', amount); // nombre “genérico”
+            datos.set('monto',  amount); // compat con tu render de resultado
+
+            const tokenCSRF =
+            document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+            document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
+            (document.cookie.split('; ').find(c=>c.startsWith('csrftoken='))||'').split('=')[1];
+
+            try {
+            const resp = await fetch('{% url "divisas:api_simular" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': tokenCSRF },
+                body: datos
             });
+            const respuesta = await resp.json();
+
+            const divError = document.getElementById('errorSimulacion');
+            const divResultado = document.getElementById('resultadoSimulacion');
+            const contenidoResultado = document.getElementById('contenidoResultado');
+            const contenidoError = document.getElementById('contenidoError');
+
+            if (respuesta.success) {
+                if (divError) divError.style.display = 'none';
+
+                const montoConv = (typeof respuesta.monto_convertido === 'number')
+                ? respuesta.monto_convertido.toFixed(4)
+                : respuesta.monto_convertido ?? '—';
+                const tasaTxt = (typeof respuesta.tasa === 'number')
+                ? respuesta.tasa.toFixed(8)
+                : respuesta.tasa ?? '—';
+
+                const htmlResultado = `
+                <div class="row">
+                    <div class="col-md-6">
+                    <strong>Cantidad a entregar:</strong> ${(() => {
+                        const origen = datosTasas.find(t => String(t.moneda.id) === String(selectMonedaOrigen.value));
+                        return isFinite(montoEntregar) && origen ? Number(montoEntregar).toLocaleString('es-ES', {minimumFractionDigits: origen.moneda.lugares_decimales, maximumFractionDigits: origen.moneda.lugares_decimales}) + ' ' + origen.moneda.codigo : '—';
+                    })()}<br>
+                    <strong>Cantidad a recibir:</strong> ${(() => {
+                        const destino = datosTasas.find(t => String(t.moneda.id) === String(selectMonedaDestino.value));
+                        return isFinite(montoRecibir) && destino ? Number(montoRecibir).toLocaleString('es-ES', {minimumFractionDigits: destino.moneda.lugares_decimales, maximumFractionDigits: destino.moneda.lugares_decimales}) + ' ' + destino.moneda.codigo : '—';
+                    })()}
+                    </div>
+                    <div class="col-md-6">
+                    <strong>Tasa Aplicada:</strong> ${(() => {
+                        let textoMoneda = '';
+                        const tipo = selectTipo.value;
+                        let tasa = null;
+                        if (tipo === 'COMPRA') {
+                            const destino = datosTasas.find(t => String(t.moneda.id) === String(selectMonedaDestino.value));
+                            textoMoneda = destino ? destino.moneda.codigo : '';
+                            tasa = destino ? destino.tasa_venta : null;
+                        } else {
+                            const origen = datosTasas.find(t => String(t.moneda.id) === String(selectMonedaOrigen.value));
+                            textoMoneda = origen ? origen.moneda.codigo : '';
+                            tasa = origen ? origen.tasa_compra : null;
+                        }
+                        return isFinite(tasa)
+                            ? Number(tasa).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 8}) + ' PYG = 1 ' + textoMoneda
+                            : tasaTxt;
+                    })()}
+                    </div>
+                </div>
+                `;
+                if (contenidoResultado) contenidoResultado.innerHTML = htmlResultado;
+                if (divResultado) divResultado.style.display = 'block';
+            } else {
+                if (divResultado) divResultado.style.display = 'none';
+                if (contenidoError) contenidoError.textContent = respuesta.error || 'Error desconocido';
+                if (divError) divError.style.display = 'block';
+            }
+            } catch {
+            const divError = document.getElementById('errorSimulacion');
+            const divResultado = document.getElementById('resultadoSimulacion');
+            const contenidoError = document.getElementById('contenidoError');
+            if (divResultado) divResultado.style.display = 'none';
+            if (contenidoError) contenidoError.textContent = 'Error de conexión. Intente nuevamente.';
+            if (divError) divError.style.display = 'block';
+            }
+        });
         }
     });
     
@@ -595,7 +685,7 @@
 
             const nuevaOpcion = document.createElement("option");
             const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
-            nuevaOpcion.value = monedaBase.id;
+            nuevaOpcion.value = monedaBase.moneda.id;
             nuevaOpcion.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
              // Agregamos la nueva opción al select
             selectMonedaDestino.appendChild(nuevaOpcion);
@@ -629,12 +719,29 @@
     // Función para proceder con la transacción
     function procederConTransaccion() {
         const elTipoTransaccion = document.getElementById('tipo_transaccion');
+        const monedaOrigen = document.getElementById('moneda_origen');
+        const monedaDestino = document.getElementById('moneda_destino');
+        const cantidadEntregar = document.getElementById('cantidad_entregar');
+        const cantidadRecibir = document.getElementById('cantidad_recibir');
         if (elTipoTransaccion) {
             const tipo = elTipoTransaccion.value;
+            // Obtiene los valores actuales
+            const moneda_origen = monedaOrigen ? monedaOrigen.value : '';
+            const moneda_destino = monedaDestino ? monedaDestino.value : '';
+            const monto_entregar = cantidadEntregar ? cantidadEntregar.value : '';
+            const monto_recibir = cantidadRecibir ? cantidadRecibir.value : '';
+            // Construye los parámetros para la URL
+            const params = new URLSearchParams({
+                tipo_transaccion: tipo,
+                moneda_origen,
+                moneda_destino,
+                monto_entregar,
+                monto_recibir
+            }).toString();
             if (tipo === 'COMPRA') {
-                window.location.href = '{% url "transacciones:comprar" %}';
+                window.location.href = '{% url "transacciones:comprar" %}?' + params;
             } else {
-                window.location.href = '{% url "transacciones:vender" %}';
+                window.location.href = '{% url "transacciones:vender" %}?' + params;
             }
         }
     }
@@ -654,4 +761,180 @@
         }
     }
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const datosTasas = JSON.parse('{{ datos_tasas_json|escapejs }}');
+
+  const tipoSel    = document.getElementById('tipo_transaccion');
+  const selOrigen  = document.getElementById('moneda_origen');
+  const selDestino = document.getElementById('moneda_destino');
+  const inpEntregar= document.getElementById('cantidad_entregar');
+  const inpRecibir = document.getElementById('cantidad_recibir');
+  const tasaOut    = document.getElementById('tasa_aplicada');
+
+  let lock = false; // evita loops de eventos
+
+  function findItemByMonedaId(id) {
+    return datosTasas.find(t => String(t.moneda.id) === String(id));
+  }
+
+  function getDecimalsByMonedaId(id) {
+    const it = findItemByMonedaId(id);
+    const d  = parseInt(it?.moneda?.lugares_decimales ?? 2, 10);
+    return Number.isFinite(d) ? Math.max(0, Math.min(8, d)) : 2;
+  }
+
+  function stepFromDecimals(d) { return d <= 0 ? '1' : `1e-${d}`; }
+
+  function applyStepsPlaceholders() {
+    const dEnt = getDecimalsByMonedaId(selOrigen.value);
+    const dRec = getDecimalsByMonedaId(selDestino.value);
+
+    if (inpEntregar) {
+      inpEntregar.step = stepFromDecimals(dEnt);
+      inpEntregar.placeholder = dEnt === 0 ? '0' : ('0.' + '0'.repeat(dEnt));
+      inpEntregar.inputMode = 'decimal';
+      inpEntregar.dataset.decimals = dEnt;
+    }
+    if (inpRecibir) {
+      inpRecibir.step = stepFromDecimals(dRec);
+      inpRecibir.placeholder = dRec === 0 ? '0' : ('0.' + '0'.repeat(dRec));
+      inpRecibir.inputMode = 'decimal';
+      inpRecibir.dataset.decimals = dRec;
+    }
+  }
+
+  // Tasa aplicada: COMPRA -> tasa_venta (de la moneda destino), VENTA -> tasa_compra (de la moneda origen)
+  function getTasa() {
+    if (tipoSel.value === 'COMPRA') {
+      const item = findItemByMonedaId(selDestino.value);
+      return item ? Number(item.tasa_venta) : NaN;
+    } else {
+      const item = findItemByMonedaId(selOrigen.value);
+      return item ? Number(item.tasa_compra) : NaN;
+    }
+  }
+
+  function pintarTasa() {
+    const t = getTasa();
+    if (!tasaOut) return;
+    const labelMoneda = (tipoSel.value === 'COMPRA'
+      ? selDestino.options[selDestino.selectedIndex]?.text
+      : selOrigen.options[selOrigen.selectedIndex]?.text) || '';
+    tasaOut.textContent = (isFinite(t) ? t.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 8 }) + ' PYG = 1 ' + labelMoneda : '—');
+  }
+
+  function calcDesdeEntregar() {
+    if (lock) return; lock = true;
+    const t = getTasa();
+    const x = Number(inpEntregar.value);
+    const dRec = getDecimalsByMonedaId(selDestino.value);
+    if (!isFinite(x) || x <= 0 || !isFinite(t) || t <= 0) {
+      inpRecibir.value = '';
+      lock = false; return;
+    }
+    if (tipoSel.value === 'COMPRA') {
+      // entrega Gs, recibe divisa
+      inpRecibir.value = (x / t).toFixed(dRec);
+    } else {
+      // entrega divisa, recibe Gs
+      inpRecibir.value = (x * t).toFixed(dRec);
+    }
+    lock = false;
+  }
+
+  function calcDesdeRecibir() {
+    if (lock) return; lock = true;
+    const t = getTasa();
+    const y = Number(inpRecibir.value);
+    const dEnt = getDecimalsByMonedaId(selOrigen.value);
+    if (!isFinite(y) || y <= 0 || !isFinite(t) || t <= 0) {
+      inpEntregar.value = '';
+      lock = false; return;
+    }
+    if (tipoSel.value === 'COMPRA') {
+      // entregar Gs = recibir * tasa_venta
+      inpEntregar.value = (y * t).toFixed(dEnt);
+    } else {
+      // entregar divisa = recibir Gs / tasa_compra
+      inpEntregar.value = (y / t).toFixed(dEnt);
+    }
+    lock = false;
+  }
+
+  function recalcAuto() {
+    pintarTasa();
+    applyStepsPlaceholders();
+    // recalcula en función de cuál tiene valor
+    if (inpEntregar.value) calcDesdeEntregar();
+    else if (inpRecibir.value) calcDesdeRecibir();
+  }
+
+  // === Listeners para calcular en cada caracter ===
+  inpEntregar && inpEntregar.addEventListener('input', calcDesdeEntregar);
+  inpRecibir  && inpRecibir.addEventListener('input',  calcDesdeRecibir);
+
+  // Cuando cambia el tipo o las monedas, actualizamos tasa, steps y recalculamos
+  tipoSel   && tipoSel.addEventListener('change',  recalcAuto);
+  selOrigen && selOrigen.addEventListener('change', recalcAuto);
+  selDestino&& selDestino.addEventListener('change',recalcAuto);
+
+  // Init
+  applyStepsPlaceholders();
+  pintarTasa();
+});
+document.addEventListener('DOMContentLoaded', function () {
+  const modalEl   = document.getElementById('modalSimulacion');
+  const form      = document.getElementById('formularioSimulacion');
+  const tipoSel   = document.getElementById('tipo_transaccion');
+  const selOrigen = document.getElementById('moneda_origen');
+  const selDestino= document.getElementById('moneda_destino');
+  const ent       = document.getElementById('cantidad_entregar');
+  const rec       = document.getElementById('cantidad_recibir');
+  const tasaOut   = document.getElementById('tasa_aplicada');
+
+  // Usa tu propia función reconstruirSelects si ya la tienes en ese scope:
+  const datosTasas = JSON.parse('{{ datos_tasas_json|escapejs }}');
+  function reconstruirSelects(tipo) {
+    // --- misma implementación que ya tienes arriba ---
+    // (pega aquí o llama a la que ya definiste en el script anterior)
+  }
+
+  function resetSimulador() {
+    // 1) Resetea el form (limpia inputs y vuelve selects a su markup inicial)
+    if (form) form.reset();
+
+    // 2) Fuerza estado inicial deseado:
+    if (tipoSel) tipoSel.value = 'COMPRA';    // o lo que quieras por defecto
+
+    // 3) Reconstruye selects base/extranjeras según “COMPRA”
+    reconstruirSelects(tipoSel.value);
+
+    // 4) Limpia campos, resultados y tasa
+    if (ent) ent.value = '';
+    if (rec) rec.value = '';
+
+    // 5) Oculta tarjetas de resultado/error
+    const resBox = document.getElementById('resultadoSimulacion');
+    const errBox = document.getElementById('errorSimulacion');
+    if (resBox) resBox.style.display = 'none';
+    if (errBox) errBox.style.display = 'none';
+  }
+
+  if (modalEl) {
+    // Al ABRIR: limpia todo y enfoca el primer campo
+    modalEl.addEventListener('shown.bs.modal', function () {
+      resetSimulador();
+      // enfocar cantidad a entregar
+      setTimeout(() => ent && ent.focus(), 0);
+    });
+
+    // Al CERRAR: por si el navegador intenta recordar, deja todo vacío
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      resetSimulador();
+    });
+  }
+});
+</script>
+
 {% endblock %}
