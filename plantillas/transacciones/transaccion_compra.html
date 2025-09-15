@@ -185,7 +185,7 @@
                         </p>
                     </div>
                     
-                    <div id="infoComision" style="display: none;">
+                    <div id="infoComision" class="d-none" style="display: none;">
                         <hr>
                         <h6>Comisiones:</h6>
                         <div id="detallesComision"></div>
@@ -314,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         infoTasa.innerHTML = `
                             <p><strong>Tasa de Cambio:</strong><br>
                             1 ${monedaDestino.options[monedaDestino.selectedIndex].text}</p>
+                            <p class="mb-0">Equivalente en <strong>${tasaCompra} Gs</strong><br>
                         `;
 
                         infoComision.style.display = 'block';
