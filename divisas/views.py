@@ -1304,15 +1304,38 @@ class VistaActualizarTasa(LoginRequiredMixin, TemplateView):
 class VistaGestionarMonedas(LoginRequiredMixin, TemplateView):
     """
     Vista de administración para gestionar monedas.
+    Se puede buscar, filtrar por estado, ver estadísticas y
+    acceder a crear/editar/eliminar monedas.
+
+
     """
     template_name = 'divisas/gestionar_monedas.html'
 
     def dispatch(self, request, *args, **kwargs):
+        ''' 
+        Controla el acceso (solo admin).
+        
+        Returns
+        -------
+        HttpResponse
+            Redirección a la página de panel de control si no es admin, en caso contrario continúa
+            el flujo normal.
+        '''
         if not request.user.es_administrador:
             return redirect('divisas:panel_de_control')
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        """
+        Construye el contexto con filtros aplicados y métricas globales.
+
+        Returns
+        -------
+        dict
+            Diccionario de contexto listo para la plantilla:
+            `monedas_con_stats`, `total_monedas`, `monedas_activas`,
+            `monedas_inactivas`, `moneda_base`, `busqueda`, `estado_filtro`.
+        """
         contexto = super().get_context_data(**kwargs)
         
         # Obtener parámetros de búsqueda y filtrado
@@ -1363,7 +1386,13 @@ class VistaGestionarMonedas(LoginRequiredMixin, TemplateView):
 
 class VistaCrearMoneda(LoginRequiredMixin, CreateView):
     """
-    Vista para crear una nueva moneda.
+    Vista para crear una nueva moneda e inicializar su precio base.
+    Notes
+    ------
+    - Si el campo `precio_base_inicial` > 0:
+    - Busca la `Moneda` marcada como `es_moneda_base=True`.
+    - Crea o actualiza el :class:`PrecioBase` (par moneda/moneda_base).
+    - Registra `actualizado_por` con el usuario actual.
     """
     model = Moneda
     form_class = FormularioMoneda
@@ -1375,7 +1404,14 @@ class VistaCrearMoneda(LoginRequiredMixin, CreateView):
             return redirect('divisas:panel_de_control')
         return super().dispatch(request, *args, **kwargs)
 
-    def form_valid(self, form):
+    def form_valid(self, form): 
+        """
+        Guarda la moneda y, si corresponde, inicializa su precio base.
+        Returns
+        -------
+        HttpResponse
+            Respuesta HTTP redirigiendo a la URL de éxito.
+        """
         moneda = form.save()
         
         # Si tiene precio base inicial, crear o actualizar el precio base
@@ -1405,7 +1441,7 @@ class VistaCrearMoneda(LoginRequiredMixin, CreateView):
 
 class VistaEditarMoneda(LoginRequiredMixin, UpdateView):
     """
-    Vista para editar una moneda existente.
+    Vista para editar una moneda existente y muestra contexto útil (stats, si puede eliminarse y su precio base actual).
     """
     model = Moneda
     form_class = FormularioMoneda
@@ -1419,6 +1455,20 @@ class VistaEditarMoneda(LoginRequiredMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega al contexto stats, posibilidad de eliminación y precio base actual.
+
+        Returns
+        -------
+        dict
+            Contexto extendido con:
+            - ``stats`` : dict | Any
+                Resultado de ``moneda.obtener_estadisticas_uso()``.
+            - ``puede_eliminarse`` : bool
+                Bandera de ``moneda.puede_ser_eliminada()``.
+            - ``precio_base_actual`` : Decimal | None
+                Valor actual en :class:`PrecioBase` (si existe).
+        """
         contexto = super().get_context_data(**kwargs)
         moneda = self.get_object()
         
