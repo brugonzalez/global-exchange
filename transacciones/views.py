@@ -37,6 +37,7 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
             contexto['cliente_activo'] = self.request.user.ultimo_cliente_seleccionado
             # Añadir clave pública de Stripe para el frontend
             contexto['stripe_clave_publicable'] = settings.STRIPE_CLAVE_PUBLICABLE
+            contexto['moneda_base'] = Moneda.objects.get(es_moneda_base=True)
             
         return contexto
     
@@ -161,6 +162,7 @@ class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView
             contexto['cliente_activo'] = self.request.user.ultimo_cliente_seleccionado
             # Añadir clave pública de Stripe para el frontend
             contexto['stripe_clave_publicable'] = settings.STRIPE_CLAVE_PUBLICABLE
+            contexto['moneda_base'] = Moneda.objects.get(es_moneda_base=True)
             
         return contexto
     
@@ -607,3 +609,15 @@ class APIVistaEstadoTransaccion(LoginRequiredMixin, TemplateView):
                 'success': False,
                 'error': str(e)
             })
+
+def obtenerTasasMonedas():
+    tasas = TasaCambio.objects.select_related('moneda_origen', 'moneda_destino').all()
+    resultado = []
+    for tasa in tasas:
+        resultado.append({
+            'moneda_origen': tasa.moneda_origen.codigo,
+            'moneda_destino': tasa.moneda_destino.codigo,
+            'tasa': str(tasa.tasa),
+            'ultima_actualizacion': tasa.ultima_actualizacion.isoformat() if tasa.ultima_actualizacion else None
+        })
+    return resultado

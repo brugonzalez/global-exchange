@@ -70,7 +70,8 @@
                             
                             <div class="row">
                                 <div class="col-md-6">
-                                    {{ formulario.moneda_origen|as_crispy_field }}
+                                    <label for="moneda_origen" class="form-label mb-0">Moneda Origen</label>
+                                    <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control mb-2">
                                 </div>
                                 <div class="col-md-6">
                                     {{ formulario.moneda_destino|as_crispy_field }}
@@ -242,6 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const infoComision = document.getElementById('infoComision');
     const infoTotal = document.getElementById('infoTotal');
     const selectorMetodoPago = document.getElementById('id_metodo_pago');
+    const moneda_base = '{{ moneda_base }}';
     
     // Inicializar Stripe
     const stripe = Stripe('{{ stripe_clave_publicable }}');
@@ -288,34 +290,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function actualizarCalculos() {
-        const origen = monedaOrigen.value;
+        //const origen = monedaOrigen.value;
         const destino = monedaDestino.value;
         const monto = parseFloat(montoOrigen.value) || 0;
         
-        if (origen && destino && monto > 0 && origen !== destino) {
-            // Aquí harías una llamada AJAX para obtener las tasas de cambio
-            // Por ahora, usaremos datos de ejemplo
-            const tasaEjemplo = 7500; // Ejemplo: USD a PYG
-            const calculado = monto * tasaEjemplo;
-            
-            montoDestino.value = calculado.toFixed(2);
-            
-            infoTasa.innerHTML = `
-                <p><strong>Tasa de Cambio:</strong><br>
-                1 ${monedaOrigen.options[monedaOrigen.selectedIndex].text} = ${tasaEjemplo.toLocaleString()} ${monedaDestino.options[monedaDestino.selectedIndex].text}</p>
-            `;
-            
-            infoComision.style.display = 'block';
-            document.getElementById('detallesComision').innerHTML = `
-                <p class="mb-1">Comisión: <span class="text-muted">2.5%</span></p>
-                <p class="mb-0">Monto: <span class="text-muted">${(calculado * 0.025).toFixed(2)}</span></p>
-            `;
-            
-            infoTotal.style.display = 'block';
-            document.getElementById('detallesTotal').innerHTML = `
-                <p class="mb-1">Subtotal: <span class="fw-bold">${calculado.toFixed(2)}</span></p>
-                <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${(calculado * 1.025).toFixed(2)}</span></p>
-            `;
+        if (destino && monto > 0) {
+            const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
+            if (!urlApi) return;
+            let tasaCompra;
+
+            ajax({
+                url: `${urlApi}?currency_id=${destino}`,
+                method: 'GET',
+                success: function(datos) {
+                    if (datos) {
+                        tasaCompra = datos.tasa_venta;
+
+                        const tasaEjemplo = 7500; // Ejemplo: USD a PYG
+                        const calculado = monto * tasaCompra;
+
+                        montoDestino.value = calculado.toFixed(2);
+
+                        infoTasa.innerHTML = `
+                            <p><strong>Tasa de Cambio:</strong><br>
+                            1 ${monedaDestino.options[monedaDestino.selectedIndex].text}</p>
+                        `;
+
+                        infoComision.style.display = 'block';
+                        document.getElementById('detallesComision').innerHTML = `
+                            <p class="mb-1">Comisión: <span class="text-muted">2.5%</span></p>
+                            <p class="mb-0">Monto: <span class="text-muted">${(calculado * 0.025).toFixed(2)}</span></p>
+                        `;
+
+                        infoTotal.style.display = 'block';
+                        document.getElementById('detallesTotal').innerHTML = `
+                            <p class="mb-1">Subtotal: <span class="fw-bold">${calculado.toFixed(2)}</span></p>
+                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${(calculado * 1.025).toFixed(2)}</span></p>
+                        `;
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error al refrescar las tasas:', xhr.statusText);
+                }
+            });
+
+
         } else {
             montoDestino.value = '';
             infoTasa.innerHTML = '<p class="text-muted"><i class="fas fa-info-circle me-2"></i>Seleccione las monedas para ver la tasa de cambio</p>';
@@ -325,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Listeners de eventos
-    monedaOrigen.addEventListener('change', actualizarCalculos);
+    //monedaOrigen.addEventListener('change', actualizarCalculos);
     monedaDestino.addEventListener('change', actualizarCalculos);
     montoOrigen.addEventListener('input', actualizarCalculos);
     selectorMetodoPago.addEventListener('change', actualizarCamposPago);

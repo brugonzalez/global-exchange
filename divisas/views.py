@@ -322,6 +322,7 @@ class APIVistaTasasActuales(TemplateView):
             categoria = CategoriaCliente.objects.get(nombre='RETAIL')
 
         codigo_moneda = solicitud.GET.get('currency')
+        id_moneda = solicitud.GET.get('currency_id')
 
         if codigo_moneda:
             moneda = get_object_or_404(Moneda, codigo=codigo_moneda, esta_activa=True)
@@ -334,10 +335,28 @@ class APIVistaTasasActuales(TemplateView):
                     'tasa_compra': float(tasa.tasa_compra),
                     'tasa_venta': float(tasa.tasa_venta),
                     'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
-                    'lugares_decimales': tasa.moneda.lugares_decimales
+                    'lugares_decimales': tasa.moneda.lugares_decimales,
+                    'moneda_id': moneda.id,
                 })
             else:
                 return JsonResponse({'error': 'No se encontró tasa'}, status=404)
+        elif id_moneda:
+            moneda = get_object_or_404(Moneda, id=id_moneda, esta_activa=True)
+            tasa = moneda.obtener_tasa_actual(categoria)
+
+            if tasa:
+                return JsonResponse({
+                    'moneda': moneda.codigo,
+                    'nombre': moneda.nombre,
+                    'tasa_compra': float(tasa.tasa_compra),
+                    'tasa_venta': float(tasa.tasa_venta),
+                    'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
+                    'lugares_decimales': tasa.moneda.lugares_decimales,
+                    'moneda_id': moneda.id,
+                })
+            else:
+                return JsonResponse({'error': 'No se encontró tasa'}, status=404)
+
         else:
             # Devolver todas las tasas
             tasas = []
@@ -352,7 +371,8 @@ class APIVistaTasasActuales(TemplateView):
                         'tasa_compra': float(tasa.tasa_compra),
                         'tasa_venta': float(tasa.tasa_venta),
                         'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
-                        'lugares_decimales': tasa.moneda.lugares_decimales
+                        'lugares_decimales': tasa.moneda.lugares_decimales,
+                        'moneda_id': moneda.id,
                     })
 
             return JsonResponse({'tasas': tasas})
@@ -522,7 +542,7 @@ class APIVistaSimulacion(TemplateView):
             # Validar IDs de moneda y obtener objetos de moneda de forma segura
             # Soportar tanto los nombres en inglés como en español para compatibilidad
             tipo_transaccion = datos.get('tipo_transaccion')
-            moneda = Moneda.objects.get(id=1)
+            moneda = Moneda.objects.get(es_moneda_base=True)
             if tipo_transaccion == 'COMPRA':
                 #si es compra traemos la moneda base GS
                 id_moneda_origen = moneda.id

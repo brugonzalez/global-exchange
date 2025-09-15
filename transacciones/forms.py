@@ -248,17 +248,23 @@ class FormularioTransaccion(forms.Form):
         from clientes.models import Cliente
         
         # Configurar querysets
-        monedas_activas = Moneda.objects.filter(esta_activa=True).order_by('codigo')
-        self.fields['moneda_origen'].queryset = monedas_activas
-        self.fields['moneda_destino'].queryset = monedas_activas
-        
+
+        moneda_base = Moneda.objects.filter(id=1)
         # Filtrar métodos de pago según el tipo de transacción
         if tipo_transaccion == 'COMPRA':
+            monedas_activas = Moneda.objects.filter(esta_activa=True, es_moneda_base=False, disponible_para_compra=True).order_by('codigo')
+            self.fields['moneda_origen'].queryset = moneda_base
+            self.fields['moneda_origen'].initial = moneda_base
+            self.fields['moneda_destino'].queryset = monedas_activas
             metodos_pago = MetodoPago.objects.filter(
                 esta_activo=True, 
                 soporta_compra=True
             ).order_by('grupo_metodo', 'nombre')
         else:
+            monedas_activas = Moneda.objects.filter(esta_activa=True, es_moneda_base=False,
+                                                    disponible_para_venta=True).order_by('codigo')
+            self.fields['moneda_origen'].queryset = monedas_activas
+            self.fields['moneda_destino'].queryset = moneda_base
             metodos_pago = MetodoPago.objects.filter(
                 esta_activo=True, 
                 soporta_venta=True
