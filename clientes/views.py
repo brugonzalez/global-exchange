@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView, FormView, View
+    ListView, DetailView, CreateView, UpdateView, DeleteView, FormView, View, TemplateView
 )
 from django.urls import reverse_lazy, reverse
 from django.db.models import Q, Count
@@ -18,8 +18,7 @@ from django.middleware.csrf import get_token
 from django.conf import settings
 
 from .models import PreferenciaCliente
-from .forms import FormularioPreferenciaCliente
-
+from .forms import FormularioPreferenciaCliente, FormularioEditarCategoriaCliente
 
 from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita, SaldoCliente
 from .forms import (
@@ -636,3 +635,97 @@ class VistaDetallesUsuario(LoginRequiredMixin, MixinStaffRequerido, View):
                 'success': False,
                 'error': f'Error al obtener los detalles del usuario: {str(e)}'
             }, status=500)
+
+class VistaConfiguracionCategorias(MixinStaffRequerido, TemplateView):
+    """Vista para gestionar configuraciones del sistema."""
+    template_name = 'clientes/gestionar_categorias.html'
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+
+        # Agrupar configuraciones por categoría
+        configuraciones = CategoriaCliente.objects.all().order_by('nombre')
+
+        contexto.update({
+            'configuraciones_por_categoria': configuraciones,
+            'total_configuraciones': configuraciones.count(),
+        })
+
+        return contexto
+
+def guardar_categoria(request, config_id, nuevo_valor):
+    configuracion = get_object_or_404(CategoriaCliente, id=config_id)
+
+    configuracion.margen_tasa_preferencial = nuevo_valor
+    configuracion.save()
+
+    return render('clientes/gestionar_categorias.html')
+
+
+class VistaEditarCategoriaCliente(MixinStaffRequerido, View):
+    """Vista para editar categoría de cliente."""
+
+    def get(self, request, categoria_id):
+        categoria = get_object_or_404(CategoriaCliente, id=categoria_id)
+        formulario = FormularioEditarCategoriaCliente(instance=categoria)
+
+        return render(request, 'clientes/editar_categoria.html', {
+            'formulario': formulario,
+            'categoria': categoria,
+            'margen_porcentaje': categoria.margen_tasa_preferencial * 100
+        })
+
+    def post(self, request, categoria_id):
+        categoria = get_object_or_404(CategoriaCliente, id=categoria_id)
+        formulario = FormularioEditarCategoriaCliente(request.POST, instance=categoria)
+
+        if formulario.is_valid():
+            categoria_actualizada = formulario.save()
+
+            # Calcular porcentaje para el mensaje
+            porcentaje = categoria_actualizada.margen_tasa_preferencial * 100
+
+            messages.success(
+                request,
+                f'Categoría "{categoria_actualizada.get_nombre_display()}" actualizada correctamente. '
+                f'Nuevo margen: {porcentaje:.2f}%'
+            )
+            return redirect('clientes:lista_clientes')  # o la URL que uses para listar
+
+        return render(request, 'clientes/editar_categoria.html', {
+            'formulario': formulario,
+            'categoria': categoria,
+            'margen_porcentaje': categoria.margen_tasa_preferencial * 100
+        })
+
+from django.http import JsonResponse
+
+class VistaActualizarMargenAjax(MixinStaffRequerido, View):
+    """Vista AJAX para actualizar solo el margen."""
+
+    def post(self, request, categoria_id):
+        try:
+            categoria = get_object_or_404(CategoriaCliente, id=categoria_id)
+            nuevo_margen = Decimal(request.POST.get('margen', '0'))
+
+            if nuevo_margen <= 0:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'El margen debe ser mayor a 0'
+                })
+
+            categoria.margen_tasa_preferencial = nuevo_margen
+            categoria.save()
+
+            return JsonResponse({
+                'success': True,
+                'nuevo_margen': float(nuevo_margen),
+                'porcentaje': float(nuevo_margen * 100),
+                'mensaje': f'Margen actualizado a {nuevo_margen * 100:.4f}%'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
