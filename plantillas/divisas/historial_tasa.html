@@ -57,9 +57,9 @@
                                         {% for registro in historial_tasa %}
                                         <tr>
                                             <td>{{ registro.marca_de_tiempo|date:"d/m/Y H:i" }}</td>
-                                            <td>{{ registro.tasa_compra|floatformat:moneda.lugares_decimales }}</td>
-                                            <td>{{ registro.tasa_venta|floatformat:moneda.lugares_decimales }}</td>
-                                            <td>{{ registro.spread|floatformat:moneda.lugares_decimales }}</td>
+                                            <td>{{ registro.tasa_compra|floatformat:0 }}</td>
+                                            <td>{{ registro.tasa_venta|floatformat:0 }}</td>
+                                            <td>{{ registro.spread|floatformat:0 }}</td>
                                         </tr>
                                         {% empty %}
                                         <tr>
