@@ -306,7 +306,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="tipo_transaccion" class="form-label">Tipo de Operación</label>
-                            <select class="form-control" id="tipo_transaccion" name="tipo_transaccion">
+                            <select class="form-select" id="tipo_transaccion" name="tipo_transaccion">
                                 <option value="COMPRA">Comprar</option>
                                 <option value="VENTA">Vender</option>
                             </select>
@@ -320,17 +320,32 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="moneda_origen" class="form-label">Moneda Origen</label>
-                            <select class="form-control" id="moneda_origen" name="moneda_origen">
+                            <select class="form-select" id="moneda_origen" name="moneda_origen" disabled>
                                 {% for tasa in datos_tasas %}
-                                    <option value="{{ tasa.moneda.id }}" {% if forloop.first %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
+                                    <option value="{{ tasa.moneda.id }}" {% if tasa.moneda.es_moneda_base %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
                                 {% endfor %}
                             </select>
+                            {% for tasa in datos_tasas %}
+                                {% if tasa.moneda.es_moneda_base %}
+                                    <input type="hidden" name="pais" value="{{ tasa.moneda.id }}" id="moneda_origen_input">
+                                {% endif %}
+                            {% endfor %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="moneda_destino" class="form-label">Moneda Destino</label>
-                            <select class="form-control" id="moneda_destino" name="moneda_destino">
+                            <select class="form-select" id="moneda_destino" name="moneda_destino">
                                 {% for tasa in datos_tasas %}
-                                    <option value="{{ tasa.moneda.id }}" {% if forloop.counter == 2 %}selected{% elif forloop.first and datos_tasas|length == 1 %}selected{% endif %}>{{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}</option>
+                                    {% if not tasa.moneda.es_moneda_base and tasa.moneda.disponible_para_compra %}
+                                        <option value="{{ tasa.moneda.id }}"
+                                            {% if forloop.counter == 2 %}
+                                                selected
+                                            {% elif forloop.first and datos_tasas|length == 1 %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            {{ tasa.moneda.codigo }} - {{ tasa.moneda.nombre }}
+                                        </option>
+                                    {% endif %}
                                 {% endfor %}
                             </select>
                         </div>
@@ -375,6 +390,75 @@
     // Manejo del formulario de simulación - usando la API fetch para un manejo adecuado de FormData
     document.addEventListener('DOMContentLoaded', function() {
         const formularioSimulacion = document.getElementById('formularioSimulacion');
+        const datosTasas = JSON.parse('{{ datos_tasas_json|escapejs }}');
+        console.log("Tasas desde backend:", datosTasas);
+
+        const selectTipo = document.getElementById("tipo_transaccion");
+        const selectMonedaOrigen = document.getElementById("moneda_origen");
+        const selectMonedaDestino = document.getElementById("moneda_destino");
+
+        // Escuchar el cambio en el select
+        selectTipo.addEventListener("change", function(event) {
+            const valorSeleccionado = event.target.value;
+            console.log("Nuevo valor:", valorSeleccionado);
+
+            if (valorSeleccionado === "VENTA") {
+                console.log("Selecciono venta");
+                // Habilitar moneda origen y deshabilitar moneda destino
+                selectMonedaOrigen.disabled = false;
+                selectMonedaDestino.disabled = true;
+                // Primero vaciamos todas las opciones existentes
+                selectMonedaDestino.innerHTML = "";
+                selectMonedaOrigen.innerHTML = "";
+
+                const nuevaOpcion = document.createElement("option");
+                const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
+                nuevaOpcion.value = monedaBase.id;
+                nuevaOpcion.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
+                 // Agregamos la nueva opción al select
+                selectMonedaDestino.appendChild(nuevaOpcion);
+
+                // Agregar las monedas NO base al select origen
+                datosTasas.forEach(tasa => {
+                    if (!tasa.moneda.moneda_base && tasa.moneda.disponible_venta) {
+                        const opcion = document.createElement("option");
+                        opcion.value = tasa.moneda.id;
+                        opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
+                        selectMonedaOrigen.appendChild(opcion);
+                    }
+                });
+            } else if (valorSeleccionado === "COMPRA") {
+                console.log("Selecciono compra");
+                // Habilitar moneda destino y deshabilitar moneda origen
+                selectMonedaDestino.disabled = false;
+                selectMonedaOrigen.disabled = true;
+
+                // Limpiar ambos selects
+                selectMonedaDestino.innerHTML = "";
+                selectMonedaOrigen.innerHTML = "";
+
+                // Agregar la moneda base al select origen
+                const monedaBase = datosTasas.find(tasa => tasa.moneda.moneda_base);
+                if (monedaBase) {
+                    const opcionBase = document.createElement("option");
+                    opcionBase.value = monedaBase.moneda.id;
+                    opcionBase.text = `${monedaBase.moneda.codigo} - ${monedaBase.moneda.nombre}`;
+                    opcionBase.selected = true;
+                    selectMonedaOrigen.appendChild(opcionBase);
+                }
+
+                // Agregar las monedas NO base al select destino
+                datosTasas.forEach(tasa => {
+                    if (!tasa.moneda.moneda_base && tasa.moneda.disponible_compra) {
+                        const opcion = document.createElement("option");
+                        opcion.value = tasa.moneda.id;
+                        opcion.text = `${tasa.moneda.codigo} - ${tasa.moneda.nombre}`;
+                        selectMonedaDestino.appendChild(opcion);
+                    }
+                });
+            }
+        });
+
         if (formularioSimulacion) {
             formularioSimulacion.addEventListener('submit', function(e) {
                 e.preventDefault();
