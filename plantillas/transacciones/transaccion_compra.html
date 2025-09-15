@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         tasaCompra = datos.tasa_venta;
 
                         const tasaEjemplo = 7500; // Ejemplo: USD a PYG
-                        const calculado = monto * tasaCompra;
+                        const calculado = monto / tasaCompra;
 
                         montoDestino.value = calculado.toFixed(2);
 
@@ -330,9 +330,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
 
                         infoTotal.style.display = 'block';
+                        const monedaCodigo = monedaDestino.options[monedaDestino.selectedIndex]?.text?.split(' ')[0] || '';
                         document.getElementById('detallesTotal').innerHTML = `
-                            <p class="mb-1">Subtotal: <span class="fw-bold">${calculado.toFixed(2)}</span></p>
-                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${(calculado * 1.025).toFixed(2)}</span></p>
+                            <p class="mb-1">Subtotal: <span class="fw-bold">${calculado.toFixed(2)} ${monedaCodigo}</span></p>
+                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${(calculado * 1.025).toFixed(2)} ${monedaCodigo}</span></p>
                         `;
                     }
                 },
@@ -358,7 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar campos de pago
     actualizarCamposPago();
-    
+    actualizarCalculos();  
     // Manejar errores de la tarjeta de Stripe
     elementoTarjeta.on('change', function(event) {
         const mostrarError = document.getElementById('errores-tarjeta');

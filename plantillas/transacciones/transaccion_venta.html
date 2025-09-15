@@ -83,7 +83,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="monto_destino" class="form-label">Cantidad a recibir</label>
-                                        <input type="text" id="monto_destino" class="form-control" readonly placeholder="0.00">
+                                        <input type="text" id="monto_destino" class="form-control" readonly placeholder="0">
                                         <small class="form-text text-muted">Calculado automáticamente</small>
                                     </div>
                                 </div>
@@ -276,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const tasaEjemplo = 7500; // Ejemplo: USD a PYG
                         const calculado = monto * tasaCompra;
 
-                        montoDestino.value = calculado.toFixed(2);
+                            montoDestino.value = isFinite(calculado) ? Math.floor(calculado).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : '';
 
                         infoTasa.innerHTML = `
                             <p><strong>Tasa de Cambio:</strong><br>
@@ -287,13 +287,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         infoComision.style.display = 'block';
                         document.getElementById('detallesComision').innerHTML = `
                             <p class="mb-1">Comisión: <span class="text-muted">2.5%</span></p>
-                            <p class="mb-0">Monto: <span class="text-muted">${(calculado * 0.025).toFixed(2)}</span></p>
+                            <p class="mb-0">Monto: <span class="text-muted">${Math.floor(calculado * 0.025).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span></p>
                         `;
 
                         infoTotal.style.display = 'block';
                         document.getElementById('detallesTotal').innerHTML = `
-                            <p class="mb-1">Subtotal: <span class="fw-bold">${calculado.toFixed(2)}</span></p>
-                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${(calculado * 1.025).toFixed(2)}</span></p>
+                            <p class="mb-1">Subtotal: <span class="fw-bold">${Math.floor(calculado).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} PYG </span></p>
+                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${Math.floor(calculado * 1.025).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} PYG </span></p>
                         `;
                     }
                 },
@@ -319,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar campos de pago
     actualizarCamposPago();
+     actualizarCalculos(); 
 });
 
 // Hacer que actualizarCamposPago sea global para el onchange del HTML
