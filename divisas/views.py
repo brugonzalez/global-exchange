@@ -19,6 +19,8 @@ from django.template.loader import render_to_string
 from .models import Moneda, TasaCambio, HistorialTasaCambio, PrecioBase, MetodoPago, AlertaTasa
 from transacciones.models import SimulacionTransaccion
 from .forms import FormularioSimulacion, FormularioActualizacionTasa, FormularioAlerta, FormularioMoneda
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 class VistaPanelControl(TemplateView):
@@ -42,6 +44,10 @@ class VistaPanelControl(TemplateView):
 
         for moneda in monedas:
             tasa = moneda.obtener_tasa_actual(categoria)
+            if moneda.es_moneda_base:
+                datos_tasas.append({
+                    'moneda': moneda
+                })
             if tasa:
                 datos_tasas.append({
                     'moneda': moneda,
@@ -49,9 +55,29 @@ class VistaPanelControl(TemplateView):
                     'tasa_venta': tasa.tasa_venta,
                     'ultima_actualizacion': tasa.fecha_actualizacion,
                 })
-        
+
+        datos_tasas_js = []
+        for item in datos_tasas:
+            moneda = item.get('moneda')
+            datos_tasas_js.append({
+                'moneda': {
+                    'id': moneda.id,
+                    'codigo': moneda.codigo,
+                    'nombre': moneda.nombre,
+                    'simbolo': moneda.simbolo,
+                    'moneda_base': moneda.es_moneda_base,
+                    'disponible_compra': moneda.disponible_para_compra,
+                    'disponible_venta': moneda.disponible_para_venta,
+                } if moneda else None,
+                'tasa_compra': float(item.get('tasa_compra')) if item.get('tasa_compra') else None,
+                'tasa_venta': float(item.get('tasa_venta')) if item.get('tasa_venta') else None,
+                'ultima_actualizacion': item.get('ultima_actualizacion').isoformat() if item.get(
+                    'ultima_actualizacion') else None,
+            })
+
         contexto.update({
             'datos_tasas': datos_tasas,
+            'datos_tasas_json': json.dumps(datos_tasas_js, cls=DjangoJSONEncoder),
             'puede_operar': self.request.user.is_authenticated and self.request.user.puede_operar_transacciones(),
             'cliente_seleccionado': getattr(self.request.user, 'ultimo_cliente_seleccionado', None) if self.request.user.is_authenticated else None,
         })
@@ -495,8 +521,15 @@ class APIVistaSimulacion(TemplateView):
             
             # Validar IDs de moneda y obtener objetos de moneda de forma segura
             # Soportar tanto los nombres en inglés como en español para compatibilidad
-            id_moneda_origen = datos.get('currency_from') or datos.get('moneda_origen')
-            id_moneda_destino = datos.get('currency_to') or datos.get('moneda_destino')
+            tipo_transaccion = datos.get('tipo_transaccion')
+            moneda = Moneda.objects.get(id=1)
+            if tipo_transaccion == 'COMPRA':
+                #si es compra traemos la moneda base GS
+                id_moneda_origen = moneda.id
+                id_moneda_destino = datos.get('currency_to') or datos.get('moneda_destino')
+            elif tipo_transaccion == 'VENTA':
+                id_moneda_origen = datos.get('currency_from') or datos.get('moneda_origen')
+                id_moneda_destino = moneda.id
             
             if not id_moneda_origen:
                 return JsonResponse({
@@ -579,6 +612,7 @@ class APIVistaSimulacion(TemplateView):
             return None
         
         # Caso 1: Conversión directa involucrando la moneda base
+        #compra
         if moneda_origen == moneda_base:
             # Convirtiendo de la moneda base a la moneda objetivo
             objeto_tasa = TasaCambio.objects.filter(
@@ -588,9 +622,9 @@ class APIVistaSimulacion(TemplateView):
             ).first()
             if objeto_tasa:
                 if tipo_operacion == 'BUY':
-                    return 1 / objeto_tasa.tasa_venta
+                    return objeto_tasa.tasa_compra
                 else:
-                    return 1 / objeto_tasa.tasa_compra
+                    return objeto_tasa.tasa_venta
                     
         elif moneda_destino == moneda_base:
             # Convirtiendo de la moneda origen a la moneda base
@@ -602,10 +636,10 @@ class APIVistaSimulacion(TemplateView):
             if objeto_tasa:
                 if tipo_operacion == 'BUY':
                     # Cliente compra moneda base con moneda origen
-                    return objeto_tasa.tasa_compra
+                    return objeto_tasa.tasa_venta
                 else:
                     # Cliente vende moneda_origen por moneda base
-                    return objeto_tasa.tasa_venta
+                    return objeto_tasa.tasa_compra
                     
         else:
             # Caso 2: Conversión de moneda cruzada a través de la moneda base
