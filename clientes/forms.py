@@ -9,6 +9,8 @@ Incluye:
 - Monedas favoritas
 - Categorías de clientes
 """
+from decimal import Decimal
+
 from django import forms
 from .models import PreferenciaCliente
 
@@ -311,3 +313,47 @@ class FormularioCategoriaCliente(forms.ModelForm):
             'margen_tasa_preferencial': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'nivel_prioridad': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 5}),
         }
+
+
+class FormularioEditarCategoriaCliente(forms.ModelForm):
+    """Formulario para editar categorías de cliente."""
+
+    class Meta:
+        model = CategoriaCliente
+        fields = ['margen_tasa_preferencial', 'descripcion']
+        widgets = {
+            'margen_tasa_preferencial': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.0001',
+                'min': '0.0001',
+                'placeholder': 'Ej: 0.0100 (1%)'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción de la categoría'
+            })
+        }
+        labels = {
+            'margen_tasa_preferencial': 'Margen de Tasa Preferencial (%)',
+            'descripcion': 'Descripción'
+        }
+
+    def clean_margen_tasa_preferencial(self):
+        valor = self.cleaned_data['margen_tasa_preferencial']
+
+        if valor <= Decimal('0'):
+            raise forms.ValidationError('El margen debe ser mayor a 0.')
+
+        if valor > Decimal('1.0000'):
+            raise forms.ValidationError('El margen no puede ser mayor al 100%.')
+
+        return valor
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Agregar help text personalizado
+        self.fields['margen_tasa_preferencial'].help_text = (
+            'Ingrese el margen como decimal (ej: 0.0100 = 1%, 0.0250 = 2.5%)'
+        )
