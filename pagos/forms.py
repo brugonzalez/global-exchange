@@ -7,6 +7,25 @@ class FormularioMedioPago(forms.ModelForm):
     """
     Formulario para crear y editar medios de pago.
     Se adapta dinámicamente según el tipo de medio de pago seleccionado.
+    Actualmente soporta:
+    - Tarjetas de crédito (integración con Stripe)
+
+    Atributtes
+    ----------
+    banco : forms.CharField
+        Nombre del banco para cuentas bancarias.
+    numero_cuenta : forms.CharField
+        Número de cuenta bancaria.
+    tipo_cuenta : forms.ChoiceField
+        Tipo de cuenta bancaria (Ahorros o Corriente).
+    proveedor_billetera : forms.ChoiceField
+        Proveedor de billetera digital (PayPal, Sipap, etc.).
+    cuenta_billetera : forms.EmailField
+        Cuenta o email asociado a la billetera digital.
+    stripe_token : forms.CharField
+        Token de Stripe para tarjetas de crédito.
+    ultimos_digitos : forms.CharField
+        Últimos 4 dígitos de la tarjeta (se llena automáticamente).
     """
 
     # Campos adicionales para diferentes tipos de medios de pago
@@ -72,28 +91,13 @@ class FormularioMedioPago(forms.ModelForm):
         widget=forms.HiddenInput()
     )
 
-    # class Meta:
-    #     model = MedioPago
-    #     fields = [
-    #         'tipo_medio_pago',
-    #         'alias',
-    #         'predeterminado'
-    #     ]
-    #     widgets = {
-    #         'tipo_medio_pago': forms.Select(attrs={
-    #             'class': 'form-control',
-    #             'id': 'tipo_medio_pago'
-    #         }),
-    #         'alias': forms.TextInput(attrs={
-    #             'class': 'form-control',
-    #             'placeholder': 'Ej: Mi tarjeta principal'
-    #         }),
-    #         'predeterminado': forms.CheckboxInput(attrs={
-    #             'class': 'form-check-input'
-    #         })
-    #     }
+
 
     class Meta:
+        """
+        Meta información del formulario.
+        Define el modelo asociado y los campos a incluir.
+        """
         model = MedioPago
         fields = [
             'tipo', 'nombre_titular'
@@ -106,6 +110,12 @@ class FormularioMedioPago(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        Inicializa el formulario y prellena campos si es una edición.
+        Args:
+            *args: Argumentos posicionales.
+            **kwargs: Argumentos nombrados.
+        """
         super().__init__(*args, **kwargs)
 
         # Hacer que el tipo de medio de pago sea requerido
@@ -132,7 +142,17 @@ class FormularioMedioPago(forms.ModelForm):
             self.fields['cuenta_billetera'].initial = datos_especificos.get('cuenta', '')
 
     def clean(self):
-        """Validaciones personalizadas según el tipo de medio de pago."""
+        """
+        Validaciones personalizadas según el tipo de medio de pago.
+
+        Raises:
+        ------
+            ValidationError: Si alguna validación falla.
+
+        Returns:
+        -------
+            dict: Datos limpios del formulario.
+        """
         cleaned_data = super().clean()
         tipo_medio_pago = cleaned_data.get('tipo')
 
@@ -152,14 +172,41 @@ class FormularioMedioPago(forms.ModelForm):
         return cleaned_data
 
     def _validar_tarjeta(self, cleaned_data):
-        """Validaciones específicas para tarjetas."""
+        """
+        Validaciones específicas para tarjetas de crédito.
+
+        Raises:
+        ------
+            ValidationError: Si el token de Stripe no está presente al crear.
+
+        Returns:
+        -------
+            None: no retorna nada si la validación pasa.
+        """
         stripe_token = cleaned_data.get('stripe_token')
 
         if not stripe_token and not self.instance.pk:
             raise ValidationError('Se requiere información válida de la tarjeta.')
 
     def _validar_cuenta_bancaria(self, cleaned_data):
-        """Validaciones específicas para cuentas bancarias."""
+        """
+        Validaciones específicas para cuentas bancarias.
+
+        Atributes:
+        ----------
+            banco (str): Nombre del banco.
+            numero_cuenta (str): Número de cuenta bancaria.
+            tipo_cuenta (str): Tipo de cuenta (Ahorros o Corriente).
+
+        Raises:
+        ------
+            ValidationError: Si algún campo requerido no está presente o es inválido.
+
+        Returns:
+        -------
+            None: no retorna nada si la validación pasa.
+
+        """
         banco = cleaned_data.get('banco')
         numero_cuenta = cleaned_data.get('numero_cuenta')
         tipo_cuenta = cleaned_data.get('tipo_cuenta')
@@ -178,7 +225,22 @@ class FormularioMedioPago(forms.ModelForm):
             raise ValidationError('El número de cuenta debe contener solo números.')
 
     def _validar_billetera_digital(self, cleaned_data):
-        """Validaciones específicas para billeteras digitales."""
+        """
+        Validaciones específicas para billeteras digitales.
+
+        Atributes:
+        ----------
+            proveedor (str): Proveedor de la billetera digital.
+            cuenta (str): Cuenta o email asociado a la billetera digital.
+
+        Raises:
+        ------
+            ValidationError: Si algún campo requerido no está presente.
+
+        Returns:
+        -------
+            None: no retorna nada si la validación pasa.
+        """
         proveedor = cleaned_data.get('proveedor_billetera')
         cuenta = cleaned_data.get('cuenta_billetera')
 
@@ -189,7 +251,25 @@ class FormularioMedioPago(forms.ModelForm):
             raise ValidationError('La cuenta/email de la billetera es requerida.')
 
     def save(self, commit=True):
-        """Guarda el medio de pago con los datos específicos."""
+        """
+        Guarda el medio de pago, construyendo los datos específicos según el tipo.
+
+        Arguments:
+        ----------
+            commit (bool): Si es True, guarda la instancia en la base de datos.
+
+        Attributes:
+        ----------
+            medio_pago (MedioPago): Instancia del medio de pago a guardar.
+
+        Returns:
+        -------
+            MedioPago: Instancia del medio de pago guardada.
+
+        Raises:
+        ------
+            ValidationError: Si el formulario no es válido.
+        """
         medio_pago = super().save(commit=False)
 
         # Construir datos específicos según el tipo
@@ -213,7 +293,20 @@ class FormularioMedioPago(forms.ModelForm):
         return medio_pago
 
     def _construir_datos_tarjeta(self):
-        """Construye los datos específicos para tarjetas."""
+        """
+        Construye los datos específicos para tarjetas de crédito.
+
+        Attributes:
+        ----------
+            stripe_token (str): Token de Stripe.
+            ultimos_digitos (str): Últimos 4 dígitos de la tarjeta.
+            procesador (str): Nombre del procesador de pagos (si aplica).
+
+        Returns:
+        -------
+            dict: Datos específicos de la tarjeta.
+
+        """
         return {
             'stripe_token': self.cleaned_data.get('stripe_token', ''),
             'ultimos_digitos': self.cleaned_data.get('ultimos_digitos', ''),
@@ -221,7 +314,13 @@ class FormularioMedioPago(forms.ModelForm):
         }
 
     def _construir_datos_cuenta_bancaria(self):
-        """Construye los datos específicos para cuentas bancarias."""
+        """
+        Construye los datos específicos para cuentas bancarias.
+
+        Returns:
+        -------
+            dict: Datos específicos de la cuenta bancaria.
+        """
         return {
             'banco': self.cleaned_data['banco'],
             'numero_cuenta': self.cleaned_data['numero_cuenta'],
@@ -229,7 +328,14 @@ class FormularioMedioPago(forms.ModelForm):
         }
 
     def _construir_datos_billetera(self):
-        """Construye los datos específicos para billeteras digitales."""
+        """
+        Construye los datos específicos para billeteras digitales.
+
+        Returns:
+        -------
+            dict: Datos específicos de la billetera digital.
+
+        """
         return {
             'proveedor': self.cleaned_data['proveedor_billetera'],
             'cuenta': self.cleaned_data['cuenta_billetera']

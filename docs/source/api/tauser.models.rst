@@ -1,7 +1,7 @@
-cuentas.tests module
+tauser.models module
 ====================
 
-.. automodule:: cuentas.tests
+.. automodule:: tauser.models
    :members:
    :undoc-members:
    :show-inheritance:

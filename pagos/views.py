@@ -19,6 +19,24 @@ from pagos.services.stripe_service import StripeService
 class MediosPago(LoginRequiredMixin, ListView):
     """
     Lista de medios de pago asociados a un cliente.
+    Requiere que el usuario esté autenticado.
+    Muestra los medios de pago activos del cliente identificado por id_cliente en la URL.
+
+    Atributtes:
+    ----------
+        model : Modelo de MedioPago.
+        template_name : str
+            Nombre de la plantilla HTML a usar.
+        context_object_name : str
+            Nombre de la variable en el contexto que contendrá la lista de medios de pago.
+
+    Métodos:
+    -------
+        get_queryset(self):
+            Devuelve el queryset de medios de pago activos para el cliente dado por id_cliente.
+
+        get_context_data(self, **kwargs):
+            Agrega información extra al contexto, incluyendo el cliente y si tiene medios de pago.
     """
     model = MedioPago
     template_name = 'pagos/medios_pagos.html'
@@ -26,7 +44,19 @@ class MediosPago(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         """
-        Devuelve todos los medios de pago del cliente dado por id_cliente.
+        Filtra los medios de pago activos del cliente identificado por id_cliente en la URL.
+        Ordena los resultados por fecha de creación descendente.
+        Si el cliente no existe, devuelve un queryset vacío.
+
+        Atributtes:
+        ----------
+            id_cliente : int
+                ID del cliente obtenido de los parámetros de la URL.
+
+        Returns:
+        -------
+            QuerySet de medios de pago activos del cliente.
+
         """
         id_cliente = self.kwargs.get("id_cliente")
         return MedioPago.objects.filter(
@@ -35,7 +65,18 @@ class MediosPago(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         """
-        Agrega información extra al contexto (el cliente y si tiene pagos).
+        Agrega información extra al contexto, incluyendo el cliente y si tiene medios de pago.
+
+        Atributtes:
+        ----------
+            cliente : Cliente o None
+                Instancia del cliente obtenido por id_cliente. None si no existe.
+            tiene_pagos : bool
+                Indica si el cliente tiene medios de pago activos.
+
+        Returns:
+        -------
+            Diccionario con el contexto para la plantilla.
         """
         contexto = super().get_context_data(**kwargs)
 
@@ -54,11 +95,38 @@ class MediosPago(LoginRequiredMixin, ListView):
 
 class VistaAsociarMedioPago(LoginRequiredMixin, TemplateView):
     """
-    Vista para asociar un medio de pago al cliente.
+    Vista para asociar un nuevo medio de pago a un cliente.
+    Requiere que el usuario esté autenticado.
+    Muestra un formulario para ingresar los datos del medio de pago y lo asocia al cliente
+    seleccionado por el usuario.
+
+    Atributtes:
+    ----------
+        template_name : str
+            Nombre de la plantilla HTML a usar.
+
     """
     template_name = 'pagos/asociar_medio_pago.html'
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega información extra al contexto, incluyendo el formulario y datos de Stripe.
+
+        Atributtes:
+        ----------
+            formulario : FormularioMedioPago
+                Instancia del formulario para ingresar datos del medio de pago.
+            cliente_activo : Cliente
+                Instancia del cliente seleccionado por el usuario.
+            tipos_medio_pago : list
+                Lista de tipos de medios de pago disponibles.
+            stripe_clave_publicable : str
+                Clave pública de Stripe para integrar pagos con tarjeta.
+
+        Returns:
+        -------
+            Diccionario con el contexto para la plantilla.
+        """
         contexto = super().get_context_data(**kwargs)
 
         # Verificar si el usuario tiene un cliente seleccionado
@@ -76,6 +144,38 @@ class VistaAsociarMedioPago(LoginRequiredMixin, TemplateView):
         return contexto
 
     def post(self, request, *args, **kwargs):
+        """
+        Maneja la lógica para procesar el formulario de asociación de medio de pago.
+        Valida el formulario, crea el cliente en Stripe si es necesario, crea y asocia
+        el metodo de pago, y guarda el medio de pago en la base de datos.
+        Muestra mensajes de éxito o error según corresponda.
+
+        Atributtes:
+        ----------
+            formulario : FormularioMedioPago
+                Instancia del formulario con los datos enviados por el usuario.
+            cliente : Cliente
+                Instancia del cliente seleccionado por el usuario.
+            usuario_creacion : Usuario
+                Usuario que está realizando la acción.
+            stripe_service : StripeService
+                Servicio para interactuar con la API de Stripe.
+            id_customer : str
+                ID del cliente en Stripe.
+            stripe_token : str
+                Token de Stripe recibido del formulario.
+            payment_method : dict
+                Detalles del método de pago creado en Stripe.
+            datos_tarjeta : dict
+                Información de la tarjeta obtenida desde Stripe.
+            medio_pago : MedioPago
+                Instancia del medio de pago que se guarda en la base de datos.
+
+        Returns:
+        -------
+            Redirige a la lista de medios de pago del cliente en caso de éxito.
+            Si hay errores, vuelve a renderizar la plantilla con los mensajes correspondientes.
+        """
 
         formulario = FormularioMedioPago(request.POST)
 
@@ -160,6 +260,27 @@ class VistaAsociarMedioPago(LoginRequiredMixin, TemplateView):
 
 
 def desvincular_medio_pago(request, pk):
+    """
+    Vista para desactivar (no eliminar) un medio de pago asociado a un cliente.
+    Requiere que el usuario esté autenticado.
+    Cambia el estado del medio de pago a inactivo y registra la acción en el log de auditoría.
+
+    Arguments:
+    ---------
+        request : HttpRequest
+            Objeto de solicitud HTTP.
+        pk : int
+            ID del medio de pago a desactivar.
+
+    Atributtes:
+    ----------
+        medio_pago : MedioPago
+            Instancia del medio de pago a desactivar.
+
+    Returns:
+    -------
+        Redirige a la lista de medios de pago del cliente.
+    """
     medio_pago = get_object_or_404(MedioPago, pk=pk)
 
     if request.method == "POST":
@@ -186,12 +307,43 @@ def desvincular_medio_pago(request, pk):
 
 class VistaGestionMetodosPago(MixinStaffRequerido, TemplateView):
     """
-    Vista para gestionar métodos de pago del sistema.
-    Solo accesible para administradores.
+    Vista para gestionar los métodos de pago disponibles en el sistema.
+    Requiere que el usuario sea staff.
+    Muestra una lista de todos los métodos de pago con opciones para activar o desactivar cada uno.
+
+    Atributtes:
+    ----------
+        template_name : str
+            Nombre de la plantilla HTML a usar.
     """
     template_name = 'pagos/gestion_metodos_pago.html'
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega información extra al contexto, incluyendo la lista de métodos de pago
+        y estadísticas sobre ellos.
+
+        Arguments:
+        ---------
+            kwargs : dict
+                Argumentos adicionales para el contexto.
+
+        Atributtes:
+        ----------
+            metodos_pago : QuerySet
+                Lista de todos los métodos de pago ordenados por nombre.
+            total_metodos : int
+                Total de métodos de pago.
+            metodos_activos : int
+                Número de métodos de pago activos.
+            metodos_inactivos : int
+                Número de métodos de pago inactivos.
+
+        Returns:
+        -------
+            Diccionario con el contexto para la plantilla.
+
+        """
         contexto = super().get_context_data(**kwargs)
 
         # Obtener todos los métodos de pago ordenados por nombre
@@ -210,9 +362,36 @@ class VistaGestionMetodosPago(MixinStaffRequerido, TemplateView):
 class VistaToggleMetodoPago(MixinStaffRequerido, TemplateView):
     """
     Vista para cambiar el estado activo/inactivo de un método de pago.
+    Requiere que el usuario sea staff.
+    Recibe el ID del método de pago en la URL y cambia su estado.
+    Responde con JSON indicando el nuevo estado y un mensaje de éxito.
+
     """
 
     def post(self, request, metodo_id):
+        """
+        Cambia el estado activo/inactivo del método de pago identificado por metodo_id.
+        Registra la acción en el log de auditoría y responde con JSON.
+
+        Arguments:
+        ---------
+            request : HttpRequest
+                Objeto de solicitud HTTP.
+            metodo_id : int
+                ID del método de pago a modificar.
+
+        Atributtes:
+        ----------
+            metodo : MetodoPago
+                Instancia del método de pago a modificar.
+            estado_anterior : bool
+                Estado anterior del método de pago.
+
+        Returns:
+        -------
+            JsonResponse con el nuevo estado, mensaje de éxito y detalles para actualizar la interfaz.
+
+        """
         metodo = get_object_or_404(MetodoPago, id=metodo_id)
 
         # Cambiar el estado

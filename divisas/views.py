@@ -18,18 +18,47 @@ from django.template.loader import render_to_string
 
 from .models import Moneda, TasaCambio, HistorialTasaCambio, PrecioBase, MetodoPago, AlertaTasa
 from transacciones.models import SimulacionTransaccion
-from .forms import FormularioSimulacion, FormularioActualizacionTasa, FormularioAlerta, FormularioMoneda
+from .forms import FormularioSimulacion, FormularioActualizacionPrecioBase, FormularioAlerta, FormularioMoneda
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 
 
 class VistaPanelControl(TemplateView):
     """
-    Vista del panel de control principal - accesible para todos los usuarios.
+    Vista del panel principal con las tasas actuales por moneda.
+
+    Si el usuario tiene un cliente seleccionado, usamos su categoría para
+    mostrar las tasas. Si no, mostramos las tasas para la categoría
+    minorista como default.
+
     """
     template_name = 'divisas/panel_de_control.html'
     
     def get_context_data(self, **kwargs):
+        """
+        Arma el contexto con las tasas vigentes y datos de sesión.
+
+        Lógica
+        ------
+        - Trae todas las `Moneda` activas.
+        - Determina la `CategoriaCliente`: si el usuario está logueado y
+          tiene `ultimo_cliente_seleccionado`, usa esa; si no, usa `RETAIL`.
+        - Para cada moneda, busca su `TasaCambio` actual para esa categoría.
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - `datos_tasas` (list[dict]): cada item trae `moneda`, `tasa_compra`,
+              `tasa_venta`, `ultima_actualizacion`.
+            - `puede_operar` (bool): si el usuario tiene clientes para operar.
+            - `cliente_seleccionado` (Cliente or None): el cliente activo si existe.
+
+        Raises
+        ------
+        CategoriaCliente.DoesNotExist
+            Si no existe la categoría por defecto `'RETAIL'`.
+        """
         contexto = super().get_context_data(**kwargs)
         
         # Obtener monedas activas y sus tasas actuales
@@ -89,16 +118,68 @@ class VistaPanelControl(TemplateView):
 
 class VistaTasasCambio(ListView):
     """
-    Vista detallada de tasas de cambio con datos históricos.
+    Lista las monedas activas y muestra sus tasas actuales
+
+    Attributes
+    ----------
+    model : Model
+        :class:`Moneda`.
+    template_name : str
+        'divisas/tasas.html'.
+    context_object_name : str
+        Nombre del queryset en plantilla (`'monedas'`).
+
+    Notes
+    -----
+    - La categoría usada para calcular tasas sale del `ultimo_cliente_seleccionado`
+      si el usuario está logueado; si no, se usa **RETAIL**.
+    - Si llega `currency` en el GET, se adjunta `historial_tasa` (hasta 30 registros).
     """
     model = Moneda
     template_name = 'divisas/tasas.html'
     context_object_name = 'monedas'
     
     def get_queryset(self):
+        """
+        Devuelve solo monedas activas, ordenadas por código.
+
+        Returns
+        -------
+        QuerySet[Moneda]
+            Monedas habilitadas en el sistema.
+        """
         return Moneda.objects.filter(esta_activa=True).order_by('codigo')
     
     def get_context_data(self, **kwargs):
+        """
+        Arma el contexto con tasas vigentes e historial opcional para gráficos.
+
+        Lógica
+        ------
+        - Obtiene todas las `Moneda` activas.
+        - Determina la `CategoriaCliente`:
+            * si usuario logueado + `ultimo_cliente_seleccionado` -> usa esa
+            * si no -> usa `RETAIL`
+        - Para cada moneda, busca su `TasaCambio` actual y prepara `datos_tasas`.
+
+
+        Returns
+        -------
+        dict
+            Contexto extendido con:
+            - `datos_tasas` (list[dict]): `moneda`, `tasa_compra`, `tasa_venta`,
+              `ultima_actualizacion`.
+            - `moneda_seleccionada` (Moneda, opcional)
+            - `historial_tasa` (QuerySet[HistorialTasaCambio], opcional)
+            - `puede_operar` (bool)
+
+        Raises
+        ------
+        CategoriaCliente.DoesNotExist
+            Si no existe la categoría por defecto `'RETAIL'`.
+        Http404
+            Si `currency` refiere a una moneda inexistente.
+        """
         contexto = super().get_context_data(**kwargs)
         
         # Obtener monedas activas y sus tasas actuales (igual que en el panel de control)
@@ -144,10 +225,36 @@ class VistaTasasCambio(ListView):
 class VistaHistorialTasa(TemplateView):
     """
     Vista del historial de tasas para una moneda específica.
+
+    Permite elegir el periodo a visualizar: 1 día, 7 días, 30 días o todo el tiempo.
     """
     template_name = 'divisas/historial_tasa.html'
     
     def get_context_data(self, **kwargs):
+        """
+        Construye el contexto con la moneda y su historial filtrado por período.
+
+        Logica
+        ------
+        - Busca la `Moneda` activa por `codigo_moneda` (URL param).
+        - Lee `periodo` del querystring (`'1'`, `'7'`, `'30'` o default `'7'`).
+        - Filtra `HistorialTasaCambio` desde `fecha_inicio` si aplica.
+        - Ordena el historial ascendentemente por `marca_de_tiempo`.
+
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - `moneda` (Moneda)
+            - `historial_tasa` (QuerySet[HistorialTasaCambio])
+            - `periodo_seleccionado` (str)
+
+        Raises
+        ------
+        Http404
+            Si la moneda no existe o no está activa.
+        """
         contexto = super().get_context_data(**kwargs)
         codigo_moneda = kwargs.get('codigo_moneda')
         
@@ -219,17 +326,54 @@ class VistaHistorialTasa(TemplateView):
 
 class VistaSimularTransaccion(TemplateView):
     """
-    Vista de simulación de transacción.
+    Simula una conversión entre dos monedas y devuelve el resultado en JSON.
+
+    Muestra un formulario de simulación y, al enviar, calcula el monto convertido
+    usando la mejor tasa disponible. Si el usuario está autenticado, guarda la simulación.
+
+
+
+    Notes
+    -----
+    - La conversión usa `TasaCambio` activa; si no hay tasa aplicable, devuelve error.
     """
     template_name = 'divisas/simular.html'
     
     def get_context_data(self, **kwargs):
+        """
+        Prepara el contexto con el formulario y la lista de monedas activas.
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - `formulario` (FormularioSimulacion)
+            - `monedas` (QuerySet[Moneda])
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['formulario'] = FormularioSimulacion()
         contexto['monedas'] = Moneda.objects.filter(esta_activa=True).order_by('codigo')
         return contexto
     
     def post(self, solicitud, *args, **kwargs):
+        """
+        Procesa la simulación y devuelve un JSON con el resultado.
+
+        Parameters
+        ----------
+        solicitud : HttpRequest
+            Petición con datos del formulario.
+
+        Returns
+        -------
+        JsonResponse
+            - success=True con `monto_convertido`, `tasa`, `puede_proceder` si hay tasa.
+            - success=False con `error` o `errors` si no hay tasa o el form es inválido.
+
+        Notes
+        -----
+        - Si el usuario está autenticado, se guarda `SimulacionTransaccion`.
+        """
         formulario = FormularioSimulacion(solicitud.POST)
         
         if formulario.is_valid():
@@ -279,8 +423,37 @@ class VistaSimularTransaccion(TemplateView):
 
     def obtener_tasa_conversion(self, moneda_origen, moneda_destino, tipo_operacion):
         """
-        Obtiene la tasa de conversión para moneda_origen -> moneda_destino.
-        Devuelve la tasa donde: monto_convertido = monto * tasa.
+        Calcula la tasa para convertir `moneda_origen` -> `moneda_destino`.
+
+        La tasa resultante cumple: ``monto_convertido = monto * tasa``.
+        Resuelve tres escenarios:
+        1) Directo desde moneda base hacia destino.
+        2) Directo desde origen hacia moneda base.
+        3) Cruzado vía moneda base: origen -> base -> destino.
+
+        Rules
+        -----
+        - Si origen == base:
+            - BUY  ->  1 / tasa_venta(dest)
+            - SELL ->  1 / tasa_compra(dest)
+        - Si destino == base:
+            - BUY  ->  tasa_compra(origen)
+            - SELL ->  tasa_venta(origen)
+
+        Parameters
+        ----------
+        moneda_origen : Moneda
+            Moneda de partida.
+        moneda_destino : Moneda
+            Moneda objetivo.
+        tipo_operacion : {'BUY', 'SELL'}
+            Tipo de operación simulada.
+
+        Returns
+        -------
+        Decimal or None
+            Tasa numérica para multiplicar el monto, o `None` si no hay tasas activas.
+
         """
         
         # Obtener moneda base
@@ -717,7 +890,12 @@ class APIVistaSimulacion(TemplateView):
 
 class VistaGestionarFavoritos(LoginRequiredMixin, TemplateView):
     """
-    Vista para gestionar las monedas favoritas del usuario.
+    Vista para gestionar las monedas favoritas por usuario/cliente.
+
+    Muestra todas las monedas activas y cuáles están marcadas como favoritas
+    para el cliente actual del usuario. Si el usuario no tiene un cliente
+    seleccionado, intentamos fijar el primero que tenga.
+
     """
     template_name = 'divisas/favoritos.html'
     
@@ -851,11 +1029,33 @@ class APIVistaReordenarFavoritos(LoginRequiredMixin, TemplateView):
 # Vistas de administración
 class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
     """
-    Vista de administración para gestionar las tasas de cambio.
+    Vista de gestion de tasas de cambio para administradores.
+
+    Muestra el precio base por moneda, las tasas activas por categoría,
+    un histórico reciente (7 días) y un form para actualizar el
+    precio base.
+
     """
     template_name = 'divisas/gestionar_tasas.html'
     
     def dispatch(self, solicitud, *args, **kwargs):
+        """
+        Controla el acceso (solo staff) y maneja respuesta AJAX/no-AJAX.
+
+        Parameters
+        ----------
+        solicitud : HttpRequest
+            Petición entrante.
+ 
+
+        Returns
+        -------
+        HttpResponse | JsonResponse
+            - 403 JSON si es AJAX y el usuario no es administrador.
+            - Redirect con mensaje si no es AJAX y no es administrador.
+            - Llama al `dispatch` de la superclase si todo está correcto.
+
+        """
         # Asegurar que solo usuarios del personal puedan acceder a esta vista
         ajax = solicitud.headers.get('x-requested-with') == 'XMLHttpRequest'
         if not solicitud.user.is_staff:
@@ -866,6 +1066,34 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         return super().dispatch(solicitud, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
+        """
+        Construye el contexto con monedas, precio base, tasas e historial.
+
+        Logic
+        -----
+        - Trae todas las monedas activas.
+        - Para cada moneda:
+          * `precio_actual`, `fecha_actualizacion`, `actualizado_por`
+          * `tasas_actuales` por categoría
+          * `historial_reciente` (últimos 7 días)
+          * `formulario` para actualizar precio base (si hay precio vigente)
+        - Agrega:
+          * `moneda_base`
+          * `metodos_pago` activos
+
+        Returns
+        -------
+        dict
+            Contexto listo para la plantilla:
+            - `datos_tasas` (list[dict])
+            - `monedas` (QuerySet[Moneda])
+            - `moneda_base` (Moneda or None)
+            - `metodos_pago` (QuerySet[MetodoPago])
+            - `total_monedas` (int)
+            - `tasas_activas` (int)
+            - `ultima_actualizacion` (datetime or None)
+
+        """
         contexto = super().get_context_data(**kwargs)
         
         # Obtener todas las monedas activas
@@ -890,7 +1118,7 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
                 'fecha_actualizacion': tasa_actual.fecha_actualizacion if tasa_actual else None,
                 'actualizado_por': tasa_actual.actualizado_por if tasa_actual else None,
                 'historial_reciente': historial_reciente,
-                'formulario': FormularioActualizacionTasa() if tasa_actual else None,
+                'formulario': FormularioActualizacionPrecioBase() if tasa_actual else None,
                 'tasas_actuales': tasas_actuales
             })
 
@@ -919,12 +1147,35 @@ class VistaGestionarTasas(LoginRequiredMixin, TemplateView):
         return contexto
     
     def post(self, request, *args, **kwargs):
+        """
+        Actualiza el precio base de una moneda.
+
+        Parameters
+        ----------
+        request : HttpRequest
+            Petición con `moneda_id` y `precio_base` (from `FormularioActualizacionPrecioBase`).
+
+
+        Returns
+        -------
+        HttpResponse | JsonResponse
+            - Si es AJAX y todo está correcto: JSON con datos listos para refrescar la fila
+              (precio formateado, fecha, quién actualizó).
+            - Si es AJAX y hay error: JSON con `errors` y mensaje.
+            - Si no es AJAX: redirect con mensaje a `'divisas:gestionar_tasas'`.
+
+        Raises
+        ------
+        Http404
+            Si `moneda_id` no corresponde a una `Moneda` válida.
+
+        """
         from django.utils import timezone
         from django.http import JsonResponse
         ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
         try:
             moneda_id = request.POST.get('moneda_id')
-            form = FormularioActualizacionTasa(request.POST)
+            form = FormularioActualizacionPrecioBase(request.POST)
             if form.is_valid() and moneda_id:
                 nuevo_precio_base = form.cleaned_data['precio_base']
                 moneda = get_object_or_404(Moneda, id=moneda_id)
@@ -1053,15 +1304,38 @@ class VistaActualizarTasa(LoginRequiredMixin, TemplateView):
 class VistaGestionarMonedas(LoginRequiredMixin, TemplateView):
     """
     Vista de administración para gestionar monedas.
+    Se puede buscar, filtrar por estado, ver estadísticas y
+    acceder a crear/editar/eliminar monedas.
+
+
     """
     template_name = 'divisas/gestionar_monedas.html'
 
     def dispatch(self, request, *args, **kwargs):
+        ''' 
+        Controla el acceso (solo admin).
+        
+        Returns
+        -------
+        HttpResponse
+            Redirección a la página de panel de control si no es admin, en caso contrario continúa
+            el flujo normal.
+        '''
         if not request.user.es_administrador:
             return redirect('divisas:panel_de_control')
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        """
+        Construye el contexto con filtros aplicados y métricas globales.
+
+        Returns
+        -------
+        dict
+            Diccionario de contexto listo para la plantilla:
+            `monedas_con_stats`, `total_monedas`, `monedas_activas`,
+            `monedas_inactivas`, `moneda_base`, `busqueda`, `estado_filtro`.
+        """
         contexto = super().get_context_data(**kwargs)
         
         # Obtener parámetros de búsqueda y filtrado
@@ -1112,7 +1386,13 @@ class VistaGestionarMonedas(LoginRequiredMixin, TemplateView):
 
 class VistaCrearMoneda(LoginRequiredMixin, CreateView):
     """
-    Vista para crear una nueva moneda.
+    Vista para crear una nueva moneda e inicializar su precio base.
+    Notes
+    ------
+    - Si el campo `precio_base_inicial` > 0:
+    - Busca la `Moneda` marcada como `es_moneda_base=True`.
+    - Crea o actualiza el :class:`PrecioBase` (par moneda/moneda_base).
+    - Registra `actualizado_por` con el usuario actual.
     """
     model = Moneda
     form_class = FormularioMoneda
@@ -1124,7 +1404,14 @@ class VistaCrearMoneda(LoginRequiredMixin, CreateView):
             return redirect('divisas:panel_de_control')
         return super().dispatch(request, *args, **kwargs)
 
-    def form_valid(self, form):
+    def form_valid(self, form): 
+        """
+        Guarda la moneda y, si corresponde, inicializa su precio base.
+        Returns
+        -------
+        HttpResponse
+            Respuesta HTTP redirigiendo a la URL de éxito.
+        """
         moneda = form.save()
         
         # Si tiene precio base inicial, crear o actualizar el precio base
@@ -1154,7 +1441,7 @@ class VistaCrearMoneda(LoginRequiredMixin, CreateView):
 
 class VistaEditarMoneda(LoginRequiredMixin, UpdateView):
     """
-    Vista para editar una moneda existente.
+    Vista para editar una moneda existente y muestra contexto útil (stats, si puede eliminarse y su precio base actual).
     """
     model = Moneda
     form_class = FormularioMoneda
@@ -1168,6 +1455,20 @@ class VistaEditarMoneda(LoginRequiredMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        """
+        Agrega al contexto stats, posibilidad de eliminación y precio base actual.
+
+        Returns
+        -------
+        dict
+            Contexto extendido con:
+            - ``stats`` : dict | Any
+                Resultado de ``moneda.obtener_estadisticas_uso()``.
+            - ``puede_eliminarse`` : bool
+                Bandera de ``moneda.puede_ser_eliminada()``.
+            - ``precio_base_actual`` : Decimal | None
+                Valor actual en :class:`PrecioBase` (si existe).
+        """
         contexto = super().get_context_data(**kwargs)
         moneda = self.get_object()
         

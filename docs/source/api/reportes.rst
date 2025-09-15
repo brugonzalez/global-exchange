@@ -21,7 +21,6 @@ Submodules
    reportes.forms
    reportes.models
    reportes.tasks
-   reportes.tests
    reportes.urls
    reportes.views
 

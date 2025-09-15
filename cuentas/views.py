@@ -28,7 +28,12 @@ from django.utils import timezone
 
 class VistaLogin(FormView):
     """
-    Vista de inicio de sesión de usuario
+    Vista de inicio de sesión de usuario.
+
+    Autentica al usuario con email/username y contraseña. Valida el estado de la cuenta.
+    Verifica email y gestiona el flujo de 2FA si es necesario.
+    Si todo está correcto, redirige al usuario a su panel de control.
+
     """
     template_name = 'cuentas/iniciar_sesion.html'
     form_class = FormularioLogin
@@ -40,6 +45,19 @@ class VistaLogin(FormView):
         return context
     
     def form_valid(self, formulario):
+        """
+        Procesa el formulario de inicio de sesión.
+
+        Parameters
+        ----------
+        formulario : FormularioLogin
+            El formulario con los datos de inicio de sesión.
+
+        Returns
+        -------
+        HttpResponse
+            Redirección a la URL de éxito (2FA, panel de control) o renderizado del formulario con errores.
+        """
         nombre_usuario = formulario.cleaned_data['username']
         contrasena = formulario.cleaned_data['contrasena']
         
@@ -108,8 +126,23 @@ class VistaLogin(FormView):
 class VistaLogout(TemplateView):
     """
     Vista de cierre de sesión de usuario
+
+    Termina la sesión del usuario y lo redirige a la página principal.
     """
     def get(self, solicitud, *args, **kwargs):
+        """
+        Procesa la peticion GET para cerrar sesion.
+
+        Parameters
+        ----------
+        solicitud : HttpRequest
+            La solicitud entrante
+        
+        Returns
+        -------
+        HttpResponse
+            Redirección a la página principal con mensaje de éxito.
+        """
         logout(solicitud)
         messages.success(solicitud, 'Ha cerrado sesión correctamente.')
         return redirect('divisas:panel_de_control')
@@ -118,12 +151,31 @@ class VistaLogout(TemplateView):
 class VistaRegistro(FormView):
     """
     Vista de registro de usuario
+
+    Muestra un formulario de registro, crea el usuario y envía un email
+    con un link de verificación para activar la cuenta.
     """
     template_name = 'cuentas/registro.html'
     form_class = FormularioRegistro
     success_url = reverse_lazy('cuentas:iniciar_sesion')
 
     def form_valid(self, formulario):
+        """
+        Procesa el formulario válido.
+
+        Crea un nuevo usuario con email sin verificar, genera un token de
+        verificación y envía el correo de activación.
+
+        Parameters
+        ----------
+        formulario : FormularioRegistro
+            Formulario de registro validado.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección a la URL de éxito (login).
+        """
         # Crear usuario
         usuario = formulario.save(commit=False)
         usuario.email_verificado = False
@@ -146,7 +198,21 @@ class VistaRegistro(FormView):
         return super().form_valid(formulario)
 
     def enviar_email_verificacion(self, usuario, token):
-        """Envía el correo de verificación de email"""
+        """
+        Envía el correo con el link de verificación.
+
+        Parameters
+        ----------
+        usuario : Usuario
+            El usuario recién registrado.
+        token : str
+            Token único para verificar el email.
+
+        Notes
+        -----
+        - El enlace expira en 24 horas.
+        - Usa la configuración de `DEFAULT_FROM_EMAIL` para el remitente.
+        """
         enlace_verificacion = self.request.build_absolute_uri(
             f'/cuentas/verificar-email/{token}/'
         )
@@ -179,11 +245,35 @@ class VistaRegistro(FormView):
 
 class VistaVerificarEmail(TemplateView):
     """
-    Vista de verificación de email
+    Vista para confirmar la verificación de correo electrónico.
     """
     template_name = 'cuentas/verificar_email.html'
 
     def get(self, solicitud, token, *args, **kwargs):
+        """
+        Procesa la verificación de email a partir de un token.
+
+        Parameters
+        ----------
+        solicitud : HttpRequest
+            La petición entrante (GET desde el enlace del correo).
+        token : str
+            El token único de verificación asociado al usuario.
+
+        Returns
+        -------
+        HttpResponse
+            Renderiza la plantilla de verificación con el resultado
+            (success=True o False).
+
+        Notes
+        -----
+        - Si el token no existe o ya fue usado, se considera inválido.
+        - Si el token existe pero expiró (24h), se muestra error de expiración.
+        - Si todo es válido:
+            - El usuario queda con `email_verificado = True`.
+            - El token se marca como `utilizado = True`.
+        """
         try:
             verificacion = VerificacionEmail.objects.get(token=token, utilizado=False)
 
@@ -211,10 +301,22 @@ class VistaVerificarEmail(TemplateView):
 class VistaPerfil(LoginRequiredMixin, TemplateView):
     """
     Vista del perfil de usuario
+
+    Muestra los datos básicos del usuario y los clientes asociados a su cuenta.
     """
     template_name = 'cuentas/perfil.html'
     
     def get_context_data(self, **kwargs):
+        """
+        Agrega datos adicionales al contexto.
+
+        Returns
+        -------
+        dict
+            Contexto extendido con:
+            - `usuario`: El usuario actual.
+            - `clientes`: Lista de clientes asociados al usuario.
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['usuario'] = self.request.user
         contexto['clientes'] = self.request.user.clientes.all()
@@ -223,18 +325,39 @@ class VistaPerfil(LoginRequiredMixin, TemplateView):
 
 class VistaEditarPerfil(LoginRequiredMixin, FormView):
     """
-    Vista para editar el perfil de usuario
+    Vista para editar el perfil de usuario (nombre, email)
     """
     template_name = 'cuentas/editar_perfil.html'
     form_class = FormularioPerfil
     success_url = reverse_lazy('cuentas:perfil')
     
     def get_form_kwargs(self):
+        """
+        Agrega el usuario actual como instancia del formulario.
+
+        Returns
+        -------
+        dict
+            Diccionario con los argumentos del formulario.
+        """
         kwargs = super().get_form_kwargs()
         kwargs['instance'] = self.request.user
         return kwargs
     
     def form_valid(self, formulario):
+        """
+        Guarda los cambios del perfil si el formulario es válido.
+
+        Parameters
+        ----------
+        formulario : FormularioPerfil
+            Formulario con los datos actualizados.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección a la vista de perfil con mensaje de éxito.
+        """
         formulario.save()
         messages.success(self.request, 'Perfil actualizado correctamente.')
         return super().form_valid(formulario)
@@ -243,10 +366,21 @@ class VistaEditarPerfil(LoginRequiredMixin, FormView):
 class VistaSeleccionarCliente(LoginRequiredMixin, TemplateView):
     """
     Vista de selección de cliente
+
+    Permite al usuario ver los clientes a los que está asociado.
     """
     template_name = 'cuentas/seleccionar_cliente.html'
     
     def get_context_data(self, **kwargs):
+        """
+        Agrega al contexto los clientes asociados al usuario.
+
+        Returns
+        -------
+        dict
+            Contexto extendido con:
+            - `clientes`: Lista de clientes asociados al usuario.
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['clientes'] = self.request.user.clientes.filter(
             clienteusuario__esta_activo=True
@@ -256,9 +390,28 @@ class VistaSeleccionarCliente(LoginRequiredMixin, TemplateView):
 
 class VistaCambiarCliente(LoginRequiredMixin, TemplateView):
     """
-    Cambia el cliente activo
+    Vista para cambiar el cliente activo de un usuario.
+
+    Permite al usuario seleccionar uno de los clientes a los que está
+    asociado y cambiar su cliente activo.
     """
     def post(self, solicitud, id_cliente, *args, **kwargs):
+        """
+        Procesa la solicitud POST para cambiar el cliente activo.
+
+        Parameters
+        ----------
+        solicitud : HttpRequest
+            La petición entrante.
+        id_cliente : int
+            ID del cliente que se quiere activar.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección al panel de control con un mensaje de éxito o error.
+
+        """
         try:
             cliente = get_object_or_404(
                 Cliente,
@@ -281,9 +434,22 @@ class VistaCambiarCliente(LoginRequiredMixin, TemplateView):
 
 class VistaDeseleccionarCliente(LoginRequiredMixin, TemplateView):
     """
-    Deselecciona el cliente activo
+    Vista para deseleccionar el cliente activo de un usuario.
     """
     def post(self, solicitud, *args, **kwargs):
+        """
+        Procesa la solicitud POST para deseleccionar el cliente activo.
+
+        Parameters
+        ----------
+        solicitud : HttpRequest
+            La petición entrante.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección al panel de control con un mensaje de éxito.
+        """
         # Limpiar el cliente seleccionado del usuario
         solicitud.user.ultimo_cliente_seleccionado = None
         solicitud.user.save(update_fields=['ultimo_cliente_seleccionado'])
@@ -296,7 +462,10 @@ class VistaDeseleccionarCliente(LoginRequiredMixin, TemplateView):
 # Vistas de Restablecimiento de Contraseña
 class VistaSolicitudRestablecimientoContrasena(FormView):
     """
-    Vista de solicitud de restablecimiento de contraseña
+    Vista para solicitar el restablecimiento de contraseña.
+
+    Muestra un formulario para ingresar el email. 
+
     """
     template_name = 'cuentas/solicitud_restablecimiento_contrasena.html'
     form_class = 'FormularioSolicitudRestablecimientoContrasena'
@@ -307,11 +476,37 @@ class VistaSolicitudRestablecimientoContrasena(FormView):
         return FormularioSolicitudRestablecimientoContrasena
     
     def get_context_data(self, **kwargs):
+        """
+        Inyecta el formulario con la clave `formulario` para la plantilla.
+
+        Returns
+        -------
+        dict
+            Contexto extendido con el formulario.
+        """
         context = super().get_context_data(**kwargs)
         context['formulario'] = context['form']
         return context
     
     def form_valid(self, formulario):
+        """
+        Procesa la solicitud cuando el formulario es válido.
+
+        - Busca el usuario por email.
+        - Si existe, genera token (UUID), borra tokens previos no usados
+          y crea el registro de restablecimiento.
+        - Envía el email con el enlace de recuperación.
+
+        Parameters
+        ----------
+        formulario : FormularioSolicitudRestablecimientoContrasena
+            Formulario validado con el email del usuario.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección tras enviar el correo de recuperación a página de inicio de sesión.
+        """
         email = formulario.cleaned_data['email']
         
         try:
@@ -345,7 +540,17 @@ class VistaSolicitudRestablecimientoContrasena(FormView):
         return super().form_valid(formulario)
     
     def enviar_email_restablecimiento(self, usuario, token):
-        """Envía el email de restablecimiento de contraseña"""
+        """
+        Envía el correo con el enlace para restablecer la contraseña.
+
+        Parameters
+        ----------
+        usuario : Usuario
+            Usuario que solicitó el restablecimiento.
+        token : str
+            Token único vinculado a la solicitud.
+
+        """
         enlace_restablecimiento = self.request.build_absolute_uri(
             f'/cuentas/contrasena/restablecer/{token}/'
         )
@@ -377,18 +582,48 @@ class VistaSolicitudRestablecimientoContrasena(FormView):
 
 class VistaRestablecimientoContrasena(FormView):
     """
-    Vista de confirmación de restablecimiento de contraseña con token
+    Vista de confirmación de restablecimiento de contraseña con token.
+
+    Muestra formulario para ingresar la nueva contraseña
+
+    Notes
+    -----
+    - El token se valida en `dispatch`: debe existir, no estar usado y no estar expirado.
+    - Se marca el token como utilizado en `form_valid` para impedir reuso.
+    - Se registra el evento en `RegistroAuditoria` (acción: ``PASSWORD_RESET``).
+      Verificá que este código de acción exista en tu enumeración.
     """
     template_name = 'cuentas/restablecimiento_contrasena.html'
     form_class = 'FormularioRestablecimientoContrasena'
     success_url = reverse_lazy('cuentas:iniciar_sesion')
     
     def get_form_class(self):
+        """
+        Obtiene la clase real del formulario.
+
+        Returns
+        -------
+        type[forms.Form]
+            La clase `FormularioRestablecimientoContrasena`.
+        """
         from .forms import FormularioRestablecimientoContrasena
         return FormularioRestablecimientoContrasena
     
     def dispatch(self, solicitud, token, *args, **kwargs):
-        """Valida el token antes de procesar"""
+        """
+        Valida el token antes de procesar la vista.
+
+        Reglas:
+        - Debe existir un registro de `RestablecimientoContrasena` con ese token
+          y `utilizado=False`.
+        - No debe estar expirado (1 hora desde su creación).
+
+        Returns
+        -------
+        HttpResponse
+            Redirección a la solicitud del token si es inválido/expirado,
+            o continúa con el flujo normal si es válido.
+        """
         try:
             self.registro_restablecimiento = RestablecimientoContrasena.objects.get(token=token, utilizado=False)
             
@@ -403,6 +638,16 @@ class VistaRestablecimientoContrasena(FormView):
         return super().dispatch(solicitud, token, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
+        """
+        Inyecta información del usuario y el alias `formulario` para la plantilla.
+
+        Returns
+        -------
+        dict
+            Contexto extendido con:
+            - ``usuario``: Usuario dueño del token.
+            - ``formulario``: El form a renderizar (alias de ``form``).
+        """
         contexto = super().get_context_data(**kwargs)
         contexto['usuario'] = self.registro_restablecimiento.usuario
         if 'form' in contexto:
@@ -414,6 +659,23 @@ class VistaRestablecimientoContrasena(FormView):
         return contexto
     
     def form_valid(self, formulario):
+        """
+        Aplica el cambio de contraseña y cierra el ciclo del token.
+
+        Toma la nueva contraseña del formulario y la guarda en el usuario vinculado al token.
+        Marca el token como utilizado, registra el evento en auditoría y 
+        muestra mensaje de éxito y redirige.
+
+        Parameters
+        ----------
+        formulario : FormularioRestablecimientoContrasena
+            Formulario validado con la nueva contraseña.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirige a la página de inicio de sesión.
+        """
         # Restablecer la contraseña
         usuario = self.registro_restablecimiento.usuario
         nueva_contrasena = formulario.cleaned_data['nueva_contrasena1']
@@ -444,6 +706,9 @@ class VistaRestablecimientoContrasena(FormView):
 class VistaCambioContrasena(LoginRequiredMixin, FormView):
     """
     Vista de cambio de contraseña para usuarios autenticados
+
+    Muestra un formulario que solicita la contraseña actual, la nueva
+    y su confirmación. Si todo está correcto, aplica el cambio y registra.
     """
     template_name = 'cuentas/cambiar_contrasena.html'
     form_class = FormularioCambioContrasena
@@ -455,11 +720,33 @@ class VistaCambioContrasena(LoginRequiredMixin, FormView):
         return kwargs
     
     def get_context_data(self, **kwargs):
+        """
+        Agrega el alias ``formulario`` para la plantilla.
+
+        Returns
+        -------
+        dict
+            Contexto extendido con el formulario bajo ``formulario``.
+        """
         context = super().get_context_data(**kwargs)
         context['formulario'] = context['form']
         return context
     
     def form_valid(self, formulario):
+        """
+        Guarda la nueva contraseña y registra el evento de auditoría.
+
+        Parameters
+        ----------
+        formulario : FormularioCambioContrasena
+            Formulario ya validado con la contraseña actual y la nueva.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección a pagina de perfil.
+
+        """
         formulario.save()
         
         # Registrar evento de auditoría
@@ -481,10 +768,34 @@ class VistaCambioContrasena(LoginRequiredMixin, FormView):
 class VistaConfiguracionDosFactores(LoginRequiredMixin, TemplateView):
     """
     Configura iToken para la cuenta del usuario
+
+    Muestra el estado actual del 2FA (si ya tiene un dispositivo TOTP cargado)
+    y expone en el contexto la configuración 2FA del usuario para ser editada
+    desde la interfaz.
+    Notes
+    -----
+    - Usa `django-otp` para administrar dispositivos TOTP (ej.: Google Authenticator).
+    - Crea automáticamente una instancia de :class:`ConfiguracionDosFactoresUsuario`
+      si el usuario aún no la tiene.
     """
     template_name = 'cuentas/2fa_configurar.html'
     
     def get_context_data(self, **kwargs):
+        """
+        Prepara el contexto con el estado del 2FA y la configuración del usuario.
+
+        Incluye:
+        - ``tiene_dispositivo_totp``: bool indicando si el usuario ya tiene al menos
+          un dispositivo TOTP registrado.
+        - ``dispositivos_totp``: queryset/iterable con los dispositivos TOTP del usuario.
+        - ``configuracion_2fa``: instancia de :class:`ConfiguracionDosFactoresUsuario`
+          del usuario (creada si no existía).
+
+        Returns
+        -------
+        dict
+            Contexto extendido para la plantilla.
+        """
         contexto = super().get_context_data(**kwargs)
         
         # Comprobar si el usuario ya tiene 2FA activado
@@ -506,7 +817,7 @@ class VistaConfiguracionDosFactores(LoginRequiredMixin, TemplateView):
 
 class VistaActivarDosFactores(LoginRequiredMixin, TemplateView):
     """
-    Activa el dispositivo iToken TOTP
+    Activa y confirma el dispositivo iToken TOTP
     """
     template_name = 'cuentas/2fa_activar.html'
     
@@ -756,6 +1067,7 @@ class MixinRequerirDosFactores:
     Mixin para requerir 2FA para operaciones sensibles
     """
     def dispatch(self, solicitud, *args, **kwargs):
+
         if solicitud.user.is_authenticated and solicitud.user.requiere_2fa('sensible'):
             # Comprobar si el usuario ha verificado 2FA recientemente (en la última hora)
             from django.utils import timezone
@@ -835,10 +1147,36 @@ def requiere_permiso_admin(permiso):
 
 
 class MixinPermisosAdmin:
-    """Mixin para verificar permisos de administrador en vistas basadas en clases."""
+    """
+    Mixin para validar permisos de administrador en vistas basadas en clases.
+
+    Se asegura de que el usuario esté autenticado y cuente con el permiso
+    específico requerido. Si no cumple, se redirige con un mensaje de error.
+    
+    Attributes
+    ----------
+    permiso_requerido : str or None
+        Código del permiso necesario para acceder a la vista. Si es None,
+        se asume que basta con ser superusuario.
+    """
     permiso_requerido = None
     
     def dispatch(self, request, *args, **kwargs):
+        """
+        Intercepta la petición y valida autenticación y permisos
+
+        Parameters
+        ----------
+        request : HttpRequest
+            La petición entrante.
+
+        Returns
+        -------
+        HttpResponse
+            - Redirección a login si no está autenticado.
+            - Redirección al panel de control si carece de permisos.
+            - Flujo normal de la vista si todo es válido.
+        """        
         if not request.user.is_authenticated:
             messages.error(request, 'Debe iniciar sesión para acceder a esta página.')
             return redirect('cuentas:iniciar_sesion')
@@ -853,11 +1191,29 @@ class MixinPermisosAdmin:
 class VistaGestionarRoles(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para gestionar roles del sistema.
+
+    Muestra la lista de roles y permisos y permite la creación, edición y 
+    eliminación de roles.
+
+    Notes
+    -----
+    - Esta vista requiere el permiso 'gestionar_roles' para acceder.
     """
     template_name = 'cuentas/gestionar_roles.html'
     permiso_requerido = 'gestionar_roles'
     
     def get_context_data(self, **kwargs):
+        """
+        Arma el contexto para la vista con información sobre roles y permisos.
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - ``roles``: QuerySet de roles con permisos precargados.
+            - ``total_roles``: Conteo total de roles.
+            - ``total_permisos``: Conteo total de permisos.
+        """
         contexto = super().get_context_data(**kwargs)
         contexto.update({
             'roles': Rol.objects.all().prefetch_related('permisos'),
@@ -870,11 +1226,29 @@ class VistaGestionarRoles(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
 class VistaCrearRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para crear un nuevo rol.
+
+    Renderiza un formulario para definir nombre, descripción y permisos
+    del rol.
+
+    Notes
+    -----
+    - Usa :class:`FormularioRol` para validar y guardar el rol.
+    - Registra la acción en :class:`RegistroAuditoria` al crear con éxito.
     """
     template_name = 'cuentas/crear_rol.html'
     permiso_requerido = 'gestionar_roles'
     
     def get_context_data(self, **kwargs):
+        """
+        Prepara el contexto con el formulario vacío y el catálogo de permisos.
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - ``formulario``: instancia de :class:`FormularioRol`.
+            - ``permisos``: listado de :class:`Permiso` ordenado por descripción.
+        """
         contexto = super().get_context_data(**kwargs)
         from .forms import FormularioRol
         contexto['formulario'] = FormularioRol()
@@ -882,6 +1256,28 @@ class VistaCrearRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
         return contexto
     
     def post(self, request, *args, **kwargs):
+        """
+        Procesa el envío del formulario para crear el rol.
+
+        Si el formulario es válido:
+        - Crea el rol y asocia permisos.
+        - Registra el evento en auditoría con metadatos útiles.
+        - Redirige a la pantalla de gestión de roles con mensaje de éxito.
+
+        Si el formulario es inválido:
+        - Re-renderiza la plantilla con errores y un mensaje informativo.
+
+        Parameters
+        ----------
+        request : HttpRequest
+            Petición con los datos del formulario.
+
+        Returns
+        -------
+        HttpResponse
+            Redirección a gestión de roles en caso de éxito o render de la
+            misma página con errores cuando falla la validación.
+        """
         from .forms import FormularioRol
         formulario = FormularioRol(request.POST)
         
@@ -911,11 +1307,25 @@ class VistaCrearRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
 class VistaEditarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para editar un rol existente.
+
+    Permite modificar el nombre, descripción y permisos del rol.
     """
     template_name = 'cuentas/editar_rol.html'
     permiso_requerido = 'gestionar_roles'
     
     def get_context_data(self, **kwargs):
+        """
+        Carga en el contexto el rol a editar y el formulario precargado.
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - ``rol``: instancia de :class:`Rol` a editar.
+            - ``formulario``: instancia de :class:`FormularioRol` con datos del rol.
+            - ``permisos``: listado de :class:`Permiso` ordenado para la UI.
+            - ``es_edicion``: bandera bool para la plantilla.
+        """
         contexto = super().get_context_data(**kwargs)
         rol_id = kwargs.get('rol_id')
         rol = get_object_or_404(Rol, id=rol_id)
@@ -930,6 +1340,25 @@ class VistaEditarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
         return contexto
     
     def post(self, request, *args, **kwargs):
+        """
+        Procesa el formulario de edición y persiste cambios en el rol.
+
+        - Obtiene el rol por ``rol_id``.
+        - Valida y guarda el formulario.
+        - Registra el evento en auditoría.
+
+        Parameters
+        ----------
+        request : HttpRequest
+            Petición con los datos enviados por POST.
+
+        Returns
+        -------
+        HttpResponse
+            Redirección a la vista de gestión de roles si todo va bien,
+            o re-render de la misma plantilla con errores si falla.
+
+        """
         rol_id = kwargs.get('rol_id')
         rol = get_object_or_404(Rol, id=rol_id)
         
@@ -966,11 +1395,30 @@ class VistaEditarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
 class VistaEliminarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para eliminar un rol.
+
+    Muestra detalles del rol a eliminar, cuantos usuarios quedarían afectados y 
+    valida si el rol puede eliminarse (los roles de sistema no se pueden eliminar)
+
+    Notes
+    -----
+    - Los roles marcados como ``es_sistema`` están protegidos contra eliminación.
+    - Registra la acción en auditoría antes de borrar definitivamente.
     """
     template_name = 'cuentas/eliminar_rol.html'
     permiso_requerido = 'gestionar_roles'
     
     def get_context_data(self, **kwargs):
+        """
+        Devuelve el contexto con información del rol
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - ``rol``: Instancia del rol a eliminar.
+            - ``usuarios_afectados``: QuerySet de usuarios que tienen ese rol.
+            - ``puede_eliminar``: ``True`` si el rol no es de sistema.
+        """
         contexto = super().get_context_data(**kwargs)
         rol_id = kwargs.get('rol_id')
         rol = get_object_or_404(Rol, id=rol_id)
@@ -983,6 +1431,23 @@ class VistaEliminarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
         return contexto
     
     def post(self, request, *args, **kwargs):
+        """
+        Elimina el rol si es elegible y registra el evento.
+
+        Reglas:
+        - Si el rol es de sistema, se bloquea la acción y se informa.
+        - Si no es, se crea un log en :class:`RegistroAuditoria` y se elimina.
+
+        Parameters
+        ----------
+        request : HttpRequest
+            Petición con la confirmación de eliminación.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección a la gestión de roles con mensaje de resultado.
+        """
         rol_id = kwargs.get('rol_id')
         rol = get_object_or_404(Rol, id=rol_id)
         
@@ -1013,11 +1478,32 @@ class VistaEliminarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
 class VistaGestionarUsuarios(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para gestionar usuarios.
+
+    Lista usuarios con paginación, permite filtrar por nombre, email o username,
+    y lista los roles disponibles para ser asignados a los usuarios.
+
+    Notes
+    -----
+    - Paginación: 20 usuarios por página.
+    - Filtros soportados (GET):
+        - ``buscar``: texto libre que aplica `icontains` sobre
+          ``nombre_completo``, ``email`` y ``username``.
     """
     template_name = 'cuentas/gestionar_usuarios.html'
     permiso_requerido = 'asignar_roles'
     
     def get_context_data(self, **kwargs):
+        """
+        Construye el contexto con la lista paginada y filtros aplicados.
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - ``usuarios``: Paginado de usuarios.
+            - ``roles_disponibles``: QuerySet de roles para asignar.
+            - ``buscar``: término de búsqueda actual.
+        """
         from django.db import models
         contexto = super().get_context_data(**kwargs)
         
@@ -1049,11 +1535,27 @@ class VistaGestionarUsuarios(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
 class VistaAsignarRolesUsuario(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para asignar roles a un usuario específico.
+
+    Muestra el formulario con los roles disponibles y los roles actuales del usuario.
+    Procesa la actualización y registra en auditoría los cambios realizados.
+
     """
     template_name = 'cuentas/asignar_roles_usuario.html'
     permiso_requerido = 'asignar_roles'
 
     def get_context_data(self, **kwargs):
+        """
+        Construye el contexto con los datos del usuario y formulario de asignación.
+
+        Returns
+        -------
+        dict
+            Contexto con:
+            - ``usuario_objetivo``: instancia de :class:`Usuario` a modificar.
+            - ``formulario``: Formulario para asignar roles. 
+            - ``roles_actuales``: roles actuales del usuario.
+            - ``permisos_actuales``: permisos actualmente asignados al usuario.
+        """
         contexto = super().get_context_data(**kwargs)
         usuario_id = kwargs.get('usuario_id')
         usuario = get_object_or_404(Usuario, id=usuario_id)
@@ -1068,6 +1570,27 @@ class VistaAsignarRolesUsuario(LoginRequiredMixin, MixinPermisosAdmin, TemplateV
         return contexto
 
     def post(self, request, *args, **kwargs):
+        """
+        Procesa el envío del formulario y aplica los roles seleccionados.
+
+        Si la validación es correcta:
+        - Actualiza la lista de roles del usuario.
+        - Registra en auditoría el cambio con el diff de roles.
+        - Redirige a la gestión de usuarios con un mensaje de éxito.
+
+        Si algo falla:
+        - Re-renderiza la plantilla con errores y un mensaje claro.
+
+        Parameters
+        ----------
+        request : HttpRequest
+            Petición con los datos del formulario (POST).
+
+        Returns
+        -------
+        HttpResponse
+            Redirección en caso de éxito o render con errores en caso contrario.
+        """
         usuario_id = kwargs.get('usuario_id')
         usuario = get_object_or_404(Usuario, id=usuario_id)
 
@@ -1110,11 +1633,36 @@ Usuario = get_user_model()
 CODIGOS_DESBLOQUEO = {}
 
 class VistaSolicitudDesbloqueoCuenta(FormView):
+    """
+    Vista para solicitar el desbloqueo de una cuenta.
+
+    Solicita el desbloqueo de cuenta mediante un codigo OTP enviado al email.
+    Muestra un formulario para ingresar el email. Si la cuenta está bloqueada,
+    se genera un codigo OTP y se envía al email del usuario.
+    """
     template_name = 'cuentas/solicitud_desbloqueo.html'
     form_class = FormularioSolicitudDesbloqueoCuenta
     success_url = reverse_lazy('cuentas:verificar_codigo_desbloqueo')
 
     def form_valid(self, form):
+        """
+        Procesa la solicitud: valida estado de la cuenta y genera OTP si corresponde.
+
+        Parameters
+        ----------
+        form : FormularioSolicitudDesbloqueoCuenta
+            Formulario validado con el email del usuario.
+
+        Returns
+        -------
+        HttpResponse
+            Redirección a ``success_url`` o a iniciar sesión si no está bloqueado.
+
+        Notes
+        -----
+        - Si la cuenta no está bloqueada, se informa y se redirige al login.
+        - Si está bloqueada, se genera un OTP de 8 caracteres y se guarda con vencimiento.
+        """
         email = form.cleaned_data['email']
         try:
             usuario = Usuario.objects.get(email=email)
@@ -1141,7 +1689,18 @@ class VistaSolicitudDesbloqueoCuenta(FormView):
         return super().form_valid(form)
 
     def enviar_email_desbloqueo(self, usuario, codigo):
-        """Envía el email de restablecimiento de contraseña"""
+        """
+        Envía el email con el código OTP y enlace de para desbloqueo.
+        (valido 1 hora)
+
+        Parameters
+        ----------
+        usuario : Usuario
+            Usuario cuya cuenta quiere desbloquear.
+        codigo : str
+            Código OTP de un solo uso (8 caracteres).
+
+        """
         enlace_restablecimiento = self.request.build_absolute_uri(
             f'/cuentas/contrasena/restablecer/{codigo}/'
         )
@@ -1171,12 +1730,38 @@ class VistaSolicitudDesbloqueoCuenta(FormView):
             fail_silently=True
         )
 
+
 class VistaVerificarCodigoDesbloqueo(FormView):
+    """
+    Vista para verificar el código de desbloqueo de cuenta.
+
+    Toma el email y el código ingresado por el usuario, valida que el código exista,
+    no haya expirado y coincida. Si todo está bien, reinicia el contador de
+    intentos fallidos y desbloquea la cuenta.
+
+    """
     template_name = 'cuentas/verificar_codigo_desbloqueo.html'
     form_class = FormularioVerificacionCodigoDesbloqueo
     success_url = reverse_lazy('cuentas:iniciar_sesion')
 
     def form_valid(self, form):
+        """
+        Valida el OTP y desbloquea la cuenta si corresponde.
+
+        Parameters
+        ----------
+        form : FormularioVerificacionCodigoDesbloqueo
+            Formulario validado con ``email`` y ``codigo``.
+
+        Returns
+        -------
+        HttpResponse
+            Redirección a iniciar sesión en caso de éxito, o render con errores en caso contrario.
+
+        Notes
+        -----
+        - Al desbloquear, se llama a ``restablecer_intentos_fallidos()`` del usuario.
+        """
         email = form.cleaned_data['email']
         codigo = form.cleaned_data['codigo']
         registro = CODIGOS_DESBLOQUEO.get(email)
@@ -1197,9 +1782,14 @@ class VistaVerificarCodigoDesbloqueo(FormView):
             messages.error(self.request, 'Usuario no encontrado.')
         return super().form_valid(form)
 
+
 class EditarUsuario(LoginRequiredMixin, MixinPermisosAdmin, UpdateView):
     """
-    Vista para editar a un usuario específico.
+    Edita los datos de un usuario específico (desde el panel).
+
+    Muestra un formulario simple (nombre completo y correo) y guarda los cambios.
+    Registra en auditoría qué campos cambiaron.
+
     """
     model = get_user_model()  # Modelo de usuario
     form_class = EditarUsuarioForm  # Formulario que definimos
@@ -1208,11 +1798,37 @@ class EditarUsuario(LoginRequiredMixin, MixinPermisosAdmin, UpdateView):
     success_url = reverse_lazy('cuentas:gestionar_usuarios')  # A dónde redirige al guardar
 
     def get_context_data(self, **kwargs):
+        """
+        Inyecta el usuario objetivo en el contexto para la plantilla.
+
+        Returns
+        -------
+        dict
+            Contexto extendido con ``usuario_objetivo`` para plantilla
+        """
         context = super().get_context_data(**kwargs)
         context['usuario_objetivo'] = self.object  # Le damos el nombre que quieres en el template
         return context
 
     def form_valid(self, form):
+        """
+        Guarda los cambios, arma un diff de campos y registra auditoría.
+
+
+        Parameters
+        ----------
+        form : EditarUsuarioForm
+            Formulario validado con los nuevos datos del usuario.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección a gestionar usuarios con mensaje de éxito.
+
+        Notes
+        -----
+        - Actualmente se auditan ``nombre_completo`` y ``email``.
+        """
         usuario = self.object  # Usuario antes de guardar
         datos_anteriores = {
             'nombre_completo': usuario.nombre_completo,
@@ -1250,12 +1866,51 @@ class EditarUsuario(LoginRequiredMixin, MixinPermisosAdmin, UpdateView):
         return response
 
     def form_invalid(self, form):
+        """
+        Maneja la validación fallida del formulario.
+
+        Muestra un mensaje re-renderiza la página con los errores.
+
+        Parameters
+        ----------
+        form : EditarUsuarioForm
+            Formulario con errores de validación.
+
+        Returns
+        -------
+        HttpResponse
+            Render con errores para que el usuario corrija.
+        """
         # Mostrar error si el formulario es inválido
         messages.error(self.request, "Por favor, corrige los errores en el formulario.")
         return super().form_invalid(form)
 
+
 class CambiarEstadoUsuarioView(LoginRequiredMixin, MixinPermisosAdmin, View):
+    """
+    Vista para cambiar el estado de un usuario (activo/bloqueado)
+
+    Notes
+    -----
+    - Llama a los métodos ``bloquear()`` y ``desbloquear()`` del modelo :class:`Usuario`.
+    - Registra cada acción en auditoría desde esos métodos.
+    """
     def post(self, request, usuario_id):
+        """
+        Alterna el estado de un usuario (activo/bloqueado).
+
+        Parameters
+        ----------
+        request : HttpRequest
+            Petición entrante con el usuario administrador autenticado.
+        usuario_id : int
+            ID del usuario objetivo.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección a la vista de edición del usuario.
+        """
         Usuario = get_user_model()
         usuario = get_object_or_404(Usuario, id=usuario_id)
 
@@ -1268,9 +1923,17 @@ class CambiarEstadoUsuarioView(LoginRequiredMixin, MixinPermisosAdmin, View):
 
         return redirect('cuentas:editar_usuario', usuario_id=usuario.id)
 
+
 class VistaRegistroUsuario(FormView):
     """
     Vista de registro de usuario por el administrador
+
+    Muestra el formulario de registro, crea la cuenta y envía el correo
+    de verificación con enlace de activación.
+
+    Notes
+    -----
+    - Por defecto se asigna el rol "Usuario" con sus permisos correspondientes.
     """
     template_name = 'cuentas/crear_usuario.html'
     form_class = FormularioRegistroUsuario
@@ -1278,6 +1941,24 @@ class VistaRegistroUsuario(FormView):
     roles = Rol.objects.all()
 
     def form_valid(self, formulario):
+        """
+        Procesa el registro cuando el formulario es válido.
+
+        Crea el usuario con email sin verificar y genera su contraseña provisional.
+        Guarda la instancia, genera y guarda el token de verificación.
+        Asigna el rol por defecto "Usuario".
+        Envia email con el link de verificación.
+
+        Parameters
+        ----------
+        formulario : FormularioRegistroUsuario
+            Formulario validado con los datos del nuevo usuario.
+
+        Returns
+        -------
+        HttpResponseRedirect
+            Redirección a gestionar usuarios con mensaje de éxito.
+        """
         # Crear usuario
         usuario = formulario.save(commit=False)
         usuario.email_verificado = False
@@ -1309,7 +1990,20 @@ class VistaRegistroUsuario(FormView):
         return super().form_valid(formulario)
 
     def enviar_email_verificacion(self, usuario, token):
-        """Envía el correo de verificación de email"""
+        """
+        Envía correo con el enlace de verificación de email.
+
+        Parameters
+        ----------
+        usuario : Usuario
+            Usuario recién creado.
+        token : str
+            Token único de verificación asociado al usuario.
+
+        Notes
+        -----
+        - El enlace expira a las 24 horas (según la lógica de `VerificacionEmail`).
+        """
         enlace_verificacion = self.request.build_absolute_uri(
             f'/cuentas/verificar-email/{token}/'
         )
@@ -1332,7 +2026,23 @@ class VistaRegistroUsuario(FormView):
             fail_silently=True
         )
 
+
 def eliminar_usuario(request, usuario_id):
+    """
+    Elimina un usuario del sistema.
+
+    Parameters
+    ----------
+    request : HttpRequest
+        La solicitud HTTP que se está procesando.
+    usuario_id : int
+        El ID del usuario a eliminar.
+
+    Returns
+    -------
+    HttpResponseRedirect
+        Redirección a la lista de usuarios con mensaje de éxito o error.
+    """
     usuario = get_object_or_404(Usuario, id=usuario_id)
 
     # Evitar que se borre a sí mismo

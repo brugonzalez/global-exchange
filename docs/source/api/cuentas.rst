@@ -21,7 +21,6 @@ Submodules
    cuentas.forms
    cuentas.models
    cuentas.signals
-   cuentas.tests
    cuentas.urls
    cuentas.views
 

@@ -1,5 +1,5 @@
-cuentas.migrations package
-==========================
+tests.notificaciones package
+============================
 
 Submodules
 ----------
@@ -7,12 +7,12 @@ Submodules
 .. toctree::
    :maxdepth: 2
 
-   cuentas.migrations.0001_initial
+   tests.notificaciones.test_notificaciones
 
 Module contents
 ---------------
 
-.. automodule:: cuentas.migrations
+.. automodule:: tests.notificaciones
    :members:
    :undoc-members:
    :show-inheritance:

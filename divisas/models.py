@@ -12,6 +12,45 @@ logger = logging.getLogger(__name__)
 class Moneda(models.Model):
     """
     Modelo para las monedas soportadas por el sistema.
+
+    Attributes
+    ----------
+    codigo : str
+        Código único de la moneda (ej. "USD").
+    nombre : str
+        Nombre completo de la moneda (ej. "Dólar Estadounidense").
+    simbolo : str
+        Símbolo de la moneda (ej. "$").
+    pais : CountryField
+        País asociado a la moneda.
+    esta_activa : bool
+        Indica si la moneda está activa.
+    es_moneda_base : bool
+        Indica si la moneda es la base para cálculos.
+    comision_compra : Decimal
+        Comisión aplicada en la compra de la moneda.
+    comision_venta : Decimal
+        Comisión aplicada en la venta de la moneda.
+    lugares_decimales : int
+        Número de lugares decimales para la representación de la moneda y cálculos.
+    icono : ImageField
+        Icono representativo de la moneda.
+    precio_base_inicial : Decimal
+        Precio base inicial al crear la moneda.
+    denominacion_minima : Decimal
+        Denominación mínima para operaciones con esta moneda.
+    stock_inicial : Decimal
+        Stock inicial disponible de la moneda.
+    disponible_para_compra : bool
+        Si está disponible para operaciones de compra.
+    disponible_para_venta : bool
+        Si está disponible para operaciones de venta.
+    denominacion_maxima : Decimal
+        Denominación máxima para operaciones con esta moneda.
+    fecha_creacion : DateTimeField
+        Fecha de creación de la moneda.
+    fecha_actualizacion : DateTimeField
+        Fecha de última actualización de la moneda.
     """
 
     codigo = models.CharField(
@@ -89,14 +128,32 @@ class Moneda(models.Model):
         return f"{self.codigo} - {self.nombre}"
 
     def save(self, *args, **kwargs):
-        """Asegura que solo exista una moneda base."""
+        """
+        Guarda la moneda y se asegura que solo exista una moneda base.
+        Si la instancia es una moneda base, se desactivan ``es_moneda_base``
+        en todas las demás.
+        """
         if self.es_moneda_base:
             Moneda.objects.exclude(pk=self.pk).update(es_moneda_base=False)
         super().save(*args, **kwargs)
 
     def obtener_tasa_actual(self, categoria):
         """
-        Obtiene la tasa de cambio más reciente para esta moneda y la categoría del cliente.
+        Devuelve la tasa de cambio activa más reciente para esta moneda y una categoría.
+
+        Parameters
+        ----------
+        categoria : CategoriaCliente
+            Categoría del cliente para la que se busca la tasa.
+
+        Returns
+        -------
+        TasaCambio or None
+            La tasa activa más reciente, o ``None`` si no hay tasas activas para esa categoría.
+
+        Notes
+        -----
+        - Se filtra por ``esta_activa=True`` y se ordena por ``-fecha_actualizacion``.
         """
         return self.tasas_cambio.filter(
             esta_activa=True,
@@ -104,26 +161,70 @@ class Moneda(models.Model):
         ).order_by('-fecha_actualizacion').first()
 
     def obtener_tasa_compra(self):
-        """Obtiene la tasa de compra actual."""
+        """
+        Obtiene la tasa de compra actual.
+
+        Returns
+        -------
+        Decimal or None
+            Valor de la tasa de compra, o ``None`` si no hay tasa disponible.
+
+        Notes
+        -----
+        - Requiere una tasa actual
+        """
         tasa = self.obtener_tasa_actual()
         return tasa.tasa_compra if tasa else None
 
     def obtener_tasa_venta(self):
-        """Obtiene la tasa de venta actual."""
+        """
+        Obtiene la tasa de venta actual.
+
+        Returns
+        -------
+        Decimal or None
+            Valor de la tasa de venta, o ``None`` si no hay tasa disponible.
+
+        Notes
+        -----
+        - Requiere una tasa actual
+        """
         tasa = self.obtener_tasa_actual()
         return tasa.tasa_venta if tasa else None
 
     def obtener_precio_base(self):
-        """Obtiene el precio base actual."""
+        """
+        Devuelve el precio base activo de la moneda.
+
+        Returns
+        -------
+        PrecioBase or None
+            Registro activo más reciente, o ``None`` si no existe.
+        """
         return self.precio_base.filter(esta_activa=True).first() 
     
     def obtener_tasas_actuales(self):
+        """
+        Lista todas las tasas activas para esta moneda.
+
+        Returns
+        -------
+        QuerySet[TasaCambio]
+            Conjunto de tasas activas.
+        """
         return self.tasas_cambio.filter(esta_activa=True).select_related('categoria_cliente')
     
     def puede_ser_eliminada(self):
         """
-        Verifica si la moneda puede ser eliminada.
-        Solo se puede eliminar si no tiene transacciones asociadas.
+        Indica si la moneda puede ser eliminada.
+
+        La moneda **no** puede eliminarse si existen transacciones donde es
+        ``moneda_origen`` o ``moneda_destino``.
+
+        Returns
+        -------
+        bool
+            ``True`` si no tiene transacciones asociadas; ``False`` en caso contrario.
         """
         # Verificar si tiene transacciones donde es moneda origen o destino
         from transacciones.models import Transaccion
@@ -136,7 +237,23 @@ class Moneda(models.Model):
     
     def obtener_estadisticas_uso(self):
         """
-        Obtiene estadísticas de uso de la moneda.
+        Calcula estadísticas de uso de la moneda en transacciones.
+
+        Returns
+        -------
+        dict
+            Diccionario con:
+            - ``total_transacciones`` : int
+                Cantidad total de transacciones donde participa la moneda
+                (como origen o destino).
+            - ``monto_total_origen`` : Decimal
+                Suma de montos donde la moneda fue **origen**.
+            - ``monto_total_destino`` : Decimal
+                Suma de montos donde la moneda fue **destino**.
+
+        Notes
+        -----
+        - Los valores None se normalizan a 0.
         """
         from transacciones.models import Transaccion
         from django.db.models import Count, Sum
@@ -170,7 +287,34 @@ class Moneda(models.Model):
 
 class PrecioBase(models.Model):
     """
-    Modelo para los precios base de las monedas.
+    Precio base vigente de una moneda respecto a una moneda base.
+
+    Representa el precio a partir del cual se calculan tasas de cambio
+    y márgenes por categoría. Solo puede existir **un** registro activo por
+    (moneda, moneda_base) a la vez; este modelo se encarga de desactivar
+    automáticamente los anteriores cuando se guarda uno nuevo activo.
+
+    Attributes
+    ----------
+    moneda : Moneda
+        Moneda cuyo precio estamos definiendo.
+    moneda_base : Moneda
+        Moneda de referencia (PYG).
+    precio_base : Decimal
+        Valor base de la moneda expresado en la moneda de referencia.
+    esta_activa : bool
+        Indica si este registro es el vigente para (moneda, moneda_base).
+    fecha_creacion : datetime
+        Fecha/hora de alta del registro.
+    fecha_actualizacion : datetime
+        Última modificación.
+    actualizado_por : Usuario or None
+        Usuario que realizó la última actualización (si corresponde).
+
+    Notes
+    -----
+    - La creación/actualización de **tasas de cambio** derivadas de la moneda
+      se maneja vía una **señal** `post_save`.
     """
 
     moneda = models.ForeignKey(
@@ -220,8 +364,21 @@ class PrecioBase(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Guarda el precio base y desactiva otros precios base activos para la misma moneda/moneda_base.
-        La creación/actualización de tasas de cambio se maneja ahora en una señal post_save.
+        Guarda el registro garantizando que haya un único precio base activo por par.
+
+        Si el registro se guarda con ``esta_activa=True``, desactiva cualquier otro
+        precio base activo existente para la misma combinación (moneda, moneda_base).
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        - La actualización se ejecuta dentro de una transacción atómica para evitar
+          estados intermedios inconsistentes.
+        - La generación/actualización de :class:`TasaCambio` vinculadas se gestiona
+          en la señal `post_save`, no acá.
         """
         with transaction.atomic():
             if self.esta_activa:
@@ -236,9 +393,35 @@ class PrecioBase(models.Model):
                 self.esta_activa = True
             super().save(*args, **kwargs)
 
+
 class TasaCambio(models.Model):
     """
-    Modelo para las tasas de cambio.
+    Tasas de cambio por moneda, moneda base y categoría de cliente.
+
+    Cada registro representa la tasa vigente para un par
+    (moneda/moneda_base) ajustada por la categoría del cliente. 
+
+    Attributes
+    ----------
+    moneda : Moneda
+        Moneda objetivo de la tasa (ej.: EUR).
+    moneda_base : Moneda
+        Moneda de referencia (ej.: USD).
+    precio_base : PrecioBase
+        Precio base desde el cual se calcularon las tasas.
+    categoria_cliente : CategoriaCliente
+        Categoría a la que aplica la tasa
+    fecha_creacion : datetime
+        Cuándo se creó el registro.
+    fecha_actualizacion : datetime
+        Última vez que se modificó.
+    esta_activa : bool
+        Indica si esta tasa está vigente para su combinación.
+    tasa_compra : Decimal
+        Tasa de compra aplicada al cliente.
+    tasa_venta : Decimal
+        Tasa de venta aplicada al cliente.
+
     """
     moneda = models.ForeignKey(
         Moneda,
@@ -287,7 +470,13 @@ class TasaCambio(models.Model):
 
     def __str__(self):
         return f"{self.moneda.codigo}/{self.moneda_base.codigo} - Tasa de Cambio: {self.tasa_compra}/{self.tasa_venta}"
+    
     def save(self, *args, **kwargs):
+        """
+        Guarda el registro garantizando que haya un único precio base activo por par.
+        Luego agrega una entrada en :class:`HistorialTasaCambio` con las tasas
+        del momento
+        """
         super().save(*args, **kwargs)
         # Agregar SIEMPRE un nuevo historial de tasas de cambio
         with transaction.atomic():
@@ -303,9 +492,31 @@ class TasaCambio(models.Model):
                 marca_de_tiempo=timezone.now()
             )
 
+
 class HistorialTasaCambio(models.Model):
     """
-    Modelo para almacenar las tasas de cambio históricas para gráficos y análisis.
+    Modelo para guardar las tasas de cambio históricas de cada moneda.
+
+    Attributes
+    ----------
+    moneda : Moneda
+        Moneda a la que corresponde la tasa.
+    moneda_base : Moneda
+        Moneda base en la que se expresa la tasa
+    categoria_cliente : CategoriaCliente
+        La categoría de cliente a la que se aplica la tasa de cambio.
+    precio_base : Decimal
+        El precio base de la moneda en ese momento.
+    tasa_compra : Decimal
+        Precio de compra en ese momento.
+    tasa_venta : Decimal
+        Precio de venta en ese momento.
+    comision_compra : Decimal
+        Comisión de compra en ese momento.
+    comision_venta : Decimal
+        Comisión de venta en ese momento.
+    marca_de_tiempo : datetime
+        Cuando se guardó ese registro
     """
     moneda = models.ForeignKey(
         Moneda, 
@@ -372,6 +583,7 @@ class HistorialTasaCambio(models.Model):
 
     def __str__(self):
         return f"{self.moneda.codigo}/{self.moneda_base.codigo} - {self.marca_de_tiempo}"
+
 
 class MetodoPago(models.Model):
     """
@@ -468,6 +680,30 @@ class MetodoPago(models.Model):
 class AlertaTasa(models.Model):
     """
     Modelo para alertas/notificaciones de cambio de tasa.
+
+    Representa una alerta que se activa cuando una moneda alcanza un cierto valor
+    o experimenta una variación significativa en su tasa de cambio.
+
+    Attributes
+    ----------
+    usuario : Usuario
+        El usuario que creó la alerta.
+    moneda : Moneda
+        La moneda para la cual se crea la alerta.
+    tipo_alerta : str
+        El tipo de alerta (ej. tasa objetivo, aumento, disminución).
+    tasa_objetivo : Decimal
+        El valor al que tiene que llegar la tasa para activar la alerta (solo requerido en alertas tipo ``RATE_TARGET``).
+    cambio_porcentual : Decimal
+        El porcentaje de cambio que dispara la alerta
+    esta_activa : bool
+        Indica si la alerta está activa o no
+    ultima_activacion : datetime
+        Marca de tiempo de la última activación de la alerta
+    conteo_activaciones : int
+        Número de veces que se ha disparado la alerta
+    fecha_creacion : datetime
+        Marca de tiempo de la creación de la alerta
     """
     TIPOS_ALERTA = [
         ('RATE_INCREASE', 'Subida de Tasa'),
