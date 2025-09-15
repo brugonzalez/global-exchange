@@ -67,17 +67,15 @@
                     {% else %}
                         <form method="post" id="formularioTransaccionCompra">
                             {% csrf_token %}
-                            
                             <div class="row">
                                 <div class="col-md-6">
                                     <label for="moneda_origen" class="form-label mb-0">Moneda Origen</label>
-                                    <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control mb-2">
+                                    <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control mb-2" id="moneda_origen_display">
                                 </div>
                                 <div class="col-md-6">
                                     {{ formulario.moneda_destino|as_crispy_field }}
                                 </div>
                             </div>
-                            
                             <div class="row">
                                 <div class="col-md-6">
                                     {{ formulario.monto_origen|as_crispy_field }}
@@ -90,32 +88,23 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="row">
-                                <!-- El campo de cliente está oculto ya que ahora se selecciona a través del selector superior de cliente -->
                                 {{ formulario.cliente }}
                                 <div class="col-md-12">
                                     {{ formulario.metodo_pago|as_crispy_field }}
                                 </div>
                             </div>
-                            
-                            <!-- Campos Específicos del Método de Pago -->
                             <div id="campos-metodo-pago">
-                                <!-- Elemento de Tarjeta de Stripe -->
                                 <div id="campos-stripe" class="campos-pago" style="display: none;">
                                     <div class="row">
                                         <div class="col-12">
                                             <label class="form-label">Información de Tarjeta</label>
-                                            <div id="elemento-tarjeta" class="form-control" style="padding: 12px;">
-                                                <!-- Los Elementos de Stripe crearán los elementos del formulario aquí -->
-                                            </div>
+                                            <div id="elemento-tarjeta" class="form-control" style="padding: 12px;"></div>
                                             <div id="errores-tarjeta" role="alert" class="text-danger mt-2"></div>
                                             {{ formulario.id_metodo_pago_stripe }}
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Campos de SIPAP -->
                                 <div id="campos-sipap" class="campos-pago" style="display: none;">
                                     <div class="row">
                                         <div class="col-md-6">
@@ -123,8 +112,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Campos de Western Union -->
                                 <div id="campos-western-union" class="campos-pago" style="display: none;">
                                     <div class="row">
                                         <div class="col-md-6">
@@ -132,8 +119,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Campos de Retiro en Caja -->
                                 <div id="campos-retiro-caja" class="campos-pago" style="display: none;">
                                     <div class="row">
                                         <div class="col-md-6">
@@ -145,13 +130,11 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="row">
                                 <div class="col-12">
                                     {{ formulario.notas|as_crispy_field }}
                                 </div>
                             </div>
-                            
                             <div class="d-flex justify-content-between align-items-center">
                                 <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left me-2"></i>
@@ -163,6 +146,29 @@
                                 </button>
                             </div>
                         </form>
+                        <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Precarga los datos desde la URL si existen
+                            const params = new URLSearchParams(window.location.search);
+                            // moneda_destino
+                            const monedaDestinoSel = document.getElementById('id_moneda_destino');
+                            if (monedaDestinoSel && params.get('moneda_destino')) {
+                                monedaDestinoSel.value = params.get('moneda_destino');
+                                monedaDestinoSel.dispatchEvent(new Event('change'));
+                            }
+                            // monto_origen
+                            const montoOrigenInp = document.getElementById('id_monto_origen');
+                            if (montoOrigenInp && params.get('monto_entregar')) {
+                                montoOrigenInp.value = params.get('monto_entregar');
+                                montoOrigenInp.dispatchEvent(new Event('input'));
+                            }
+                            // monto_destino (solo visual, se recalcula por JS normalmente)
+                            const montoDestinoInp = document.getElementById('monto_destino');
+                            if (montoDestinoInp && params.get('monto_recibir')) {
+                                montoDestinoInp.value = params.get('monto_recibir');
+                            }
+                        });
+                        </script>
                     {% endif %}
                 </div>
             </div>

@@ -719,12 +719,29 @@
     // Función para proceder con la transacción
     function procederConTransaccion() {
         const elTipoTransaccion = document.getElementById('tipo_transaccion');
+        const monedaOrigen = document.getElementById('moneda_origen');
+        const monedaDestino = document.getElementById('moneda_destino');
+        const cantidadEntregar = document.getElementById('cantidad_entregar');
+        const cantidadRecibir = document.getElementById('cantidad_recibir');
         if (elTipoTransaccion) {
             const tipo = elTipoTransaccion.value;
+            // Obtiene los valores actuales
+            const moneda_origen = monedaOrigen ? monedaOrigen.value : '';
+            const moneda_destino = monedaDestino ? monedaDestino.value : '';
+            const monto_entregar = cantidadEntregar ? cantidadEntregar.value : '';
+            const monto_recibir = cantidadRecibir ? cantidadRecibir.value : '';
+            // Construye los parámetros para la URL
+            const params = new URLSearchParams({
+                tipo_transaccion: tipo,
+                moneda_origen,
+                moneda_destino,
+                monto_entregar,
+                monto_recibir
+            }).toString();
             if (tipo === 'COMPRA') {
-                window.location.href = '{% url "transacciones:comprar" %}';
+                window.location.href = '{% url "transacciones:comprar" %}?' + params;
             } else {
-                window.location.href = '{% url "transacciones:vender" %}';
+                window.location.href = '{% url "transacciones:vender" %}?' + params;
             }
         }
     }

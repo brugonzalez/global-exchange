@@ -67,17 +67,15 @@
                     {% else %}
                         <form method="post" id="formularioTransaccionVenta">
                             {% csrf_token %}
-                            
                             <div class="row">
                                 <div class="col-md-6">
                                     {{ formulario.moneda_origen|as_crispy_field }}
                                 </div>
                                 <div class="col-md-6">
                                     <label for="moneda_origen" class="form-label mb-0">Moneda Destino</label>
-                                    <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control">
+                                    <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control" id="moneda_destino_display">
                                 </div>
                             </div>
-                            
                             <div class="row">
                                 <div class="col-md-6">
                                     {{ formulario.monto_origen|as_crispy_field }}
@@ -90,18 +88,13 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="row">
-                                <!-- El campo de cliente está oculto ya que ahora se selecciona a través del selector superior de cliente -->
                                 {{ formulario.cliente }}
                                 <div class="col-md-12">
                                     {{ formulario.metodo_pago|as_crispy_field }}
                                 </div>
                             </div>
-                            
-                            <!-- Campos Específicos del Método de Pago -->
                             <div id="campos-metodo-pago">
-                                <!-- Campos de SIPAP -->
                                 <div id="campos-sipap" class="campos-pago" style="display: none;">
                                     <div class="row">
                                         <div class="col-md-6">
@@ -109,8 +102,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Campos de Western Union -->
                                 <div id="campos-western-union" class="campos-pago" style="display: none;">
                                     <div class="row">
                                         <div class="col-md-6">
@@ -118,8 +109,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Campos de Retiro en Caja -->
                                 <div id="campos-retiro-caja" class="campos-pago" style="display: none;">
                                     <div class="row">
                                         <div class="col-md-6">
@@ -131,13 +120,11 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="row">
                                 <div class="col-12">
                                     {{ formulario.notas|as_crispy_field }}
                                 </div>
                             </div>
-                            
                             <div class="d-flex justify-content-between align-items-center">
                                 <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left me-2"></i>
@@ -149,6 +136,29 @@
                                 </button>
                             </div>
                         </form>
+                        <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Precarga los datos desde la URL si existen
+                            const params = new URLSearchParams(window.location.search);
+                            // moneda_origen
+                            const monedaOrigenSel = document.getElementById('id_moneda_origen');
+                            if (monedaOrigenSel && params.get('moneda_origen')) {
+                                monedaOrigenSel.value = params.get('moneda_origen');
+                                monedaOrigenSel.dispatchEvent(new Event('change'));
+                            }
+                            // monto_origen
+                            const montoOrigenInp = document.getElementById('id_monto_origen');
+                            if (montoOrigenInp && params.get('monto_entregar')) {
+                                montoOrigenInp.value = params.get('monto_entregar');
+                                montoOrigenInp.dispatchEvent(new Event('input'));
+                            }
+                            // monto_destino (solo visual, se recalcula por JS normalmente)
+                            const montoDestinoInp = document.getElementById('monto_destino');
+                            if (montoDestinoInp && params.get('monto_recibir')) {
+                                montoDestinoInp.value = params.get('monto_recibir');
+                            }
+                        });
+                        </script>
                     {% endif %}
                 </div>
             </div>
