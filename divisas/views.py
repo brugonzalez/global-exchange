@@ -131,7 +131,7 @@ class VistaHistorialTasa(TemplateView):
         if periodo == '1':
             # Últimas 24 horas
             from datetime import timedelta
-            fecha_inicio = timezone.now() - timedelta(days=1)
+            fecha_inicio = timezone.now() - timedelta(hours=24)
         elif periodo == '7':
             # Últimos 7 días
             from datetime import timedelta
@@ -140,6 +140,10 @@ class VistaHistorialTasa(TemplateView):
             # Últimos 30 días
             from datetime import timedelta
             fecha_inicio = timezone.now() - timedelta(days=30)
+        elif periodo == '90':
+            # Últimos 90 días
+            from datetime import timedelta
+            fecha_inicio = timezone.now() - timedelta(days=90)
         else:
             # Todo el tiempo
             fecha_inicio = None
@@ -150,13 +154,32 @@ class VistaHistorialTasa(TemplateView):
         
         historial = consulta_historial.order_by('marca_de_tiempo')
         
+        # Preparar datos para el gráfico
+        datos_grafico = self.preparar_datos_grafico(historial)
+        
         contexto.update({
             'moneda': moneda,
             'historial_tasa': historial,
             'periodo_seleccionado': periodo,
+            'datos_grafico': datos_grafico,
         })
         
         return contexto
+    
+    def preparar_datos_grafico(self, historial):
+        """Prepara los datos para el gráfico en formato JSON"""
+        datos = {
+            'fechas': [],
+            'tasas_compra': [],
+            'tasas_venta': [],
+        }
+        
+        for registro in historial:
+            datos['fechas'].append(registro.marca_de_tiempo.strftime('%Y-%m-%d %H:%M'))
+            datos['tasas_compra'].append(float(registro.tasa_compra))
+            datos['tasas_venta'].append(float(registro.tasa_venta))
+        
+        return datos
 
 
 class VistaSimularTransaccion(TemplateView):

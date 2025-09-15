@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.VistaPanelControl.as_view(), name='panel_de_control'),
     path('tasas/', views.VistaTasasCambio.as_view(), name='tasas'),
     path('tasas/historial/<str:codigo_moneda>/', views.VistaHistorialTasa.as_view(), name='historial_tasa'),
+    path('api/datos-grafico/', views.VistaHistorialTasa.as_view(), name='api_datos_grafico'),
     path('simular/', views.VistaSimularTransaccion.as_view(), name='simular'),
     
     # Endpoints de API para datos en tiempo real
