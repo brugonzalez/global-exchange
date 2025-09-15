@@ -23,8 +23,8 @@ from .forms import FormularioLogin, FormularioRegistro, FormularioPerfil, Formul
     FormularioRegistroUsuario, FormularioConfiguracion
 from clientes.models import Cliente
 from django.utils import timezone
-
-
+import logging
+_logger= logging.getLogger(__name__)
 
 class VistaLogin(FormView):
     """
@@ -150,6 +150,7 @@ class VistaRegistro(FormView):
         enlace_verificacion = self.request.build_absolute_uri(
             f'/cuentas/verificar-email/{token}/'
         )
+        _logger.info(f"###Entramos en verificar####")
 
         asunto = 'Verifique su dirección de email - Global Exchange'
         mensaje = f'''
@@ -165,9 +166,9 @@ class VistaRegistro(FormView):
                 asunto,
                 mensaje,
                 settings.DEFAULT_FROM_EMAIL,
-                [usuario.email],
-                fail_silently=True
+                [usuario.email]
             )
+            _logger.info(f"Correo default {settings.DEFAULT_FROM_EMAIL}")
 
         except BadHeaderError:
             print("Encabezado de email inválido.")
@@ -963,51 +964,7 @@ class VistaEditarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
             return render(request, self.template_name, contexto)
 
 
-class VistaEliminarRol(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
-    """
-    Vista para eliminar un rol.
-    """
-    template_name = 'cuentas/eliminar_rol.html'
-    permiso_requerido = 'gestionar_roles'
-    
-    def get_context_data(self, **kwargs):
-        contexto = super().get_context_data(**kwargs)
-        rol_id = kwargs.get('rol_id')
-        rol = get_object_or_404(Rol, id=rol_id)
-        
-        contexto.update({
-            'rol': rol,
-            'usuarios_afectados': Usuario.objects.filter(roles=rol),
-            'puede_eliminar': not rol.es_sistema
-        })
-        return contexto
-    
-    def post(self, request, *args, **kwargs):
-        rol_id = kwargs.get('rol_id')
-        rol = get_object_or_404(Rol, id=rol_id)
-        
-        # No permitir eliminar roles del sistema
-        if rol.es_sistema:
-            messages.error(request, 'No se pueden eliminar roles del sistema.')
-            return redirect('cuentas:gestionar_roles')
-        
-        nombre_rol = rol.nombre_rol
-        
-        # Registrar en auditoría antes de eliminar
-        RegistroAuditoria.objects.create(
-            usuario=request.user,
-            accion='ROLE_DELETED',
-            descripcion=f'Eliminó el rol: {nombre_rol}',
-            direccion_ip=request.META.get('REMOTE_ADDR'),
-            agente_usuario=request.META.get('HTTP_USER_AGENT'),
-            datos_adicionales={'rol_id': rol.id, 'rol_nombre': nombre_rol}
-        )
-        
-        # Eliminar el rol
-        rol.delete()
-        
-        messages.success(request, f'Rol "{nombre_rol}" eliminado exitosamente.')
-        return redirect('cuentas:gestionar_roles')
+
 
 
 class VistaGestionarUsuarios(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
