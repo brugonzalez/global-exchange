@@ -439,6 +439,7 @@ class MonedaFavorita(models.Model):
 
 
 class SaldoCliente(models.Model):
+
     """
     Modelo para rastrear los saldos disponibles para retiro de los clientes por moneda.
 
@@ -489,3 +490,43 @@ class SaldoCliente(models.Model):
             Formato "Nombre Cliente - Código Moneda: Saldo".
         """
         return f"{self.cliente.obtener_nombre_completo()} - {self.moneda.codigo}: {self.saldo}"
+
+
+class LimiteTransaccionCliente(models.Model):
+    """
+    Modelo para definir límites específicos de transacción para clientes.
+
+    Permite establecer límites diarios y mensuales personalizados para cada cliente.
+    """
+    cliente = models.ForeignKey(
+        Cliente, 
+        on_delete=models.CASCADE, 
+        related_name='limites'
+    )
+    monto_limite_diario = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Límite máximo diario de transacciones (0 = sin límite)"
+    )
+    monto_limite_mensual = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Límite máximo mensual de transacciones (0 = sin límite)"
+    )
+    usa_default = models.BooleanField(
+        default=True,
+        help_text="Indica si se usan los límites definidos generalmente por el administrador"
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    usuario_modificacion = models.ForeignKey(
+        'cuentas.Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='limites_transaccion_modificados'
+    )
+    def __str__(self):
+        return f"Limites de {self.cliente.obtener_nombre_completo()}"
