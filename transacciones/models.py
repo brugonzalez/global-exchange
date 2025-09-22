@@ -571,3 +571,30 @@ class ComisionTransaccion(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_comision_display()} - {self.monto} {self.moneda.codigo}"
+    
+class LimiteTransaccion(models.Model):
+    """
+    Modelo para límites de transacciones para todos los clientes
+    
+    Permite definir el límite del monto total con los que los clientes pueden operar
+    por día y por mes.
+    El monto es definido en guaraníes.
+    """
+    moneda_limites = models.ForeignKey(
+        'divisas.Moneda',
+        on_delete=models.PROTECT,
+        help_text="Moneda en la que está expresada los límites")
+    monto_limite_diario = models.DecimalField(
+        max_digits=20, 
+        decimal_places=8, 
+        default=Decimal('100000000.00'),
+        help_text="El monto máximo total con el que pueden operar los clientes en un día")
+    monto_limite_mensual = models.DecimalField(
+        max_digits=20, 
+        decimal_places=8, 
+        default=Decimal('800000000.00'),
+        help_text="El monto máximo total con el que pueden operar los clientes en el mes")
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Límites - Diario: {self.monto_limite_diario}, Mensual: {self.monto_limite_mensual}"
