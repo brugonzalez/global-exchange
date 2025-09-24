@@ -316,10 +316,22 @@ class VistaPerfil(LoginRequiredMixin, TemplateView):
             Contexto extendido con:
             - `usuario`: El usuario actual.
             - `clientes`: Lista de clientes asociados al usuario.
+            - `mis_transacciones`: Últimas 5 transacciones del usuario.
         """
         contexto = super().get_context_data(**kwargs)
         contexto['usuario'] = self.request.user
         contexto['clientes'] = self.request.user.clientes.all()
+        
+        # Obtener las últimas 5 transacciones del usuario
+        from transacciones.models import Transaccion
+        try:
+            contexto['mis_transacciones'] = Transaccion.objects.filter(
+                usuario=self.request.user
+            ).select_related('moneda_origen', 'moneda_destino').order_by('-fecha_creacion')[:5]
+        except Exception:
+            # En caso de error, devolver lista vacía
+            contexto['mis_transacciones'] = []
+            
         return contexto
 
 

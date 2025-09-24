@@ -8,9 +8,14 @@
         <div class="col-md-8 mx-auto">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-user me-2"></i>Mi Perfil
-                    </h4>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-user me-2"></i>Mi Perfil
+                        </h4>
+                        <a href="{% url 'transacciones:lista_transacciones' %}" class="btn btn-outline-light">
+                            <i class="fas fa-list me-2"></i>CONSULTAR TRANSACCIONES
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -54,6 +59,94 @@
                                     </div>
                                 </div>
                             {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    {% if mis_transacciones %}
+                        <hr>
+                        <h6 class="text-muted">Mis Transacciones</h6>
+                        <div class="mb-3">
+                            <small class="text-muted">Últimas transacciones realizadas</small>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Tipo</th>
+                                        <th>Monedas</th>
+                                        <th>Monto</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for transaccion in mis_transacciones %}
+                                    <tr>
+                                        <td>
+                                            <small>{{ transaccion.fecha_creacion|date:"d/m/Y" }}</small><br>
+                                            <small class="text-muted">{{ transaccion.fecha_creacion|time:"H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            {% if transaccion.tipo_transaccion == 'COMPRA' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-arrow-down me-1"></i>Compra
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-arrow-up me-1"></i>Venta
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small>
+                                                {{ transaccion.moneda_origen.codigo }} → {{ transaccion.moneda_destino.codigo }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small>
+                                                {{ transaccion.monto_origen|floatformat:2 }} {{ transaccion.moneda_origen.codigo }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            {% if transaccion.estado == 'PENDIENTE' %}
+                                            <span class="badge bg-warning">Pendiente</span>
+                                            {% elif transaccion.estado == 'COMPLETADA' %}
+                                            <span class="badge bg-success">Completada</span>
+                                            {% elif transaccion.estado == 'CANCELADA' %}
+                                            <span class="badge bg-secondary">Cancelada</span>
+                                            {% elif transaccion.estado == 'FALLIDA' %}
+                                            <span class="badge bg-danger">Fallida</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'transacciones:detalle_transaccion' transaccion.id_transaccion %}" 
+                                               class="btn btn-sm btn-outline-primary" title="Ver Detalles">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center">
+                            <a href="{% url 'transacciones:lista_transacciones' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-list me-2"></i>Ver Todas las Transacciones
+                            </a>
+                        </div>
+                    {% else %}
+                        <hr>
+                        <h6 class="text-muted">Mis Transacciones</h6>
+                        <div class="text-center py-3">
+                            <i class="fas fa-exchange-alt fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-2">Aún no has realizado ninguna transacción.</p>
+                            <small class="text-muted">Cuando realices transacciones, aparecerán aquí.</small>
+                        </div>
+                        <div class="text-center">
+                            <a href="{% url 'transacciones:lista_transacciones' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-list me-2"></i>Ver Historial Completo
+                            </a>
                         </div>
                     {% endif %}
                     

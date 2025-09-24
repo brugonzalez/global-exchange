@@ -58,7 +58,9 @@ class FormularioFiltroTransaccion(forms.Form):
     """
     Formulario para filtrar la lista de transacciones.
     """
-    OPCIONES_ESTADO = [('', 'Todos los estados')] + Transaccion.ESTADOS
+    # Excluir 'ANULADA' de las opciones de estado disponibles
+    ESTADOS_FILTRO = [estado for estado in Transaccion.ESTADOS if estado[0] != 'ANULADA']
+    OPCIONES_ESTADO = [('', 'Todos los estados')] + ESTADOS_FILTRO
     OPCIONES_TIPO = [('', 'Todos los tipos')] + Transaccion.TIPOS_TRANSACCION
     
     estado = forms.ChoiceField(
