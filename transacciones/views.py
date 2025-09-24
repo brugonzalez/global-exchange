@@ -432,19 +432,20 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
         contexto = super().get_context_data(**kwargs)
         
         # Obtener las transacciones - para administradores mostrar todas, para usuarios normales solo las suyas
+        # Excluir transacciones anuladas de la visualización
         try:
             if self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists():
-                # Admin puede ver todas las transacciones
-                transacciones = Transaccion.objects.safe_all()
+                # Admin puede ver todas las transacciones excepto anuladas
+                transacciones = Transaccion.objects.safe_all().exclude(estado='ANULADA')
             else:
-                # Usuario normal solo ve sus transacciones
-                transacciones = Transaccion.objects.safe_all().filter(usuario=self.request.user)
+                # Usuario normal solo ve sus transacciones excepto anuladas
+                transacciones = Transaccion.objects.safe_all().filter(usuario=self.request.user).exclude(estado='ANULADA')
         except Exception:
             # Si hay error con safe_all, intentar método alternativo
             if self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists():
-                transacciones = Transaccion.objects.all()
+                transacciones = Transaccion.objects.all().exclude(estado='ANULADA')
             else:
-                transacciones = Transaccion.objects.filter(usuario=self.request.user)
+                transacciones = Transaccion.objects.filter(usuario=self.request.user).exclude(estado='ANULADA')
             # Filtrar solo las válidas usando el queryset personalizado
             try:
                 transacciones = transacciones.filter_valid_decimals()
@@ -515,12 +516,13 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
         volumen_total = transacciones.aggregate(Sum('monto_origen'))['monto_origen__sum'] or Decimal('0')
         transaccion_promedio = transacciones.aggregate(Avg('monto_origen'))['monto_origen__avg'] or Decimal('0')
         
-        # Conteo por estado
+        # Conteo por estado (excluyendo ANULADA)
         conteo_estados = {}
         for codigo_estado, etiqueta_estado in Transaccion.ESTADOS:
-            conteo = transacciones.filter(estado=codigo_estado).count()
-            if conteo > 0:
-                conteo_estados[etiqueta_estado] = conteo
+            if codigo_estado != 'ANULADA':  # Excluir ANULADA del conteo
+                conteo = transacciones.filter(estado=codigo_estado).count()
+                if conteo > 0:
+                    conteo_estados[etiqueta_estado] = conteo
         
         contexto.update({
             'transacciones': transacciones[:100],  # Limitar para rendimiento
@@ -537,7 +539,7 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
                 'cliente': cliente_filtro,
                 'usuario': usuario_filtro,
             },
-            'opciones_estado': Transaccion.ESTADOS,
+            'opciones_estado': [estado for estado in Transaccion.ESTADOS if estado[0] != 'ANULADA'],  # Excluir ANULADA
             'opciones_tipo': Transaccion.TIPOS_TRANSACCION,
             'monedas': Moneda.objects.filter(esta_activa=True).order_by('codigo'),
             'es_administrador': self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists(),
@@ -555,10 +557,11 @@ class VistaExportarHistorial(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
         formato = solicitud.GET.get('formato', 'csv')
         
         # Usar la misma lógica de filtrado que VistaHistorialTransacciones
+        # Excluir transacciones anuladas de la exportación
         if solicitud.user.is_superuser or solicitud.user.roles.filter(nombre_rol='Administrador').exists():
-            transacciones = Transaccion.objects.all()
+            transacciones = Transaccion.objects.all().exclude(estado='ANULADA')
         else:
-            transacciones = Transaccion.objects.filter(usuario=solicitud.user)
+            transacciones = Transaccion.objects.filter(usuario=solicitud.user).exclude(estado='ANULADA')
         
         # Aplicar los mismos filtros
         fecha_desde = solicitud.GET.get('fecha_desde')
