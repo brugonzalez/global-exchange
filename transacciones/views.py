@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import TemplateView, ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, HttpResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.utils.decorators import method_decorator
@@ -11,6 +11,14 @@ from django.db import models
 from django.urls import reverse
 from decimal import Decimal
 from django.conf import settings
+import csv
+import io
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 from .models import Transaccion, SimulacionTransaccion, Factura
 from .forms import FormularioCancelarTransaccion, FormularioTransaccion, FormularioPagoStripe
@@ -423,14 +431,25 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         
-        # Obtener las transacciones del usuario de forma segura
+        # Obtener las transacciones - para administradores mostrar todas, para usuarios normales solo las suyas
         try:
-            transacciones = Transaccion.objects.safe_all().filter(usuario=self.request.user)
+            if self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists():
+                # Admin puede ver todas las transacciones
+                transacciones = Transaccion.objects.safe_all()
+            else:
+                # Usuario normal solo ve sus transacciones
+                transacciones = Transaccion.objects.safe_all().filter(usuario=self.request.user)
         except Exception:
             # Si hay error con safe_all, intentar método alternativo
-            transacciones = Transaccion.objects.filter(usuario=self.request.user)
+            if self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists():
+                transacciones = Transaccion.objects.all()
+            else:
+                transacciones = Transaccion.objects.filter(usuario=self.request.user)
             # Filtrar solo las válidas usando el queryset personalizado
-            transacciones = transacciones.filter_valid_decimals()
+            try:
+                transacciones = transacciones.filter_valid_decimals()
+            except:
+                pass  # Si no existe el método, continuar sin él
         
         # Aplicar filtro de fecha
         fecha_desde = self.request.GET.get('fecha_desde')
@@ -456,6 +475,36 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
                 models.Q(moneda_origen__codigo=moneda) | 
                 models.Q(moneda_destino__codigo=moneda)
             )
+        
+        # Filtros adicionales para administradores
+        cliente_filtro = self.request.GET.get('cliente')
+        if cliente_filtro:
+            # Permitir búsqueda por nombre, correo o ID del cliente
+            if cliente_filtro.isdigit():
+                # Si es numérico, buscar por ID
+                transacciones = transacciones.filter(cliente__id=cliente_filtro)
+            else:
+                # Si es texto, buscar por nombre o email
+                transacciones = transacciones.filter(
+                    models.Q(cliente__nombre__icontains=cliente_filtro) |
+                    models.Q(cliente__apellido__icontains=cliente_filtro) |
+                    models.Q(cliente__nombre_empresa__icontains=cliente_filtro) |
+                    models.Q(cliente__email__icontains=cliente_filtro)
+                )
+        
+        usuario_filtro = self.request.GET.get('usuario')
+        if usuario_filtro:
+            # Permitir búsqueda por nombre o email del usuario
+            if usuario_filtro.isdigit():
+                # Si es numérico, buscar por ID
+                transacciones = transacciones.filter(usuario__id=usuario_filtro)
+            else:
+                # Si es texto, buscar por nombre o email
+                transacciones = transacciones.filter(
+                    models.Q(usuario__first_name__icontains=usuario_filtro) |
+                    models.Q(usuario__last_name__icontains=usuario_filtro) |
+                    models.Q(usuario__email__icontains=usuario_filtro)
+                )
         
         # Ordenar por fecha
         transacciones = transacciones.order_by('-fecha_creacion')
@@ -485,24 +534,207 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
                 'estado': estado,
                 'tipo': tipo_transaccion,
                 'moneda': moneda,
+                'cliente': cliente_filtro,
+                'usuario': usuario_filtro,
             },
             'opciones_estado': Transaccion.ESTADOS,
             'opciones_tipo': Transaccion.TIPOS_TRANSACCION,
             'monedas': Moneda.objects.filter(esta_activa=True).order_by('codigo'),
+            'es_administrador': self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists(),
         })
         
         return contexto
 
-class VistaExportarHistorial(LoginRequiredMixin, TemplateView):
+class VistaExportarHistorial(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Exporta el historial de transacciones a varios formatos.
     """
-    template_name = 'en_construccion.html'
+    permiso_requerido = 'consultar_transacciones'
     
     def get(self, solicitud, *args, **kwargs):
-        # Esto se implementará cuando añadamos la funcionalidad de exportación
-        messages.info(solicitud, "Funcionalidad de exportación en desarrollo")
-        return redirect('transacciones:lista_transacciones')
+        formato = solicitud.GET.get('formato', 'csv')
+        
+        # Usar la misma lógica de filtrado que VistaHistorialTransacciones
+        if solicitud.user.is_superuser or solicitud.user.roles.filter(nombre_rol='Administrador').exists():
+            transacciones = Transaccion.objects.all()
+        else:
+            transacciones = Transaccion.objects.filter(usuario=solicitud.user)
+        
+        # Aplicar los mismos filtros
+        fecha_desde = solicitud.GET.get('fecha_desde')
+        fecha_hasta = solicitud.GET.get('fecha_hasta')
+        estado = solicitud.GET.get('estado')
+        tipo_transaccion = solicitud.GET.get('tipo')
+        moneda = solicitud.GET.get('moneda')
+        cliente_filtro = solicitud.GET.get('cliente')
+        usuario_filtro = solicitud.GET.get('usuario')
+        
+        if fecha_desde:
+            transacciones = transacciones.filter(fecha_creacion__date__gte=fecha_desde)
+        if fecha_hasta:
+            transacciones = transacciones.filter(fecha_creacion__date__lte=fecha_hasta)
+        if estado:
+            transacciones = transacciones.filter(estado=estado)
+        if tipo_transaccion:
+            transacciones = transacciones.filter(tipo_transaccion=tipo_transaccion)
+        if moneda:
+            transacciones = transacciones.filter(
+                models.Q(moneda_origen__codigo=moneda) | 
+                models.Q(moneda_destino__codigo=moneda)
+            )
+        if cliente_filtro:
+            if cliente_filtro.isdigit():
+                transacciones = transacciones.filter(cliente__id=cliente_filtro)
+            else:
+                transacciones = transacciones.filter(
+                    models.Q(cliente__nombre__icontains=cliente_filtro) |
+                    models.Q(cliente__apellido__icontains=cliente_filtro) |
+                    models.Q(cliente__nombre_empresa__icontains=cliente_filtro) |
+                    models.Q(cliente__email__icontains=cliente_filtro)
+                )
+        if usuario_filtro:
+            if usuario_filtro.isdigit():
+                transacciones = transacciones.filter(usuario__id=usuario_filtro)
+            else:
+                transacciones = transacciones.filter(
+                    models.Q(usuario__first_name__icontains=usuario_filtro) |
+                    models.Q(usuario__last_name__icontains=usuario_filtro) |
+                    models.Q(usuario__email__icontains=usuario_filtro)
+                )
+        
+        transacciones = transacciones.order_by('-fecha_creacion')
+        
+        if formato == 'csv':
+            return self._exportar_csv(transacciones)
+        elif formato == 'pdf':
+            return self._exportar_pdf(transacciones)
+        else:
+            messages.error(solicitud, "Formato de exportación no válido")
+            return redirect('transacciones:lista_transacciones')
+    
+    def _exportar_csv(self, transacciones):
+        """Exporta las transacciones a formato CSV"""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="historial_transacciones_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        response.write('\ufeff')  # BOM para UTF-8
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Fecha',
+            'Número Transacción', 
+            'Tipo',
+            'Moneda Origen',
+            'Moneda Destino',
+            'Monto Origen',
+            'Monto Destino',
+            'Tasa Aplicada',
+            'Estado',
+            'Cliente',
+            'Email Cliente',
+            'Usuario',
+            'Email Usuario'
+        ])
+        
+        for transaccion in transacciones:
+            writer.writerow([
+                transaccion.fecha_creacion.strftime('%d/%m/%Y %H:%M:%S'),
+                transaccion.numero_transaccion,
+                transaccion.get_tipo_transaccion_display(),
+                transaccion.moneda_origen.codigo,
+                transaccion.moneda_destino.codigo,
+                str(transaccion.monto_origen),
+                str(transaccion.monto_destino),
+                str(transaccion.tasa_cambio),
+                transaccion.get_estado_display(),
+                transaccion.cliente.obtener_nombre_completo(),
+                transaccion.cliente.email,
+                f"{transaccion.usuario.first_name} {transaccion.usuario.last_name}".strip() or transaccion.usuario.email,
+                transaccion.usuario.email,
+            ])
+        
+        return response
+    
+    def _exportar_pdf(self, transacciones):
+        """Exporta las transacciones a formato PDF"""
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="historial_transacciones_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+        
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=0.5*inch, rightMargin=0.5*inch)
+        
+        # Elementos del PDF
+        elementos = []
+        estilos = getSampleStyleSheet()
+        
+        # Título
+        titulo_estilo = ParagraphStyle(
+            'TituloCustom',
+            parent=estilos['Heading1'],
+            fontSize=16,
+            textColor=colors.darkblue,
+            alignment=1  # Centro
+        )
+        titulo = Paragraph("Historial de Transacciones - Global Exchange", titulo_estilo)
+        elementos.append(titulo)
+        elementos.append(Spacer(1, 0.2*inch))
+        
+        # Información adicional
+        info_estilo = ParagraphStyle(
+            'InfoCustom',
+            parent=estilos['Normal'],
+            fontSize=10,
+            alignment=1  # Centro
+        )
+        fecha_generacion = Paragraph(f"Generado el: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}", info_estilo)
+        total_registros = Paragraph(f"Total de registros: {transacciones.count()}", info_estilo)
+        elementos.append(fecha_generacion)
+        elementos.append(total_registros)
+        elementos.append(Spacer(1, 0.3*inch))
+        
+        # Tabla de datos
+        datos_tabla = [
+            ['Fecha', 'Número', 'Tipo', 'Monedas', 'Monto Origen', 'Tasa', 'Estado', 'Cliente']
+        ]
+        
+        for transaccion in transacciones[:50]:  # Limitar a 50 para no sobrecargar el PDF
+            datos_tabla.append([
+                transaccion.fecha_creacion.strftime('%d/%m/%Y'),
+                transaccion.numero_transaccion,
+                transaccion.get_tipo_transaccion_display()[:6],
+                f"{transaccion.moneda_origen.codigo}→{transaccion.moneda_destino.codigo}",
+                f"{transaccion.monto_origen:,.2f}",
+                f"{transaccion.tasa_cambio:,.4f}",
+                transaccion.get_estado_display()[:8],
+                transaccion.cliente.obtener_nombre_completo()[:20],
+            ])
+        
+        tabla = Table(datos_tabla, repeatRows=1)
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        
+        elementos.append(tabla)
+        
+        # Nota al pie
+        if transacciones.count() > 50:
+            nota = Paragraph(f"<i>Nota: Se muestran los primeros 50 registros de {transacciones.count()} transacciones totales.</i>", info_estilo)
+            elementos.append(Spacer(1, 0.2*inch))
+            elementos.append(nota)
+        
+        doc.build(elementos)
+        pdf = buffer.getvalue()
+        buffer.close()
+        response.write(pdf)
+        
+        return response
 
 class APIVistaCrearTransaccion(LoginRequiredMixin, TemplateView):
     """
