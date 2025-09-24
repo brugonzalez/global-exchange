@@ -433,7 +433,7 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
         
         # Obtener las transacciones - para administradores mostrar todas, para usuarios normales solo las suyas
         try:
-            if self.request.user.is_superuser or self.request.user.roles.filter(nombre='Administrador').exists():
+            if self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists():
                 # Admin puede ver todas las transacciones
                 transacciones = Transaccion.objects.safe_all()
             else:
@@ -441,7 +441,7 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
                 transacciones = Transaccion.objects.safe_all().filter(usuario=self.request.user)
         except Exception:
             # Si hay error con safe_all, intentar método alternativo
-            if self.request.user.is_superuser or self.request.user.roles.filter(nombre='Administrador').exists():
+            if self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists():
                 transacciones = Transaccion.objects.all()
             else:
                 transacciones = Transaccion.objects.filter(usuario=self.request.user)
@@ -540,7 +540,7 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
             'opciones_estado': Transaccion.ESTADOS,
             'opciones_tipo': Transaccion.TIPOS_TRANSACCION,
             'monedas': Moneda.objects.filter(esta_activa=True).order_by('codigo'),
-            'es_administrador': self.request.user.is_superuser or self.request.user.roles.filter(nombre='Administrador').exists(),
+            'es_administrador': self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists(),
         })
         
         return contexto
@@ -555,7 +555,7 @@ class VistaExportarHistorial(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
         formato = solicitud.GET.get('formato', 'csv')
         
         # Usar la misma lógica de filtrado que VistaHistorialTransacciones
-        if solicitud.user.is_superuser or solicitud.user.roles.filter(nombre='Administrador').exists():
+        if solicitud.user.is_superuser or solicitud.user.roles.filter(nombre_rol='Administrador').exists():
             transacciones = Transaccion.objects.all()
         else:
             transacciones = Transaccion.objects.filter(usuario=solicitud.user)
