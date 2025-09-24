@@ -1,4 +1,7 @@
 from django import forms
+
+from divisas.models import Moneda
+from pagos.models import MedioPago
 from .models import Transaccion, SimulacionTransaccion
 
 
@@ -208,9 +211,15 @@ class FormularioTransaccion(forms.Form):
     )
     
     # Campos específicos de Stripe
-    id_metodo_pago_stripe = forms.CharField(
-        widget=forms.HiddenInput(),
-        required=False
+    id_metodo_pago_stripe = forms.ModelChoiceField(
+        queryset=None,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_tarjetas',
+        }),
+        label='Tarjetas Asociadas',
+        # help_text='Método por el cual el usuario recibirá el dinero',
+        required=True
     )
     
     # Campos de billetera digital
@@ -263,21 +272,24 @@ class FormularioTransaccion(forms.Form):
     def __init__(self, *args, **kwargs):
         tipo_transaccion = kwargs.pop('transaction_type', 'COMPRA')
         usuario = kwargs.pop('user', None)
+        moneda_origen = kwargs.pop('moneda_base', None)
         super().__init__(*args, **kwargs)
         
         # Importar aquí para evitar importaciones circulares
         from divisas.models import Moneda, MetodoPago, MetodoCobro
         from clientes.models import Cliente
         
-        # Configurar querysets
 
-        moneda_base = Moneda.objects.filter(id=1)
+        cliente = usuario.ultimo_cliente_seleccionado
+        #cambiamos el filtro por moneda base directamente
+        moneda_base = Moneda.objects.filter(es_moneda_base=True)
         # Filtrar métodos de pago según el tipo de transacción
         if tipo_transaccion == 'COMPRA':
             monedas_activas = Moneda.objects.filter(esta_activa=True, es_moneda_base=False, disponible_para_compra=True).order_by('codigo')
+            tarjetasClientes = MedioPago.objects.filter(activo=True, cliente_id=cliente.id).order_by('id')
             self.fields['moneda_origen'].queryset = moneda_base
-            self.fields['moneda_origen'].initial = moneda_base
             self.fields['moneda_destino'].queryset = monedas_activas
+            self.fields['id_metodo_pago_stripe'].queryset = tarjetasClientes
             metodos_pago = MetodoPago.objects.filter(
                 esta_activo=True, 
                 soporta_compra=True
@@ -315,10 +327,13 @@ class FormularioTransaccion(forms.Form):
     
     def clean(self):
         datos_limpios = super().clean()
-        moneda_origen = datos_limpios.get('moneda_origen')
+        moneda_origen = Moneda.objects.get(es_moneda_base=True)
         moneda_destino = datos_limpios.get('moneda_destino')
         metodo_pago = datos_limpios.get('metodo_pago')
-        
+
+        if self.errors:
+            return datos_limpios
+
         if moneda_origen and moneda_destino:
             if moneda_origen == moneda_destino:
                 raise forms.ValidationError(
@@ -330,7 +345,17 @@ class FormularioTransaccion(forms.Form):
             self._validar_campos_metodo_pago(datos_limpios, metodo_pago)
         
         return datos_limpios
-    
+
+    def clean_moneda_origen(self):
+        moneda_origen = self.cleaned_data.get('moneda_origen')
+        if isinstance(moneda_origen, str):  # Si el valor es un string (por ejemplo, un ID)
+            from divisas.models import Moneda
+            try:
+                moneda_origen = Moneda.objects.get(pk=moneda_origen)  # Busca el objeto por ID
+            except Moneda.DoesNotExist:
+                raise forms.ValidationError('La moneda origen seleccionada no es válida.')
+        return moneda_origen
+
     def _validar_campos_metodo_pago(self, datos_limpios, metodo_pago):
         """Valida los campos específicos de cada método de pago"""
         

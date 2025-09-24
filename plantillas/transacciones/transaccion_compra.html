@@ -71,6 +71,7 @@
                                 <div class="col-md-6">
                                     <label for="moneda_origen" class="form-label mb-0">Moneda Origen</label>
                                     <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control mb-2" id="moneda_origen_display">
+                                    <input type="hidden" name="moneda_origen" value="{{ moneda_base.id }}">
                                 </div>
                                 <div class="col-md-6">
                                     {{ formulario.moneda_destino|as_crispy_field }}
@@ -94,31 +95,39 @@
                                     {{ formulario.metodo_pago|as_crispy_field }}
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    {{ formulario.metodo_cobro|as_crispy_field }}
-                                </div>
-                            </div>
-                            <div class="row d-none">
-                                <div class="col-md-12">
-                                    {{ formulario.referencia_cobro|as_crispy_field }}
-                                </div>
-                            </div>
                             <div id="campos-metodo-pago">
+                                <div id="campos-efectivo" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <p class="text-muted">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Deposite su dinero en el tauser más cercano.
+                                                No se requieren datos adicionales para pagos en efectivo.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div id="campos-stripe" class="campos-pago" style="display: none;">
                                     <div class="row">
                                         <div class="col-12">
-                                            <label class="form-label">Información de Tarjeta</label>
-                                            <div id="elemento-tarjeta" class="form-control" style="padding: 12px;"></div>
-                                            <div id="errores-tarjeta" role="alert" class="text-danger mt-2"></div>
+                                            <label class="form-label">Tarjetas Asociadas</label>
+                                            <!--<div id="elemento-tarjeta" class="form-control" style="padding: 12px;"></div>
+                                            <div id="errores-tarjeta" role="alert" class="text-danger mt-2"></div>-->
                                             {{ formulario.id_metodo_pago_stripe }}
                                         </div>
                                     </div>
                                 </div>
-                                <div id="campos-sipap" class="campos-pago" style="display: none;">
+                                <div id="campos-transferencia" class="campos-pago mb-3" style="display: none;">
                                     <div class="row">
                                         <div class="col-md-6">
-                                            {{ formulario.cuenta_sipap|as_crispy_field }}
+                                            <label for="nroComprobante" class=" requiredField">
+                                                Nro Comprobante de tu Transferencia<span class="asteriskField">*</span>
+                                            </label>
+                                            <div>
+                                                <input type="number" name="nroComprobante"
+                                                       class="form-control"
+                                                       placeholder="12345" required="" id="nroComprobante">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -138,6 +147,16 @@
                                             {{ formulario.identificacion_retiro|as_crispy_field }}
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    {{ formulario.metodo_cobro|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row d-none">
+                                <div class="col-md-12">
+                                    {{ formulario.referencia_cobro|as_crispy_field }}
                                 </div>
                             </div>
                             <div class="row d-none">
@@ -290,18 +309,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Mostrar campos relevantes según el método de pago
-        if (nombreMetodoPago.includes('Stripe')) {
+        if (nombreMetodoPago.includes('Tarjeta') || nombreMetodoPago.includes('Stripe')) {
             document.getElementById('campos-stripe').style.display = 'block';
-            if (!tarjetaMontada) {
+            /*if (!tarjetaMontada) {
                 elementoTarjeta.mount('#elemento-tarjeta');
                 tarjetaMontada = true;
-            }
-        } else if (nombreMetodoPago.includes('SIPAP')) {
-            document.getElementById('campos-sipap').style.display = 'block';
+            }*/
+        } else if (nombreMetodoPago.includes('Transferencia')) {
+            document.getElementById('campos-transferencia').style.display = 'block';
         } else if (nombreMetodoPago.includes('Western Union')) {
             document.getElementById('campos-western-union').style.display = 'block';
-        } else if (nombreMetodoPago.includes('Retiro en Caja')) {
-            document.getElementById('campos-retiro-caja').style.display = 'block';
+        } else if (nombreMetodoPago.includes('Efectivo')) {
+            document.getElementById('campos-efectivo').style.display = 'block';
         }
     }
     

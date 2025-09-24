@@ -669,7 +669,8 @@ class MetodoPago(models.Model):
         ordering = ['nombre']
 
     def __str__(self):
-        return f"{self.nombre} ({self.get_tipo_metodo_display()})"
+        #return f"{self.nombre} ({self.get_tipo_metodo_display()})"
+        return f"{self.nombre}"
 
     def calcular_comision(self, monto):
         """Calcula la comisión para un monto dado."""

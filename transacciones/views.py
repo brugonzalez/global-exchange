@@ -58,7 +58,7 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
             )
             return redirect('clientes:lista_clientes')
         
-        formulario = FormularioTransaccion(solicitud.POST, transaction_type='COMPRA', user=solicitud.user)
+        formulario = FormularioTransaccion(solicitud.POST, transaction_type='COMPRA', user=solicitud.user, moneda_base=Moneda.objects.get(es_moneda_base=True))
         
         if formulario.is_valid():
             # Obtener el cliente - ya sea del formulario o del cliente seleccionado por el usuario
@@ -72,11 +72,18 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
             
             # Obtener tasa de cambio (implementación de ejemplo)
             # En una implementación real, esto se obtendría del modelo TasaCambio
+
+            from divisas.models import TasaCambio
+            moneda = formulario.cleaned_data['moneda_origen']
+            moneda_destino = formulario.cleaned_data['moneda_destino']
+            tasaCambio = TasaCambio.objects.get(categoria_cliente_id=cliente.categoria_id, moneda_id=moneda_destino.id, esta_activa=True)
+            monto = formulario.cleaned_data['monto_origen']
+
             from decimal import Decimal
             tasa_ejemplo = Decimal('7500.00')  # Tasa de ejemplo
             
             # Calcular monto de destino
-            monto_destino = formulario.cleaned_data['monto_origen'] * tasa_ejemplo
+            monto_destino = monto / tasaCambio.tasa_venta
             
             # Crear transacción usando método seguro
             objeto_transaccion = Transaccion.objects.create_safe(
@@ -148,7 +155,9 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
                 objeto_transaccion.estado = 'FALLIDA'
                 objeto_transaccion.save()
                 messages.error(solicitud, f"Error en el pago: {resultado_pago.get('message', 'Error desconocido')}")
-        
+        else:
+            print(formulario.errors)  # Mostrar errores en consola
+            messages.error(solicitud, f"Errores en el formulario: {formulario.errors}")
         contexto = self.get_context_data(**kwargs)
         contexto['formulario'] = formulario
         return self.render_to_response(contexto)

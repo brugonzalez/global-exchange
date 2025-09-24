@@ -87,4 +87,4 @@ class MedioPago(models.Model):
         """
         Retorna una representación legible del medio de pago.
         """
-        return f"{self.tipo} - {self.cliente.nombre}"
+        return f"{self.nombre_titular} - {self.marca} - {self.ultimos_digitos}"
