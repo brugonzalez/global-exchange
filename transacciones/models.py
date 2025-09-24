@@ -167,6 +167,20 @@ class Transaccion(models.Model):
         help_text="Referencia del pago (número de transferencia, etc.)"
     )
     
+    # Información de cobro
+    metodo_cobro = models.ForeignKey(
+        'divisas.MetodoCobro',
+        on_delete=models.PROTECT,
+        related_name='transacciones',
+        blank=True,
+        null=True
+    )
+    referencia_cobro = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Referencia del cobro (número de transferencia, etc.)"
+    )
+
     # Información de banco/billetera
     info_cuenta_bancaria = models.JSONField(
         blank=True,

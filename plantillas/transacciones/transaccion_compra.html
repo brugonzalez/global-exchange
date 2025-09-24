@@ -84,14 +84,24 @@
                                     <div class="form-group">
                                         <label for="monto_destino" class="form-label">Cantidad a recibir</label>
                                         <input type="text" id="monto_destino" class="form-control" readonly placeholder="0.00">
-                                        <small class="form-text text-muted">Calculado automáticamente</small>
+                                        <!--<small class="form-text text-muted">Calculado automáticamente</small>-->
                                     </div>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row mb-3">
                                 {{ formulario.cliente }}
                                 <div class="col-md-12">
                                     {{ formulario.metodo_pago|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    {{ formulario.metodo_cobro|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row d-none">
+                                <div class="col-md-12">
+                                    {{ formulario.referencia_cobro|as_crispy_field }}
                                 </div>
                             </div>
                             <div id="campos-metodo-pago">
@@ -130,12 +140,12 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="row">
+                            <div class="row d-none">
                                 <div class="col-12">
                                     {{ formulario.notas|as_crispy_field }}
                                 </div>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center mt-3">
                                 <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left me-2"></i>
                                     Cancelar

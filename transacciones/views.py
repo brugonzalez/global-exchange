@@ -90,7 +90,9 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
                 tasa_cambio=tasa_ejemplo,
                 metodo_pago=formulario.cleaned_data['metodo_pago'],
                 notas=formulario.cleaned_data['notas'] or '',
-                estado='PENDIENTE'
+                estado='PENDIENTE',
+                metodo_cobro=formulario.cleaned_data['metodo_cobro'],
+                referencia_cobro=formulario.cleaned_data.get('referencia_cobro', ''),
             )
             
             # Procesar pago según el método

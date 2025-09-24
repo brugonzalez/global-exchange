@@ -754,3 +754,54 @@ class AlertaTasa(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} - {self.moneda.codigo} - {self.get_tipo_alerta_display()}"
+
+
+class MetodoCobro(models.Model):
+    """
+    Modelo para la configuración de métodos de cobro (cómo el usuario recibirá el dinero).
+    """
+    TIPOS_METODO = [
+        ('BANK_TRANSFER', 'Transferencia Bancaria'),
+        ('DIGITAL_WALLET', 'Billetera Digital'),
+        ('CASH', 'Efectivo'),
+        ('CHECK', 'Cheque'),
+    ]
+
+    GRUPOS_METODO = [
+        ('BANKING', 'Banca y Transferencias'),
+        ('DIGITAL_WALLETS', 'Billeteras Digitales'),
+        ('CASH_PICKUP', 'Retiro en Caja'),
+    ]
+
+    nombre = models.CharField(max_length=100)
+    tipo_metodo = models.CharField(max_length=20, choices=TIPOS_METODO)
+    grupo_metodo = models.CharField(
+        max_length=30,
+        choices=GRUPOS_METODO,
+        default='BANKING',
+        help_text="Grupo al que pertenece este método de cobro"
+    )
+    esta_activo = models.BooleanField(default=True)
+    soporta_compra = models.BooleanField(default=True)
+    soporta_venta = models.BooleanField(default=True)
+    monto_minimo = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0
+    )
+    monto_maximo = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+
+    class Meta:
+        db_table = 'divisas_metodo_cobro'
+        verbose_name = 'Método de Cobro'
+        verbose_name_plural = 'Métodos de Cobro'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+

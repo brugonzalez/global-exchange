@@ -134,14 +134,14 @@ class FormularioTransaccion(forms.Form):
         queryset=None,
         widget=forms.Select(attrs={'class': 'form-select'}),
         label='Moneda origen',
-        help_text='Moneda que entrega'
+        #help_text='Moneda que entrega'
     )
     
     moneda_destino = forms.ModelChoiceField(
         queryset=None,
         widget=forms.Select(attrs={'class': 'form-select'}),
         label='Moneda destino',
-        help_text='Moneda que recibe'
+        #help_text='Moneda que recibe'
     )
     
     monto_origen = forms.DecimalField(
@@ -154,7 +154,7 @@ class FormularioTransaccion(forms.Form):
             'placeholder': '0.00'
         }),
         label='Cantidad',
-        help_text='Cantidad en moneda origen'
+        #help_text='Cantidad en moneda origen'
     )
     
     cliente = forms.ModelChoiceField(
@@ -173,9 +173,29 @@ class FormularioTransaccion(forms.Form):
             'onchange': 'actualizarCamposPago()'
         }),
         label='Método de pago',
-        help_text='Método de pago para esta transacción'
+        #help_text='Método de pago para esta transacción'
     )
     
+    metodo_cobro = forms.ModelChoiceField(
+        queryset=None,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_metodo_cobro',
+        }),
+        label='Método de cobro',
+        #help_text='Método por el cual el usuario recibirá el dinero',
+        required=True
+    )
+
+    referencia_cobro = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Referencia del cobro (opcional)'
+        }),
+        label='Referencia de cobro',
+        required=False
+    )
+
     notas = forms.CharField(
         widget=forms.Textarea(attrs={
             'class': 'form-control',
@@ -246,7 +266,7 @@ class FormularioTransaccion(forms.Form):
         super().__init__(*args, **kwargs)
         
         # Importar aquí para evitar importaciones circulares
-        from divisas.models import Moneda, MetodoPago
+        from divisas.models import Moneda, MetodoPago, MetodoCobro
         from clientes.models import Cliente
         
         # Configurar querysets
@@ -262,6 +282,10 @@ class FormularioTransaccion(forms.Form):
                 esta_activo=True, 
                 soporta_compra=True
             ).order_by('grupo_metodo', 'nombre')
+            metodos_cobro = MetodoCobro.objects.filter(
+                esta_activo=True,
+                soporta_compra=True
+            ).order_by('grupo_metodo', 'nombre')
         else:
             monedas_activas = Moneda.objects.filter(esta_activa=True, es_moneda_base=False,
                                                     disponible_para_venta=True).order_by('codigo')
@@ -271,9 +295,13 @@ class FormularioTransaccion(forms.Form):
                 esta_activo=True, 
                 soporta_venta=True
             ).order_by('grupo_metodo', 'nombre')
-        
+            metodos_cobro = MetodoCobro.objects.filter(
+                esta_activo=True,
+                soporta_venta=True
+            ).order_by('grupo_metodo', 'nombre')
         self.fields['metodo_pago'].queryset = metodos_pago
-        
+        self.fields['metodo_cobro'].queryset = metodos_cobro
+
         # Manejar el campo de cliente - siempre oculto ya que el cliente se selecciona desde el selector superior
         self.fields['cliente'].widget = forms.HiddenInput()
         self.fields['cliente'].required = False
