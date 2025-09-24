@@ -172,6 +172,48 @@
                 
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
+                        <!-- Icono de Notificaciones -->
+                        <li class="nav-item dropdown me-2">
+                            <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                {% if tiene_notificaciones %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ contador_notificaciones }}
+                                    <span class="visually-hidden">notificaciones no leídas</span>
+                                </span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" style="width: 350px;">
+                                <li class="dropdown-header">
+                                    <strong>Notificaciones</strong>
+                                    {% if tiene_notificaciones %}
+                                    <span class="badge bg-primary ms-2">{{ contador_notificaciones }}</span>
+                                    {% endif %}
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% if tiene_notificaciones %}
+                                <li class="px-3 py-2">
+                                    <div class="text-center">
+                                        <small class="text-muted">Tienes {{ contador_notificaciones }} notificación{{ contador_notificaciones|pluralize:"es" }} nueva{{ contador_notificaciones|pluralize:",s" }}</small>
+                                    </div>
+                                </li>
+                                {% else %}
+                                <li class="px-3 py-2">
+                                    <div class="text-center text-muted">
+                                        <i class="fas fa-bell-slash mb-2"></i>
+                                        <div><small>No tienes notificaciones nuevas</small></div>
+                                    </div>
+                                </li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-center" href="{% url 'notificaciones:lista_notificaciones' %}">
+                                        <i class="fas fa-list me-1"></i>Ver todas las notificaciones
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <!-- Menu de Usuario -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user me-1"></i>{{ user.nombre_completo|default:user.username }}

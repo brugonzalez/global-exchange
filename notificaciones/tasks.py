@@ -1,3 +1,4 @@
+
 import threading
 from django.core.mail import send_mail
 from django.conf import settings
@@ -339,7 +340,7 @@ def enviar_notificacion_transaccion(id_transaccion, tipo_notificacion='TRANSACTI
         transaccion = Transaccion.objects.select_related('cliente', 'moneda_origen', 'moneda_destino').get(id=id_transaccion)
         
         # Obtener usuarios asociados con el cliente y asegurar que tengan preferencias de notificación
-        usuarios_cliente = transaccion.cliente.usuarios.filter(esta_activo=True)
+        usuarios_cliente = transaccion.cliente.usuarios.filter(is_active=True)
         usuarios_a_notificar = []
         
         for usuario in usuarios_cliente:
@@ -407,7 +408,8 @@ Equipo de Global Exchange
         # Crear notificaciones para cada usuario
         notificaciones_creadas = 0
         for usuario in usuarios_a_notificar:
-            notificacion = Notificacion.objects.create(
+            # Crear notificación por EMAIL
+            notificacion_email = Notificacion.objects.create(
                 usuario=usuario,
                 tipo_notificacion='EMAIL',
                 plantilla=plantilla,
@@ -423,13 +425,41 @@ Equipo de Global Exchange
                     'monto_destino': str(transaccion.monto_destino),
                     'estado': transaccion.get_estado_display(),
                     'accion_estado': accion_estado,
-                    'fecha_creacion': transaccion.fecha_creacion.strftime('%d/%m/%Y %H:%M')
+                    'fecha_creacion': transaccion.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+                    'id_transaccion': str(transaccion.id_transaccion)
+                }
+            )
+            
+            # Crear notificación IN_APP para mostrar en el sistema
+            mensaje_in_app = f'Su transacción #{transaccion.numero_transaccion} de {transaccion.get_tipo_transaccion_display().lower()} de {transaccion.moneda_origen.codigo} ha sido {accion_estado}'
+            if tipo_notificacion == 'TRANSACTION_CANCELLED' and transaccion.motivo_cancelacion:
+                mensaje_in_app += f'. Motivo: {transaccion.motivo_cancelacion}'
+            
+            notificacion_in_app = Notificacion.objects.create(
+                usuario=usuario,
+                tipo_notificacion='IN_APP',
+                plantilla=plantilla,
+                asunto=f'Transacción {accion_estado.capitalize()}',
+                mensaje=mensaje_in_app,
+                estado='ENTREGADO',  # Las notificaciones in-app se marcan como entregadas inmediatamente
+                datos_contexto={
+                    'numero_transaccion': transaccion.numero_transaccion,
+                    'tipo_transaccion': transaccion.get_tipo_transaccion_display(),
+                    'moneda_origen': transaccion.moneda_origen.codigo,
+                    'moneda_destino': transaccion.moneda_destino.codigo,
+                    'monto_origen': str(transaccion.monto_origen),
+                    'monto_destino': str(transaccion.monto_destino),
+                    'estado': transaccion.get_estado_display(),
+                    'accion_estado': accion_estado,
+                    'fecha_creacion': transaccion.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+                    'id_transaccion': str(transaccion.id_transaccion),
+                    'url_detalle': f'/transacciones/detalle/{transaccion.id_transaccion}/'
                 }
             )
             
             # Enviar email
-            llamar_tarea_con_fallback(enviar_notificacion_email, notificacion.id)
-            notificaciones_creadas += 1
+            llamar_tarea_con_fallback(enviar_notificacion_email, notificacion_email.id)
+            notificaciones_creadas += 2  # Email + IN_APP
         
         logger.info(f"Notificaciones de transacción creadas: {notificaciones_creadas} para la transacción {id_transaccion}")
         return f"Notificaciones de transacción creadas: {notificaciones_creadas} para la transacción {id_transaccion}"
