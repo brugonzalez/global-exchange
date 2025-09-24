@@ -69,7 +69,7 @@ class VistaPanelControl(TemplateView):
         if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
             categoria = self.request.user.ultimo_cliente_seleccionado.categoria
         else:
-            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+            categoria = CategoriaCliente.objects.get(nombre='Minorista')
 
         for moneda in monedas:
             tasa = moneda.obtener_tasa_actual(categoria)
@@ -189,7 +189,7 @@ class VistaTasasCambio(ListView):
         if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
             categoria = self.request.user.ultimo_cliente_seleccionado.categoria
         else:
-            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+            categoria = CategoriaCliente.objects.get(nombre='Minorista')
 
         for moneda in monedas:
             tasa = moneda.obtener_tasa_actual(categoria)
@@ -287,7 +287,7 @@ class VistaHistorialTasa(TemplateView):
         if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
             categoria = self.request.user.ultimo_cliente_seleccionado.categoria
         else:
-            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+            categoria = CategoriaCliente.objects.get(nombre='Minorista')
 
         consulta_historial = HistorialTasaCambio.objects.filter(moneda=moneda, categoria_cliente=categoria)
         if fecha_inicio:
@@ -524,7 +524,7 @@ class APIVistaTasasActuales(TemplateView):
         if solicitud.user.is_authenticated and hasattr(solicitud.user, 'ultimo_cliente_seleccionado') and solicitud.user.ultimo_cliente_seleccionado:
             categoria = solicitud.user.ultimo_cliente_seleccionado.categoria
         else:
-            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+            categoria = CategoriaCliente.objects.get(nombre='Minorista')
 
         codigo_moneda = solicitud.GET.get('currency')
         id_moneda = solicitud.GET.get('currency_id')

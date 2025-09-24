@@ -23,7 +23,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-history me-2"></i>
-                    Historial de Transacciones
+                    {% if es_administrador %}Panel Administrativo - {% endif %}Historial de Transacciones
                 </h2>
                 <div>
                     <a href="{% url 'divisas:panel_de_control' %}" class="btn btn-outline-light">
@@ -31,7 +31,7 @@
                     </a>
                 </div>
             </div>
-            <p>Visualice movimientos realizados en la casa de cambios</p>
+            <p>{% if es_administrador %}Panel completo de administración - Visualice y gestione todas las transacciones del sistema{% else %}Visualice movimientos realizados en la casa de cambios{% endif %}</p>
         </div>
     </div>
 
@@ -49,27 +49,27 @@
         <div class="col-md-3 mb-3">
             <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas text-success fa-dollar-sign fa-2x mb-2"></i>
-                    <h4 class="text-success">{{ volumen_total|floatformat:2 }}</h4>
-                    <p class="text-dark mb-0">Volumen Total</p>
+                    <i class="fas text-success fa-money-bill-wave fa-2x mb-2"></i>
+                    <h4 class="text-success">{{ volumen_total|floatformat:0|intcomma }}</h4>
+                    <p class="mb-0 text-dark">Volumen Total (PYG)</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
             <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas text-info fa-chart-bar fa-2x mb-2"></i>
-                    <h4 class="text-info">{{ transaccion_promedio|floatformat:2 }}</h4>
-                    <p class="text-dark mb-0">Promedio por Transacción</p>
+                    <i class="fas text-info fa-chart-line fa-2x mb-2"></i>
+                    <h4 class="text-info">{{ transaccion_promedio|floatformat:0|intcomma }}</h4>
+                    <p class="mb-0 text-dark">Promedio por Transacción</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3 mb-3">
             <div class="card bg-light text-white">
                 <div class="card-body text-center">
-                    <i class="fas text-warning fa-chart-pie fa-2x mb-2"></i>
-                    <h4 class="text-warning">{{ conteo_estados|length }}</h4>
-                    <p class="text-dark mb-0">Estados Diferentes</p>
+                    <i class="fas text-warning fa-calendar-day fa-2x mb-2"></i>
+                    <h4 class="text-warning">{{ transacciones|length }}</h4>
+                    <p class="mb-0 text-dark">Mostradas</p>
                 </div>
             </div>
         </div>
@@ -162,18 +162,60 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label"> </label>
+                            <label class="form-label"> </label>
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-search me-2"></i>Buscar
                                 </button>
                             </div>
                         </div>
+                        {% if es_administrador %}
+                        <div class="col-md-3">
+                            <label for="cliente" class="form-label">Cliente</label>
+                            <input type="text" name="cliente" id="cliente" class="form-control" 
+                                   value="{{ filtros.cliente }}" placeholder="Nombre, email o ID del cliente">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="usuario" class="form-label">Usuario</label>
+                            <input type="text" name="usuario" id="usuario" class="form-control" 
+                                   value="{{ filtros.usuario }}" placeholder="Nombre, email o ID del usuario">
+                        </div>
+                        {% endif %}
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Botones de Exportación -->
+    {% if es_administrador %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-download me-2"></i>Exportar Datos
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'transacciones:exportar_historial' %}?formato=csv{% if filtros.fecha_desde %}&fecha_desde={{ filtros.fecha_desde }}{% endif %}{% if filtros.fecha_hasta %}&fecha_hasta={{ filtros.fecha_hasta }}{% endif %}{% if filtros.estado %}&estado={{ filtros.estado }}{% endif %}{% if filtros.tipo %}&tipo={{ filtros.tipo }}{% endif %}{% if filtros.moneda %}&moneda={{ filtros.moneda }}{% endif %}{% if filtros.cliente %}&cliente={{ filtros.cliente }}{% endif %}{% if filtros.usuario %}&usuario={{ filtros.usuario }}{% endif %}" 
+                           class="btn btn-success">
+                            <i class="fas fa-file-csv me-2"></i>Exportar CSV
+                        </a>
+                        <a href="{% url 'transacciones:exportar_historial' %}?formato=pdf{% if filtros.fecha_desde %}&fecha_desde={{ filtros.fecha_desde }}{% endif %}{% if filtros.fecha_hasta %}&fecha_hasta={{ filtros.fecha_hasta }}{% endif %}{% if filtros.estado %}&estado={{ filtros.estado }}{% endif %}{% if filtros.tipo %}&tipo={{ filtros.tipo }}{% endif %}{% if filtros.moneda %}&moneda={{ filtros.moneda }}{% endif %}{% if filtros.cliente %}&cliente={{ filtros.cliente }}{% endif %}{% if filtros.usuario %}&usuario={{ filtros.usuario }}{% endif %}" 
+                           class="btn btn-danger">
+                            <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+                        </a>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        Los archivos exportados incluirán todas las transacciones que coincidan con los filtros aplicados.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Tabla de Transacciones -->
     <div class="row">
@@ -203,6 +245,7 @@
                                     <th>Tasa</th>
                                     <th>Estado</th>
                                     <th>Cliente</th>
+                                    {% if es_administrador %}<th>Usuario</th>{% endif %}
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -266,7 +309,14 @@
                                     <td>
                                         <div>{{ transaccion.cliente.obtener_nombre_completo }}</div>
                                         <small class="text-muted">{{ transaccion.cliente.get_tipo_cliente_display }}</small>
+                                        {% if es_administrador %}<br><small class="text-muted">{{ transaccion.cliente.email }}</small>{% endif %}
                                     </td>
+                                    {% if es_administrador %}
+                                    <td>
+                                        <div>{{ transaccion.usuario.first_name }} {{ transaccion.usuario.last_name }}</div>
+                                        <small class="text-muted">{{ transaccion.usuario.email }}</small>
+                                    </td>
+                                    {% endif %}
                                     <td>
                                         <div class="btn-group" role="group">
                                             <a href="{% url 'transacciones:detalle_transaccion' transaccion.id_transaccion %}" 
@@ -291,13 +341,13 @@
                         <i class="fas fa-search fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted">No se encontraron transacciones</h5>
                         <p class="text-muted">
-                            {% if filtros.fecha_desde or filtros.fecha_hasta or filtros.estado or filtros.tipo or filtros.moneda %}
+                            {% if filtros.fecha_desde or filtros.fecha_hasta or filtros.estado or filtros.tipo or filtros.moneda or filtros.cliente or filtros.usuario %}
                             No hay transacciones que coincidan con los filtros aplicados.
                             {% else %}
-                            Aún no has realizado ninguna transacción.
+                            {% if es_administrador %}No hay transacciones registradas en el sistema.{% else %}Aún no has realizado ninguna transacción.{% endif %}
                             {% endif %}
                         </p>
-                        {% if filtros.fecha_desde or filtros.fecha_hasta or filtros.estado or filtros.tipo or filtros.moneda %}
+                        {% if filtros.fecha_desde or filtros.fecha_hasta or filtros.estado or filtros.tipo or filtros.moneda or filtros.cliente or filtros.usuario %}
                         <a href="{% url 'transacciones:lista_transacciones' %}" class="btn btn-primary me-2">
                             <i class="fas fa-times me-2"></i>Limpiar Filtros
                         </a>
