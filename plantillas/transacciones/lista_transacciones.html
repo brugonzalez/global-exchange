@@ -296,15 +296,28 @@
                                     </td>
                                     <td>
                                         {% if transaccion.estado == 'PENDIENTE' %}
-                                        <span class="badge bg-warning">Pendiente</span>
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Pendiente
+                                        </span>
                                         {% elif transaccion.estado == 'PAGADA' %}
-                                        <span class="badge bg-info">Pagada</span>
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-credit-card me-1"></i>Pagada
+                                        </span>
                                         {% elif transaccion.estado == 'COMPLETADA' %}
-                                        <span class="badge bg-success">Completada</span>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Completada
+                                        </span>
                                         {% elif transaccion.estado == 'CANCELADA' %}
-                                        <span class="badge bg-danger">Cancelada</span>
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times-circle me-1"></i>Cancelada
+                                        </span>
+                                        {% if transaccion.motivo_cancelacion %}
+                                        <br><small class="text-muted">{{ transaccion.motivo_cancelacion|truncatechars:30 }}</small>
+                                        {% endif %}
                                         {% elif transaccion.estado == 'ANULADA' %}
-                                        <span class="badge bg-secondary">Anulada</span>
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-ban me-1"></i>Anulada
+                                        </span>
                                         {% else %}
                                         <span class="badge bg-light text-dark">{{ transaccion.get_estado_display }}</span>
                                         {% endif %}
