@@ -889,12 +889,12 @@ class VistaConfiguracionTransaccion(LoginRequiredMixin, MixinPermisosAdmin, Temp
                 
                 messages.success(
                     request, 
-                    f'✅ Tiempo actualizado a {nuevo_tiempo} minutos. '
+                    f'Tiempo actualizado a {nuevo_tiempo} minutos. '
                     f'Se actualizaron {transacciones_actualizadas} transacciones pendientes.'
                 )
             else:
-                messages.error(request, '❌ El tiempo debe estar entre 1 y 1440 minutos')
+                messages.error(request, 'El tiempo debe estar entre 1 y 1440 minutos')
         else:
-            messages.error(request, '❌ Ingrese un número válido')
+            messages.error(request, 'Ingrese un número válido')
     
         return redirect('transacciones:configurar_transaccion')

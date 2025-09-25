@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'django_countries',
-    
+    'django_q',
     # Aplicaciones de terceros
     'django_extensions',
     'crispy_forms',
@@ -262,4 +262,21 @@ LOGGING = {
             'propagate': False,
         },
     },
+}
+# Configuración de Django-Q
+Q_CLUSTER = {
+    'name': 'DjangoQ',
+    'workers': 4,                    # Número de procesos worker
+    'recycle': 500,                  # Reiniciar workers después de 500 tareas
+    'timeout': 60,                   # Tiempo máximo por tarea
+    'compress': True,                # Comprimir resultados
+    'save_limit': 250,               # Máximo resultados guardados
+    'queue_limit': 50,               # Máximo tareas en cola
+    'cpu_affinity': 1,               # Afinidad de CPU
+    'label': 'Django Q',             # Etiqueta para admin
+    # 'redis': {                       # Opcional: usar Redis en lugar de DB
+    #     'host': '127.0.0.1',
+    #     'port': 6379,
+    #     'db': 0,
+    # }
 }

@@ -16,7 +16,7 @@
                     <!-- Mostrar tiempo actual -->
                     <div class="alert alert-info">
                         <strong>Tiempo configurado:</strong>
-                        {{ request.session.get('tiempo_expiracion_global', 30) }} minutos
+                        {{ request.session.tiempo_expiracion_global|default:30 }} minutos
                         <br>
                         <small>Transacciones pendientes usarán este tiempo</small>
                     </div>

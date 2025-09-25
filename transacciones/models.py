@@ -403,16 +403,6 @@ class Transaccion(models.Model):
     def puede_ser_cancelada(self):
         """Verifica si la transacción puede ser cancelada."""
         return self.estado in ['PENDIENTE'] and not self.fecha_completado
-    
-    def cancelar_automaticamente(self):
-        """Cancela la transacción automáticamente si ha expirado."""
-        if self.ha_expirado and self.puede_ser_cancelada():
-            self.estado = 'CANCELADA'
-            self.fecha_cancelacion = timezone.now()
-            self.motivo_cancelacion = f"Expirada automáticamente después de {self.tiempo_expiracion_minutos} minutos"
-            self.save()
-            return True
-        return False
 
     def cancelar(self, motivo="", cancelado_por=None):
         """Cancela la transacción."""
