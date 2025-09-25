@@ -8,7 +8,7 @@ from clientes.models import Cliente
 from clientes.views import MixinStaffRequerido
 from cuentas.models import Usuario, RegistroAuditoria
 from cuentas.views import MixinPermisosAdmin
-from divisas.models import MetodoPago
+from divisas.models import MetodoPago, MetodoCobro
 from global_exchange import settings
 from pagos.forms import FormularioMedioPago
 from pagos.models import MedioPago
@@ -359,6 +359,61 @@ class VistaGestionMetodosPago(MixinStaffRequerido, TemplateView):
         return contexto
 
 
+class VistaGestionMetodosCobro(MixinStaffRequerido, TemplateView):
+    """
+    Vista para gestionar los métodos de cobro disponibles en el sistema.
+    Requiere que el usuario sea staff.
+    Muestra una lista de todos los métodos de cobro con opciones para activar o desactivar cada uno.
+
+    Atributtes:
+    ----------
+        template_name : str
+            Nombre de la plantilla HTML a usar.
+    """
+    template_name = 'pagos/gestion_metodos_cobro.html'
+
+    def get_context_data(self, **kwargs):
+        """
+        Agrega información extra al contexto, incluyendo la lista de métodos de pago
+        y estadísticas sobre ellos.
+
+        Arguments:
+        ---------
+            kwargs : dict
+                Argumentos adicionales para el contexto.
+
+        Atributtes:
+        ----------
+            metodos_pago : QuerySet
+                Lista de todos los métodos de pago ordenados por nombre.
+            total_metodos : int
+                Total de métodos de pago.
+            metodos_activos : int
+                Número de métodos de pago activos.
+            metodos_inactivos : int
+                Número de métodos de pago inactivos.
+
+        Returns:
+        -------
+            Diccionario con el contexto para la plantilla.
+
+        """
+        contexto = super().get_context_data(**kwargs)
+
+        # Obtener todos los métodos de pago ordenados por nombre
+        metodos_cobro = MetodoCobro.objects.all().order_by('nombre')
+
+        contexto.update({
+            'metodos_pago': metodos_cobro,
+            'total_metodos': metodos_cobro.count(),
+            'metodos_activos': metodos_cobro.filter(esta_activo=True).count(),
+            'metodos_inactivos': metodos_cobro.filter(esta_activo=False).count(),
+        })
+
+        return contexto
+
+
+
 class VistaToggleMetodoPago(MixinStaffRequerido, TemplateView):
     """
     Vista para cambiar el estado activo/inactivo de un método de pago.
@@ -393,6 +448,67 @@ class VistaToggleMetodoPago(MixinStaffRequerido, TemplateView):
 
         """
         metodo = get_object_or_404(MetodoPago, id=metodo_id)
+
+        # Cambiar el estado
+        estado_anterior = metodo.esta_activo
+        metodo.esta_activo = not metodo.esta_activo
+        metodo.save()
+
+        # Preparar respuesta con mensajes más específicos
+        if metodo.esta_activo:
+            mensaje = f'Método de pago "{metodo.nombre}" habilitado correctamente.'
+            accion_contraria = 'Deshabilitar'
+            clase_boton = 'btn-warning'
+            icono = 'fa-eye-slash'
+        else:
+            mensaje = f'Método de pago "{metodo.nombre}" deshabilitado correctamente.'
+            accion_contraria = 'Habilitar'
+            clase_boton = 'btn-success'
+            icono = 'fa-eye'
+
+        return JsonResponse({
+            'success': True,
+            'nuevo_estado': metodo.esta_activo,
+            'mensaje': mensaje,
+            'accion_contraria': accion_contraria,
+            'clase_boton': clase_boton,
+            'icono': icono
+        })
+
+class VistaToggleMetodoCobro(MixinStaffRequerido, TemplateView):
+    """
+    Vista para cambiar el estado activo/inactivo de un método de pago.
+    Requiere que el usuario sea staff.
+    Recibe el ID del método de pago en la URL y cambia su estado.
+    Responde con JSON indicando el nuevo estado y un mensaje de éxito.
+
+    """
+
+    def post(self, request, metodo_id):
+        """
+        Cambia el estado activo/inactivo del método de pago identificado por metodo_id.
+        Registra la acción en el log de auditoría y responde con JSON.
+
+        Arguments:
+        ---------
+            request : HttpRequest
+                Objeto de solicitud HTTP.
+            metodo_id : int
+                ID del método de pago a modificar.
+
+        Atributtes:
+        ----------
+            metodo : MetodoPago
+                Instancia del método de pago a modificar.
+            estado_anterior : bool
+                Estado anterior del método de pago.
+
+        Returns:
+        -------
+            JsonResponse con el nuevo estado, mensaje de éxito y detalles para actualizar la interfaz.
+
+        """
+        metodo = get_object_or_404(MetodoCobro, id=metodo_id)
 
         # Cambiar el estado
         estado_anterior = metodo.esta_activo
