@@ -543,7 +543,6 @@ class APIVistaTasasActuales(TemplateView):
                     'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
                     'lugares_decimales': tasa.moneda.lugares_decimales,
                     'moneda_id': moneda.id,
-                    'denominacion_minima': moneda.denominacion_minima if moneda.denominacion_minima else None,
                 })
             else:
                 return JsonResponse({'error': 'No se encontró tasa'}, status=404)
@@ -560,7 +559,6 @@ class APIVistaTasasActuales(TemplateView):
                     'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
                     'lugares_decimales': tasa.moneda.lugares_decimales,
                     'moneda_id': moneda.id,
-                    'denominacion_minima': moneda.denominacion_minima if moneda.denominacion_minima else None,
                 })
             else:
                 return JsonResponse({'error': 'No se encontró tasa'}, status=404)

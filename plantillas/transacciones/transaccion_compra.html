@@ -323,174 +323,64 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('campos-efectivo').style.display = 'block';
         }
     }
-    function actualizarCalculos() {
-    const destino = monedaDestino.value;
-    const monto = parseFloat(montoOrigen.value) || 0;
     
-    if (destino && monto > 0) {
-        const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
-        if (!urlApi) return;
+    function actualizarCalculos() {
+        //const origen = monedaOrigen.value;
+        const destino = monedaDestino.value;
+        const monto = parseFloat(montoOrigen.value) || 0;
         
-        ajax({
-            url: `${urlApi}?currency_id=${destino}`,
-            method: 'GET',
-            success: function(datos) {
-                if (datos) {
-                    const tasaCompra = datos.tasa_venta;
-                    const denominacionMinima = datos.denominacion_minima || 0;
-                    const comisionPorcentaje = datos.comision_compra || 0.025; // 2.5% por defecto
-                    
-                    // Calcular monto sin ajustar denominación
-                    const calculadoSinAjuste = monto / tasaCompra;
-                    
-                    console.log('=== CÁLCULOS INICIALES ===');
-                    console.log('Monto origen (PYG):', monto);
-                    console.log('Tasa de compra:', tasaCompra);
-                    console.log('Calculado sin ajuste:', calculadoSinAjuste);
-                    console.log('Denominación mínima:', denominacionMinima);
-                    console.log('Comisión:', (comisionPorcentaje * 100) + '%');
-                    
-                    let montoDestinoFinal = calculadoSinAjuste;
-                    let advertenciaDenominacion = '';
-                    let montoAjustadoPorDenominacion = false;
-                    
-                    // Validar y ajustar denominación mínima
-                    if (denominacionMinima > 0 && (calculadoSinAjuste % denominacionMinima !== 0)) {
-                        // Ajustar hacia abajo para no exceder lo disponible
-                        montoDestinoFinal = Math.floor(calculadoSinAjuste / denominacionMinima) * denominacionMinima;
-                        montoAjustadoPorDenominacion = true;
-                        
-                        const diferencia = calculadoSinAjuste - montoDestinoFinal;
-                        advertenciaDenominacion = `
-                            <div class="alert alert-warning mt-2 mb-0">
-                                <small>
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    Monto ajustado por denominación mínima:<br>
-                                    De ${calculadoSinAjuste.toFixed(2)} a ${montoDestinoFinal.toFixed(2)}
-                                    (diferencia: -${diferencia.toFixed(2)})
-                                </small>
-                            </div>
-                        `;
-                        
-                        console.log('=== AJUSTE POR DENOMINACIÓN ===');
-                        console.log('Monto ajustado:', montoDestinoFinal);
-                        console.log('Diferencia:', diferencia);
-                    }
-                    
-                    // Calcular comisión sobre el monto final (ya ajustado)
-                    const montoComision = montoDestinoFinal * comisionPorcentaje;
-                    const montoTotalConComision = montoDestinoFinal + montoComision;
-                    
-                    // Calcular cuánto PYG se usará realmente
-                    const montoRealEnPYG = montoDestinoFinal * tasaCompra;
-                    const diferenciaPYG = monto - montoRealEnPYG;
-                    
-                    console.log('=== CÁLCULOS FINALES ===');
-                    console.log('Monto destino final:', montoDestinoFinal);
-                    console.log('Comisión aplicada:', montoComision);
-                    console.log('Total con comisión:', montoTotalConComision);
-                    console.log('PYG realmente usado:', montoRealEnPYG);
-                    console.log('PYG sobrantes:', diferenciaPYG);
-                    
-                    // Actualizar el campo del monto destino
-                    montoDestino.value = montoDestinoFinal.toFixed(2);
-                    
-                    // Obtener información de la moneda seleccionada
-                    const opcionSeleccionada = monedaDestino.options[monedaDestino.selectedIndex];
-                    const nombreMoneda = opcionSeleccionada?.text || '';
-                    const codigoMoneda = nombreMoneda.split(' ')[0] || '';
-                    
-                    // Actualizar información de tasa
-                    infoTasa.innerHTML = `
-                        <div>
+        if (destino && monto > 0) {
+            const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
+            if (!urlApi) return;
+            let tasaCompra;
+
+            ajax({
+                url: `${urlApi}?currency_id=${destino}`,
+                method: 'GET',
+                success: function(datos) {
+                    if (datos) {
+                        tasaCompra = datos.tasa_venta;
+
+                        const tasaEjemplo = 7500; // Ejemplo: USD a PYG
+                        const calculado = monto / tasaCompra;
+
+                        montoDestino.value = calculado.toFixed(2);
+
+                        infoTasa.innerHTML = `
                             <p><strong>Tasa de Cambio:</strong><br>
-                            1 ${nombreMoneda} = ${tasaCompra.toLocaleString()} Gs</p>
-                            ${montoAjustadoPorDenominacion ? `
-                                <p class="mb-0 text-info">
-                                    <small>PYG sobrantes: ${diferenciaPYG.toLocaleString()} Gs</small>
-                                </p>
-                            ` : ''}
-                            ${advertenciaDenominacion}
-                        </div>
-                    `;
-                    
-                    // Mostrar información de comisión
-                    infoComision.style.display = 'block';
-                    document.getElementById('detallesComision').innerHTML = `
-                        <p class="mb-1">Comisión: <span class="text-muted">${(comisionPorcentaje * 100).toFixed(1)}%</span></p>
-                        <p class="mb-0">Monto: <span class="text-muted">${montoComision.toFixed(2)} ${codigoMoneda}</span></p>
-                    `;
-                    
-                    // Mostrar total
-                    infoTotal.style.display = 'block';
-                    document.getElementById('detallesTotal').innerHTML = `
-                        <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${montoTotalConComision.toFixed(2)} ${codigoMoneda}</span></p>
-                        ${montoAjustadoPorDenominacion ? `
-                            <p class="mb-0 mt-1">
-                                <small class="text-muted">
-                                    Monto real usado: ${montoRealEnPYG.toLocaleString()} Gs
-                                </small>
-                            </p>
-                        ` : ''}
-                    `;
+                            1 ${monedaDestino.options[monedaDestino.selectedIndex].text}</p>
+                            <p class="mb-0">Equivalente en <strong>${tasaCompra} Gs</strong><br>
+                        `;
+
+                        infoComision.style.display = 'block';
+                        document.getElementById('detallesComision').innerHTML = `
+                            <p class="mb-1">Comisión: <span class="text-muted">2.5%</span></p>
+                            <p class="mb-0">Monto: <span class="text-muted">${(calculado * 0.025).toFixed(2)}</span></p>
+                        `;
+
+                        infoTotal.style.display = 'block';
+                        const monedaCodigo = monedaDestino.options[monedaDestino.selectedIndex]?.text?.split(' ')[0] || '';
+                        document.getElementById('detallesTotal').innerHTML = `
+                            <p class="mb-1">Subtotal: <span class="fw-bold">${calculado.toFixed(2)} ${monedaCodigo}</span></p>
+                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${(calculado * 1.025).toFixed(2)} ${monedaCodigo}</span></p>
+                        `;
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error al refrescar las tasas:', xhr.statusText);
                 }
-            },
-            error: function(xhr) {
-                console.error('Error al refrescar las tasas:', xhr.statusText);
-                // Mostrar error en la UI
-                infoTasa.innerHTML = `
-                    <p class="text-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        Error al cargar las tasas de cambio. Intente nuevamente.
-                    </p>
-                `;
-                infoComision.style.display = 'none';
-                infoTotal.style.display = 'none';
-            }
-        });
-    } else {
-        // Limpiar campos cuando no hay datos válidos
-        montoDestino.value = '';
-        infoTasa.innerHTML = '<p class="text-muted"><i class="fas fa-info-circle me-2"></i>Seleccione las monedas y ingrese un monto para ver la tasa de cambio</p>';
-        infoComision.style.display = 'none';
-        infoTotal.style.display = 'none';
-    }
-}
+            });
 
-// Función auxiliar para formatear números
-function formatearNumero(numero, decimales = 2) {
-    return numero.toLocaleString('es-PY', {
-        minimumFractionDigits: decimales,
-        maximumFractionDigits: decimales
-    });
-}
 
-// Función auxiliar para mostrar detalles adicionales (opcional)
-function mostrarDetallesTransaccion(datos) {
-    const detallesElement = document.getElementById('detalles-adicionales');
-    if (detallesElement) {
-        detallesElement.innerHTML = `
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h6 class="mb-0">Detalles de la Transacción</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Monto original:</strong> ${datos.montoOriginal}</p>
-                            <p class="mb-1"><strong>Monto ajustado:</strong> ${datos.montoAjustado}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Comisión:</strong> ${datos.comision}</p>
-                            <p class="mb-1"><strong>Total:</strong> ${datos.total}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        } else {
+            montoDestino.value = '';
+            infoTasa.innerHTML = '<p class="text-muted"><i class="fas fa-info-circle me-2"></i>Seleccione las monedas para ver la tasa de cambio</p>';
+            infoComision.style.display = 'none';
+            infoTotal.style.display = 'none';
+        }
     }
-}
-     // Listeners de eventos
+    
+    // Listeners de eventos
     //monedaOrigen.addEventListener('change', actualizarCalculos);
     monedaDestino.addEventListener('change', actualizarCalculos);
     montoOrigen.addEventListener('input', actualizarCalculos);

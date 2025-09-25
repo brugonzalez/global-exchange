@@ -19,14 +19,13 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-import logging
+
 from .models import Transaccion, SimulacionTransaccion, Factura
 from .forms import FormularioCancelarTransaccion, FormularioTransaccion, FormularioPagoStripe
 from .payments import ProcesadorPagos, crear_intento_pago_stripe
 from divisas.models import Moneda, TasaCambio
 from cuentas.views import MixinPermisosAdmin
 
-_logger = logging.getLogger(__name__)
 class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para crear transacciones de compra.
@@ -187,64 +186,106 @@ class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView
         return contexto
     
     def post(self, solicitud, *args, **kwargs):
+        # Comprobar si el usuario tiene acceso a clientes
         if not solicitud.user.ultimo_cliente_seleccionado and not solicitud.user.clientes.exists():
             messages.error(
                 solicitud, 
                 'Debe tener un cliente asignado para realizar transacciones.'
             )
             return redirect('clientes:lista_clientes')
+        
         formulario = FormularioTransaccion(solicitud.POST, transaction_type='VENTA', user=solicitud.user)
+        
         if formulario.is_valid():
+            # Obtener el cliente - ya sea del formulario o del cliente seleccionado por el usuario
             cliente = formulario.cleaned_data.get('cliente') or solicitud.user.ultimo_cliente_seleccionado
+            
             if not cliente:
                 messages.error(solicitud, 'No se pudo determinar el cliente para la transacción.')
                 contexto = self.get_context_data(**kwargs)
                 contexto['formulario'] = formulario
                 return self.render_to_response(contexto)
-            moneda_origen = formulario.cleaned_data['moneda_origen']
-            moneda_destino = formulario.cleaned_data['moneda_destino']
-            monto_origen = formulario.cleaned_data['monto_origen']
-            metodo_pago = formulario.cleaned_data['metodo_pago']
-            # Validar denominación mínima
-            _logger.info(f'Validando monto de origen: {monto_origen} para moneda {moneda_origen.codigo} con denominación mínima {moneda_origen.denominacion_minima}')
-            if (Decimal(monto_origen) % moneda_origen.denominacion_minima) != 0:
-                _logger.warning(f'Intento de transacción con monto no válido: {monto_origen}')
-                messages.error(solicitud, f'El monto de origen debe ser múltiplo de la denominación mínima ({moneda_origen.denominacion_minima}) de la moneda.')
-                contexto = self.get_context_data(**kwargs)
-                contexto['formulario'] = formulario
-                return self.render_to_response(contexto)
-
-            # Obtener tasa y comisión
-            tasa = moneda_origen.obtener_tasa_actual(cliente.categoria).tasa_venta
-            comision = moneda_origen.comision_venta
-            monto_destino = Decimal(monto_origen) * tasa
-            ganancia = comision * Decimal(monto_origen)
-            # Crear transacción
+            
+            # Obtener tasa de cambio (implementación de ejemplo)
+            # En una implementación real, esto se obtendría del modelo TasaCambio
+            from decimal import Decimal
+            tasa_ejemplo = Decimal('7450.00')  # Tasa de venta de ejemplo (menor que la de compra)
+            
+            # Calcular monto de destino
+            monto_destino = formulario.cleaned_data['monto_origen'] * tasa_ejemplo
+            
+            # Crear transacción usando método seguro
             objeto_transaccion = Transaccion.objects.create_safe(
                 tipo_transaccion='VENTA',
                 cliente=cliente,
                 usuario=solicitud.user,
-                moneda_origen=moneda_origen,
-                moneda_destino=moneda_destino,
-                monto_origen=monto_origen,
+                moneda_origen=formulario.cleaned_data['moneda_origen'],
+                moneda_destino=formulario.cleaned_data['moneda_destino'],
+                monto_origen=formulario.cleaned_data['monto_origen'],
                 monto_destino=monto_destino,
-                tasa_cambio=tasa,
-                monto_comision=comision,
-                metodo_pago=metodo_pago,
+                tasa_cambio=tasa_ejemplo,
+                metodo_pago=formulario.cleaned_data['metodo_pago'],
                 notas=formulario.cleaned_data['notas'] or '',
                 estado='PENDIENTE'
             )
-            # Notificación por email (solo si está activada)
-            if hasattr(cliente, 'notificaciones_activas') and cliente.notificaciones_activas:
-                from notificaciones.tasks import enviar_notificacion_transaccion
-                enviar_notificacion_transaccion(objeto_transaccion.id, 'VENTA_CONFIRMADA')
-            messages.success(solicitud, f'Transacción de venta #{objeto_transaccion.numero_transaccion} creada exitosamente. Ganancia: {ganancia}')
-            return redirect('transacciones:detalle_transaccion', id_transaccion=objeto_transaccion.id_transaccion)
+            
+            # Procesar pago según el método
+            procesador_pago = ProcesadorPagos(
+                formulario.cleaned_data['metodo_pago'], 
+                objeto_transaccion
+            )
+            
+            # Preparar datos de pago
+            datos_pago = {
+                'id_metodo_pago_stripe': formulario.cleaned_data.get('id_metodo_pago_stripe'),
+                'cuenta_sipap': formulario.cleaned_data.get('cuenta_sipap'),
+                'info_destinatario': {
+                    'nombre': formulario.cleaned_data.get('destinatario_western_union')
+                },
+                'lugar_retiro': formulario.cleaned_data.get('lugar_retiro'),
+                'identificacion': formulario.cleaned_data.get('identificacion_retiro'),
+                'return_url': solicitud.build_absolute_uri(
+                    reverse('transacciones:detalle_transaccion', 
+                           kwargs={'id_transaccion': objeto_transaccion.id_transaccion})
+                )
+            }
+            
+            # Procesar el pago
+            resultado_pago = procesador_pago.procesar_pago(datos_pago)
+            
+            if resultado_pago.get('success'):
+                # Actualizar transacción con información de pago
+                objeto_transaccion.referencia_pago = resultado_pago.get('id_pago', '')
+                if resultado_pago.get('estado') == 'succeeded':
+                    objeto_transaccion.estado = 'PAGADA'
+                objeto_transaccion.save()
+                
+                # Añadir mensaje de éxito con instrucciones de pago
+                mensaje_exito = f'Transacción de venta #{objeto_transaccion.numero_transaccion} creada exitosamente. '
+                if resultado_pago.get('instructions'):
+                    mensaje_exito += resultado_pago['instructions']
+                
+                messages.success(solicitud, mensaje_exito)
+                
+                # Manejar respuestas específicas de Stripe
+                if resultado_pago.get('requiere_accion'):
+                    # Guardar información del intento de pago en la sesión para manejo en el frontend
+                    solicitud.session['pago_pendiente'] = {
+                        'id_transaccion': str(objeto_transaccion.id_transaccion),
+                        'secreto_cliente': resultado_pago.get('secreto_cliente'),
+                        'id_intento_pago': resultado_pago.get('id_intento_pago')
+                    }
+                    
+                return redirect('transacciones:detalle_transaccion', id_transaccion=objeto_transaccion.id_transaccion)
+            else:
+                # El pago falló
+                objeto_transaccion.estado = 'FALLIDA'
+                objeto_transaccion.save()
+                messages.error(solicitud, f"Error en el pago: {resultado_pago.get('message', 'Error desconocido')}")
+        
         contexto = self.get_context_data(**kwargs)
         contexto['formulario'] = formulario
         return self.render_to_response(contexto)
-     
-     
 
 class VistaDetalleTransaccion(LoginRequiredMixin, DetailView):
     """
