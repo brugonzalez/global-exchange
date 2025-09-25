@@ -15,7 +15,7 @@ from django import forms
 from .models import PreferenciaCliente
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita
+from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita, LimiteTransaccion, LimiteTransaccionCliente
 from divisas.models import Moneda
 
 Usuario = get_user_model()
@@ -46,6 +46,125 @@ class FormularioPreferenciaCliente(forms.ModelForm):
             'preferencia_tipo_cambio': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+
+class FormularioLimiteGeneral(forms.ModelForm):
+    """ 
+    Formulario para definir límites generales de transacciones por cliente
+    Se definen límites diarios y mensuales que aplican a todos los clientes
+    a menos que tengan límites personalizados en su categoría o preferencias.
+
+    Attributes
+    -------------
+    monto_limite_diario : NumberInput
+        Límite diario para transacciones (0 = sin límite).
+    monto_limite_mensual : NumberInput
+        Límite mensual para transacciones (0 = sin límite).
+
+    Notas
+    -------------
+    - Los valores deben ser números no negativos.
+    - Un valor de 0 indica que no hay límite.
+    """
+    class Meta:
+        model = LimiteTransaccion
+        fields = ['monto_limite_diario', 'monto_limite_mensual']
+        widgets = {
+            'monto_limite_diario': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'step': '1',
+                'placeholder': 'monto en guaraníes',
+                'help_text': 'Límite diario para transacciones (0 = sin límite)'
+            }),
+            'monto_limite_mensual': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'step': '1',
+                'placeholder': 'monto en guaraníes',
+                'help_text': 'Límite mensual para transacciones (0 = sin límite)'
+            }),
+        }
+
+    def clean(self):
+        """
+        Valida que los límites sean números no negativos.
+        """
+        cleaned_data = super().clean()
+        monto_diario = cleaned_data.get('monto_limite_diario')
+        monto_mensual = cleaned_data.get('monto_limite_mensual')
+
+        if monto_diario is not None and monto_diario < 0:
+            self.add_error('monto_limite_diario', 'El límite diario no puede ser negativo.')
+
+        if monto_mensual is not None and monto_mensual < 0:
+            self.add_error('monto_limite_mensual', 'El límite mensual no puede ser negativo.')
+
+        return cleaned_data
+
+class FormularioLimiteCliente(forms.ModelForm):
+    """ 
+    Formulario para definir límites de transacciones específicos para un cliente.
+    Estos límites sobrescriben los límites generales y de categoría del cliente.
+
+    Attributes
+    -------------
+    cliente : Cliente
+        Cliente al que se aplican los límites personalizados.
+    monto_limite_diario : NumberInput
+        Límite diario para transacciones (0 = sin límite).
+    monto_limite_mensual : NumberInput
+        Límite mensual para transacciones (0 = sin límite).
+    """
+    class Meta:
+        model = LimiteTransaccionCliente
+        fields = ['cliente', 'monto_limite_diario', 'monto_limite_mensual']
+        widgets = {
+            'cliente': forms.Select(attrs={'class': 'form-control'}),
+            'monto_limite_diario': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'step': '1',
+                'placeholder': 'monto en guaraníes',
+                'help_text': 'Límite diario para transacciones (0 = sin límite)'
+            }),
+            'monto_limite_mensual': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'step': '1',
+                'placeholder': 'monto en guaraníes',
+                'help_text': 'Límite mensual para transacciones (0 = sin límite)'
+            }),
+        }
+    def clean(self):
+        """
+        Valida que los límites sean números no negativos y que se seleccione un cliente.
+        
+        Returns
+        -------
+        dict
+            Datos limpios después de la validación.
+        Raises
+        -------
+        ValidationError
+            Si los límites son negativos o no se selecciona un cliente.
+        """
+        cleaned_data = super().clean()
+        cliente = cleaned_data.get('cliente')
+        monto_diario = cleaned_data.get('monto_limite_diario')
+        monto_mensual = cleaned_data.get('monto_limite_mensual')
+
+        if not cliente:
+            self.add_error('cliente', 'Debe seleccionar un cliente.')
+
+        if monto_diario is not None and monto_diario < 0:
+            self.add_error('monto_limite_diario', 'El límite diario no puede ser negativo.')
+
+        if monto_mensual is not None and monto_mensual < 0:
+            self.add_error('monto_limite_mensual', 'El límite mensual no puede ser negativo.')
+
+        return cleaned_data
+    
+    
 class FormularioCliente(forms.ModelForm):
     """
     Formulario para crear y editar clientes.
