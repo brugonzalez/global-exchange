@@ -228,6 +228,9 @@ class Cliente(models.Model):
     stripe_customer_id = models.CharField(max_length=100, default="")
 
     # Información Financiera
+    usa_limites_default = models.BooleanField(
+        default=True,
+        help_text="Usar límites definidos generales definidos por el administrador")
     saldo_cuenta = models.DecimalField(
         max_digits=15, 
         decimal_places=2, 
@@ -496,13 +499,40 @@ class LimiteTransaccionCliente(models.Model):
     """
     Modelo para definir límites específicos de transacción para clientes.
 
-    Permite establecer límites diarios y mensuales personalizados para cada cliente.
+    Permite establecer límites diarios y mensuales personalizados para un cliente.
+
+    Attributes
+    ----------
+    cliente : Cliente
+        El cliente al que se le aplican los límites.
+    moneda_limite : Moneda
+        Moneda en la que están expresados los límites.
+    monto_limite_diario : DecimalField
+        Límite máximo diario de monto acumulado de las transacciones que se han
+        realizado en el día.
+    monto_limite_mensual : DecimalField
+        Límite máximo mensual de monto acumulado de las transacciones que se han
+        realizado en el mes.
+    usa_default : bool
+        Indica si se usan los límites definidos generalmente por el administrador
+        o los límites definidos específicamente para este cliente.
+    fecha_creacion : DateTimeField
+        Fecha de creación del registro.
+    fecha_actualizacion : DateTimeField 
+        Fecha de la última actualización del registro.
+    usuario_modificacion : Usuario
+        Usuario que realizó la última modificación de los límites.
+
     """
     cliente = models.ForeignKey(
         Cliente, 
         on_delete=models.CASCADE, 
         related_name='limites'
     )
+    moneda_limite = models.ForeignKey(
+        'divisas.Moneda',
+        on_delete=models.PROTECT,
+        help_text="Moneda en la que están expresados los límites")
     monto_limite_diario = models.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -515,10 +545,6 @@ class LimiteTransaccionCliente(models.Model):
         default=Decimal('0.00'),
         help_text="Límite máximo mensual de transacciones (0 = sin límite)"
     )
-    usa_default = models.BooleanField(
-        default=True,
-        help_text="Indica si se usan los límites definidos generalmente por el administrador"
-    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     usuario_modificacion = models.ForeignKey(
@@ -530,3 +556,30 @@ class LimiteTransaccionCliente(models.Model):
     )
     def __str__(self):
         return f"Limites de {self.cliente.obtener_nombre_completo()}"
+
+class LimiteTransaccion(models.Model):
+    """
+    Modelo para límites de transacciones para todos los clientes
+    
+    Permite definir el límite del monto total con los que los clientes pueden operar
+    por día y por mes.
+    El monto es definido en guaraníes.
+    """
+    moneda_limites = models.ForeignKey(
+        'divisas.Moneda',
+        on_delete=models.PROTECT,
+        help_text="Moneda en la que está expresada los límites")
+    monto_limite_diario = models.DecimalField(
+        max_digits=20, 
+        decimal_places=8, 
+        default=Decimal('100000000.00'),
+        help_text="El monto máximo total con el que pueden operar los clientes en un día")
+    monto_limite_mensual = models.DecimalField(
+        max_digits=20, 
+        decimal_places=8, 
+        default=Decimal('800000000.00'),
+        help_text="El monto máximo total con el que pueden operar los clientes en el mes")
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Límites - Diario: {self.monto_limite_diario}, Mensual: {self.monto_limite_mensual}"
