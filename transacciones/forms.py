@@ -243,6 +243,17 @@ class FormularioTransaccion(forms.Form):
         label='Destinatario Western Union',
         required=False
     )
+
+    tausers = forms.ModelChoiceField(
+        queryset=None,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_tausers',
+        }),
+        label='Tausers',
+        help_text='Método por el cual el usuario recibirá el dinero',
+        required=True
+    )
     
     # Campos de retiro en efectivo
     lugar_retiro = forms.ChoiceField(
@@ -278,7 +289,14 @@ class FormularioTransaccion(forms.Form):
         # Importar aquí para evitar importaciones circulares
         from divisas.models import Moneda, MetodoPago, MetodoCobro
         from clientes.models import Cliente
-        
+        from tauser.models import Tauser
+
+        # Agregar Tausers activos al formulario
+        tausers_activos = Tauser.objects.filter(
+            estado='ACTIVO'
+        ).order_by('nombre')
+
+        self.fields['tausers'].queryset = tausers_activos
 
         cliente = usuario.ultimo_cliente_seleccionado
         #cambiamos el filtro por moneda base directamente

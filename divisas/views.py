@@ -21,6 +21,7 @@ from transacciones.models import SimulacionTransaccion
 from .forms import FormularioSimulacion, FormularioActualizacionPrecioBase, FormularioAlerta, FormularioMoneda
 import json
 from django.core.serializers.json import DjangoJSONEncoder
+from tauser.models import StockTauser, StockTauserSerializer
 
 
 class VistaPanelControl(TemplateView):
@@ -530,6 +531,10 @@ class APIVistaTasasActuales(TemplateView):
         codigo_moneda = solicitud.GET.get('currency')
         id_moneda = solicitud.GET.get('currency_id')
 
+        #retornaremos tambien el stock de los tausers
+        stocks = StockTauser.objects.all()
+        serializer = StockTauserSerializer(stocks, many=True)
+
         if codigo_moneda:
             moneda = get_object_or_404(Moneda, codigo=codigo_moneda, esta_activa=True)
             tasa = moneda.obtener_tasa_actual(categoria)
@@ -543,6 +548,7 @@ class APIVistaTasasActuales(TemplateView):
                     'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
                     'lugares_decimales': tasa.moneda.lugares_decimales,
                     'moneda_id': moneda.id,
+                    'stock_tausers': serializer.data,
                 })
             else:
                 return JsonResponse({'error': 'No se encontró tasa'}, status=404)
@@ -559,6 +565,7 @@ class APIVistaTasasActuales(TemplateView):
                     'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
                     'lugares_decimales': tasa.moneda.lugares_decimales,
                     'moneda_id': moneda.id,
+                    'stock_tausers': serializer.data,
                 })
             else:
                 return JsonResponse({'error': 'No se encontró tasa'}, status=404)
@@ -581,7 +588,7 @@ class APIVistaTasasActuales(TemplateView):
                         'moneda_id': moneda.id,
                     })
 
-            return JsonResponse({'tasas': tasas})
+            return JsonResponse({'tasas': tasas, 'stock_tausers': serializer.data})
 
 
 class APIVistaActualizarTasas(LoginRequiredMixin, TemplateView):
