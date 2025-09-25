@@ -345,7 +345,8 @@ class FormularioTransaccion(forms.Form):
     
     def clean(self):
         datos_limpios = super().clean()
-        moneda_origen = Moneda.objects.get(es_moneda_base=True)
+        #moneda_origen = Moneda.objects.get(es_moneda_base=True)
+        moneda_origen = datos_limpios.get('moneda_origen')
         moneda_destino = datos_limpios.get('moneda_destino')
         metodo_pago = datos_limpios.get('metodo_pago')
 

@@ -74,6 +74,7 @@
                                 <div class="col-md-6">
                                     <label for="moneda_origen" class="form-label mb-0">Moneda Destino</label>
                                     <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control" id="moneda_destino_display">
+                                     <input type="hidden" id="moneda_destino" name="moneda_destino" value="{{ moneda_base.id }}">
                                 </div>
                             </div>
                             <div class="row">
@@ -90,42 +91,77 @@
                             </div>
                             <div class="row">
                                 {{ formulario.cliente }}
-                                <div class="col-md-12">
+                                <div class="col-md-6">
                                     {{ formulario.metodo_pago|as_crispy_field }}
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
+                                <div class="col-md-6">
                                     {{ formulario.metodo_cobro|as_crispy_field }}
                                 </div>
                             </div>
-                            <div class="row d-none">
-                                <div class="col-md-12">
-                                    {{ formulario.referencia_cobro|as_crispy_field }}
-                                </div>
-                            </div>
-                            <div id="campos-metodo-pago">
-                                <div id="campos-sipap" class="campos-pago" style="display: none;">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            {{ formulario.cuenta_sipap|as_crispy_field }}
+                            <div class="row mb-3">
+                                <div id="campos-metodo-pago" class="col-md-6">
+                                    <div id="campos-efectivo" class="campos-pago" style="display: none;">
+                                        <div class=" ">
+                                            <p class="text-muted">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Deposite su dinero en el tauser más cercano.
+                                                No se requieren datos adicionales para pagos en efectivo.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div id="campos-transferencia" class="campos-pago mb-3" style="display: none;">
+                                        <div class=" ">
+                                            <label for="nroComprobante" class="mb-2 requiredField">
+                                                Nro Comprobante de tu Transferencia<span
+                                                    class="asteriskField">*</span>
+                                            </label>
+                                            <div>
+                                                <input type="number" name="nroComprobante"
+                                                       class="form-control"
+                                                       placeholder="12345"    id="nroComprobante">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="campos-billetera" class="campos-pago" style="display: none;">
+                                        <div class=" ">
+                                            <label for="nroComprobanteBilletera" class="mb-2 requiredField">
+                                                Nro Comprobante de tu Pago/Transferencia<span
+                                                    class="asteriskField">*</span>
+                                            </label>
+                                            <div>
+                                                <input type="number" name="nroComprobanteBilletera"
+                                                       class="form-control"
+                                                       placeholder="12345"    id="nroComprobanteBilletera">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="campos-pago-error" class="campos-pago mt-3" style="display: none;">
+                                        <div class=" ">
+                                            <label for="nroCuenta" class=" requiredField">
+                                                No se aceptan transferencia con la divisa seleccionada<span
+                                                    class="error">*</span>
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
-                                <div id="campos-western-union" class="campos-pago" style="display: none;">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            {{ formulario.destinatario_western_union|as_crispy_field }}
+                                <div id="campos-metodo-cobro mt-3" class="col-md-6">
+                                    <div id="campos-tauser" class="campos-pago" style="display: none;">
+                                        <div class=" ">
+                                            <label class="form-label">Tausers</label>
+                                            {{ formulario.tausers }}
                                         </div>
                                     </div>
-                                </div>
-                                <div id="campos-retiro-caja" class="campos-pago" style="display: none;">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            {{ formulario.lugar_retiro|as_crispy_field }}
-                                        </div>
-                                        <div class="col-md-6">
-                                            {{ formulario.identificacion_retiro|as_crispy_field }}
+                                    <div id="campos-cobro-transferencia" class="campos-pago mt-3"
+                                         style="display: none;">
+                                        <div class=" ">
+                                            <label for="nroCuenta" class=" requiredField">
+                                                Nro Cuenta para la transferencia<span class="asteriskField">*</span>
+                                            </label>
+                                            <div>
+                                                <input type="text" name="nroCuenta"
+                                                       class="form-control"
+                                                       placeholder="12345"    id="nroCuenta">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -238,35 +274,87 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const formulario = document.getElementById('formularioTransaccionVenta');
-    const monedaOrigen = document.getElementById('id_moneda_origen');
-    const monedaDestino = document.getElementById('id_moneda_destino');
+    const monedaOrigenBackup = document.getElementById('id_moneda_origen');
+    var monedaOrigen = document.getElementById('id_moneda_origen');
+    const monedaDestino = document.getElementById('moneda_destino');
     const montoOrigen = document.getElementById('id_monto_origen');
     const montoDestino = document.getElementById('monto_destino');
     const infoTasa = document.getElementById('infoTasa');
     const infoComision = document.getElementById('infoComision');
     const infoTotal = document.getElementById('infoTotal');
     const selectorMetodoPago = document.getElementById('id_metodo_pago');
+    var selectorMetodoCobro = document.getElementById('id_metodo_cobro');
+    var selectorMetodoCobroBackup = document.getElementById('id_metodo_cobro');
+    var selectorTauser = document.getElementById('id_tausers');
+    const moneda_base = '{{ moneda_base }}';
     
     function actualizarCamposPago() {
         const opcionSeleccionada = selectorMetodoPago.options[selectorMetodoPago.selectedIndex];
+        const opcionSeleccionadaCobro = selectorMetodoCobro.options[selectorMetodoCobro.selectedIndex];
         const nombreMetodoPago = opcionSeleccionada.text;
-        
+        const nombreMetodoCobro = opcionSeleccionadaCobro.text;
+
         // Ocultar todos los campos de pago
         document.querySelectorAll('.campos-pago').forEach(campo => {
             campo.style.display = 'none';
         });
-        
-        // Mostrar campos relevantes según el método de pago (sin Stripe para ventas)
-        if (nombreMetodoPago.includes('SIPAP')) {
-            document.getElementById('campos-sipap').style.display = 'block';
-        } else if (nombreMetodoPago.includes('Western Union')) {
-            document.getElementById('campos-western-union').style.display = 'block';
-        } else if (nombreMetodoPago.includes('Retiro en Caja')) {
-            document.getElementById('campos-retiro-caja').style.display = 'block';
+
+        if (monedaOrigen && nombreMetodoPago.includes('Transferencia') && (monedaOrigen.value == '2' || monedaOrigen.value == '3')) {
+            document.getElementById('campos-transferencia').style.display = 'block';
+        } else if (monedaOrigen.value != '' && nombreMetodoPago.includes('Transferencia') ){
+            document.getElementById('campos-pago-error').style.display = 'block';
+        }
+
+        if(nombreMetodoPago.includes('Efectivo')) {
+            document.getElementById('campos-efectivo').style.display = 'block';
+        }
+
+        // Mostrar campos relevantes según el método de cobro
+        if (nombreMetodoCobro.includes('Efectivo')) {
+            document.getElementById('campos-tauser').style.display = 'block';
+        } else if (nombreMetodoCobro.includes('Transferencia')) {
+            document.getElementById('campos-cobro-transferencia').style.display = 'block';
+        }
+
+
+        const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
+        if (!urlApi) return;
+        let tasaCompra;
+        const destino = monedaOrigen.value;
+        if(destino) {
+            montoDestinoValor = montoDestino.value;
+            ajax({
+                url: `${urlApi}?currency_id=${destino}`,
+                method: 'GET',
+                success: function (datos) {
+                    if (datos) {
+                        console.log(datos.stock_tausers);
+
+                        selectorTauser.innerHTML = '<option value="">---</option>';
+
+                        // Recorrer data2 y agregar solo los que cumplen la condición
+                        datos.stock_tausers.forEach(item => {
+                            let bNum = parseFloat(item.cantidad_disponible);
+                            let aNum = parseFloat(montoDestinoValor);
+                            if (item.moneda == monedaDestino.value && bNum >= aNum) {
+                                const opt = document.createElement('option');
+                                opt.value = item.id;
+                                opt.textContent = `${item.tauser_nombre}`;
+                                selectorTauser.appendChild(opt);
+                            }
+                        });
+                    }
+                },
+                error: function (xhr) {
+                    console.error('Error al refrescar las tasas:', xhr.statusText);
+                }
+            });
         }
     }
     
     function actualizarCalculos() {
+        const opcionSeleccionada = selectorMetodoCobro.options[selectorMetodoCobro.selectedIndex];
+        const nombreMetodoCobro = opcionSeleccionada.text;
         const origen = monedaOrigen.value;
         //const destino = monedaDestino.value;
         const monto = parseFloat(montoOrigen.value) || 0;
@@ -286,7 +374,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         const tasaEjemplo = 7500; // Ejemplo: USD a PYG
                         const calculado = monto * tasaCompra;
 
-                            montoDestino.value = isFinite(calculado) ? Math.floor(calculado).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : '';
+                            //montoDestino.value = isFinite(calculado) ? Math.floor(calculado).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : '';
+                        montoDestino.value = calculado;
+
+                        if(nombreMetodoCobro && (nombreMetodoCobro.includes('Efectivo') || nombreMetodoCobro.includes('---------'))) {
+                            selectorMetodoCobro.value = '';
+                            //$("campos-tauser").hide();
+                            document.getElementById('campos-tauser').style.display = 'none';
+                        }
 
                         infoTasa.innerHTML = `
                             <p><strong>Tasa de Cambio:</strong><br>
@@ -296,14 +391,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         infoComision.style.display = 'block';
                         document.getElementById('detallesComision').innerHTML = `
-                            <p class="mb-1">Comisión: <span class="text-muted">2.5%</span></p>
-                            <p class="mb-0">Monto: <span class="text-muted">${Math.floor(calculado * 0.025).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span></p>
+                            <p class="mb-0">Monto: <span class="text-muted">${Math.floor(calculado).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span></p>
                         `;
 
                         infoTotal.style.display = 'block';
                         document.getElementById('detallesTotal').innerHTML = `
-                            <p class="mb-1">Subtotal: <span class="fw-bold">${Math.floor(calculado).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} PYG </span></p>
-                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${Math.floor(calculado * 1.025).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} PYG </span></p>
+                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${Math.floor(calculado).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} PYG </span></p>
                         `;
                     }
                 },
@@ -323,20 +416,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Listeners de eventos
     monedaOrigen.addEventListener('change', actualizarCalculos);
+    monedaOrigen.addEventListener('change', actualizarCamposPago);
     //monedaDestino.addEventListener('change', actualizarCalculos);
     montoOrigen.addEventListener('input', actualizarCalculos);
     selectorMetodoPago.addEventListener('change', actualizarCamposPago);
-    
+    selectorMetodoCobro.addEventListener('change', actualizarCamposPago);
+
     // Inicializar campos de pago
     actualizarCamposPago();
      actualizarCalculos(); 
 });
 
 // Hacer que actualizarCamposPago sea global para el onchange del HTML
-window.actualizarCamposPago = function() {
+/*window.actualizarCamposPago = function() {
     const evento = new Event('change');
     document.getElementById('id_metodo_pago').dispatchEvent(evento);
-};
+};*/
 </script>
 {% endif %}
 {% endblock %}
