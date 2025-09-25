@@ -219,7 +219,7 @@ class FormularioTransaccion(forms.Form):
         }),
         label='Tarjetas Asociadas',
         # help_text='Método por el cual el usuario recibirá el dinero',
-        required=True
+        required=False
     )
     
     # Campos de billetera digital
@@ -252,7 +252,7 @@ class FormularioTransaccion(forms.Form):
         }),
         label='Tausers',
         help_text='Método por el cual el usuario recibirá el dinero',
-        required=True
+        required=False
     )
     
     # Campos de retiro en efectivo

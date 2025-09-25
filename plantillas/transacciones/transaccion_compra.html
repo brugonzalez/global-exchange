@@ -126,7 +126,7 @@
                                             <div>
                                                 <input type="number" name="nroComprobante"
                                                        class="form-control"
-                                                       placeholder="12345" required="" id="nroComprobante">
+                                                       placeholder="12345"    id="nroComprobante">
                                             </div>
                                         </div>
                                     </div>
@@ -148,7 +148,7 @@
                                             <div>
                                                 <input type="number" name="nroComprobanteBilletera"
                                                        class="form-control"
-                                                       placeholder="12345" required="" id="nroComprobanteBilletera">
+                                                       placeholder="12345"    id="nroComprobanteBilletera">
                                             </div>
                                         </div>
                                     </div>
@@ -169,7 +169,7 @@
                                             <div>
                                                 <input type="text" name="nroCuenta"
                                                        class="form-control"
-                                                       placeholder="12345" required="" id="nroCuenta">
+                                                       placeholder="12345"    id="nroCuenta">
                                             </div>
                                         </div>
                                     </div>
@@ -307,7 +307,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const infoComision = document.getElementById('infoComision');
     const infoTotal = document.getElementById('infoTotal');
     const selectorMetodoPago = document.getElementById('id_metodo_pago');
-    const selectorMetodoCobro = document.getElementById('id_metodo_cobro');
+    var selectorMetodoCobro = document.getElementById('id_metodo_cobro');
+    var selectorMetodoCobroBackup = document.getElementById('id_metodo_cobro');
+    var selectorTauser = document.getElementById('id_tausers');
     const moneda_base = '{{ moneda_base }}';
     
     // Inicializar Stripe
@@ -367,7 +369,52 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 document.getElementById('campos-cobro-error').style.display = 'block';
             }
+        }
 
+        const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
+        if (!urlApi) return;
+        let tasaCompra;
+        const destino = monedaDestino.value;
+        if(destino) {
+            montoDestinoValor = montoDestino.value;
+            ajax({
+                url: `${urlApi}?currency_id=${destino}`,
+                method: 'GET',
+                success: function (datos) {
+                    if (datos) {
+                        console.log(datos.stock_tausers);
+
+                        /*for (let i = 0; i < select.options.length; i++) {
+                            const opt = select.options[i];
+                            const item = data2.find(d => d.id == opt.value);
+
+                            if (item && item.monto >= montoIngresado) {
+                                opt.hidden = false;
+                            } else if (item) {
+                                opt.hidden = true;
+                            }
+                        }*/
+
+
+                        selectorTauser.innerHTML = '<option value="">---</option>';
+
+                        // Recorrer data2 y agregar solo los que cumplen la condición
+                        datos.stock_tausers.forEach(item => {
+                            let bNum = parseFloat(item.cantidad_disponible);
+                            let aNum = parseFloat(montoDestinoValor);
+                            if (item.moneda == destino && bNum >= aNum) {
+                                const opt = document.createElement('option');
+                                opt.value = item.id;
+                                opt.textContent = `${item.tauser_nombre}`;
+                                selectorTauser.appendChild(opt);
+                            }
+                        });
+                    }
+                },
+                error: function (xhr) {
+                    console.error('Error al refrescar las tasas:', xhr.statusText);
+                }
+            });
         }
     }
     
@@ -395,8 +442,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         montoDestino.value = calculado.toFixed(2);
                         if(nombreMetodoCobro && nombreMetodoCobro.includes('Efectivo')){
-
-
+                            selectorMetodoCobro.value = '';
+                            document.getElementById('campos-tauser').style.display = 'block';
                         }
                         infoTasa.innerHTML = `
                             <p><strong>Tasa de Cambio:</strong><br>

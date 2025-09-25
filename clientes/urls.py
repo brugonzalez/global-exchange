@@ -26,7 +26,7 @@ urlpatterns = [
     path('<int:id_cliente>/preferencias/<int:id_preferencia>/editar/', views.VistaEditarPreferenciasCliente.as_view(), name='editar_preferencias_cliente'),
     # Saldos de cliente
     path('<int:id_cliente>/saldos/', views.VistaSaldosCliente.as_view(), name='saldos_cliente'),
-    path('/gestionar/categorias', views.VistaConfiguracionCategorias.as_view(), name='gestionar_categorias'),
-    path('/gestionar/guardar_configuracion', guardar_categoria, name='guardar_configuracion'),
+    path('gestionar/categorias', views.VistaConfiguracionCategorias.as_view(), name='gestionar_categorias'),
+    path('gestionar/guardar_configuracion', guardar_categoria, name='guardar_configuracion'),
     path('categoria/editar/<int:categoria_id>/', views.VistaEditarCategoriaCliente.as_view(), name='editar_categoria'),
 ]
