@@ -25,6 +25,8 @@ from .forms import FormularioCancelarTransaccion, FormularioTransaccion, Formula
 from .payments import ProcesadorPagos, crear_intento_pago_stripe
 from divisas.models import Moneda, TasaCambio
 from cuentas.views import MixinPermisosAdmin
+from clientes.models import Cliente
+from cuentas.models import Usuario
 
 class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
@@ -553,6 +555,8 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
             'opciones_estado': [estado for estado in Transaccion.ESTADOS if estado[0] != 'ANULADA'],  # Excluir ANULADA
             'opciones_tipo': Transaccion.TIPOS_TRANSACCION,
             'monedas': Moneda.objects.filter(esta_activa=True).order_by('codigo'),
+            'clientes': Cliente.objects.filter(estado='ACTIVO').order_by('nombre', 'nombre_empresa'),
+            'usuarios': Usuario.objects.filter(is_active=True).order_by('nombre_completo', 'email'),
             'es_administrador': self.request.user.is_superuser or self.request.user.roles.filter(nombre_rol='Administrador').exists(),
         })
         
