@@ -1,6 +1,7 @@
 from django.db import models
 from decimal import Decimal, InvalidOperation
 from django.utils import timezone
+from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 import uuid
@@ -179,6 +180,15 @@ class Transaccion(models.Model):
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     fecha_completado = models.DateTimeField(blank=True, null=True)
     fecha_cancelacion = models.DateTimeField(blank=True, null=True)
+    fecha_expiracion = models.DateTimeField(
+        blank=True, 
+        null=True,
+        help_text="Fecha y hora en que la transacción expirará automáticamente"
+    )
+    tiempo_expiracion_minutos = models.PositiveIntegerField(
+        default=30,
+        help_text="Tiempo de expiración en minutos configurado para esta transacción"
+    )
     
     # Información adicional
     notas = models.TextField(blank=True)
@@ -301,6 +311,13 @@ class Transaccion(models.Model):
                 nuevo_num = '000001'
             
             self.numero_transaccion = f"{cadena_fecha}-{nuevo_num}"
+            
+        """Genera el número de transacción si no existe y calcula la fecha de expiración."""
+        es_nueva = self.pk is None
+        
+        # PARA TRANSACCIONES NUEVAS PENDIENTES: calcular fecha de expiración
+        if es_nueva and self.estado == 'PENDIENTE':
+            self.calcular_fecha_expiracion()
         
         super().save(*args, **kwargs)
         
@@ -323,9 +340,79 @@ class Transaccion(models.Model):
             notificacion_logger = logging.getLogger(__name__)
             notificacion_logger.error(f"Error al enviar la notificación de transacción: {e}")
 
+    def calcular_fecha_expiracion(self, minutos_expiracion=None):
+        """Calcula y establece la fecha de expiración"""
+        if minutos_expiracion is None:
+            # Obtener de la configuración del sistema o usar valor por defecto
+            minutos_expiracion = getattr(self, '_tiempo_expiracion_configurado', 30)
+        
+        self.tiempo_expiracion_minutos = minutos_expiracion
+        self.fecha_expiracion = self.fecha_creacion + timedelta(minutes=minutos_expiracion)
+    
+    @property
+    def tiempo_restante(self):
+        """Calcula el tiempo restante en segundos para la expiración"""
+        if self.fecha_expiracion and self.estado == 'PENDIENTE':
+            ahora = timezone.now()
+            if ahora < self.fecha_expiracion:
+                segundos_restantes = int((self.fecha_expiracion - ahora).total_seconds())
+                return max(0, segundos_restantes)  # No negativo
+        return 0
+    
+    @property
+    def tiempo_restante_formateado(self):
+        """Devuelve el tiempo restante formateado como MM:SS"""
+        segundos = self.tiempo_restante
+        if segundos > 0:
+            minutos = segundos // 60
+            segundos_restantes = segundos % 60
+            return f"{minutos:02d}:{segundos_restantes:02d}"
+        return "00:00"
+    
+    @property
+    def ha_expirado(self):
+        """Verifica si la transacción ha expirado"""
+        if self.fecha_expiracion and self.estado == 'PENDIENTE':
+            return timezone.now() > self.fecha_expiracion
+        return False
+    
+    @property
+    def minutos_restantes(self):
+        """Devuelve los minutos restantes (para clases CSS)"""
+        segundos = self.tiempo_restante
+        return segundos // 60
+    
+    def expirar_automaticamente(self):
+        """Marca la transacción como expirada automáticamente"""
+        if self.ha_expirado and self.estado == 'PENDIENTE':
+            self.estado = 'CANCELADA'
+            self.fecha_cancelacion = timezone.now()
+            self.motivo_cancelacion = f"Expirada automáticamente después de {self.tiempo_expiracion_minutos} minutos"
+            self.save()
+            
+            # Enviar notificación de expiración
+            try:
+                from notificaciones.tasks import enviar_notificacion_transaccion, llamar_tarea_con_fallback
+                llamar_tarea_con_fallback(enviar_notificacion_transaccion, self.id, 'TRANSACCION_EXPIRADA')
+            except Exception as e:
+                logger.error(f"Error al enviar notificación de expiración: {e}")
+            
+            return True
+        return False
+
     def puede_ser_cancelada(self):
         """Verifica si la transacción puede ser cancelada."""
         return self.estado in ['PENDIENTE'] and not self.fecha_completado
+    
+    def cancelar_automaticamente(self):
+        """Cancela la transacción automáticamente si ha expirado."""
+        if self.ha_expirado and self.puede_ser_cancelada():
+            self.estado = 'CANCELADA'
+            self.fecha_cancelacion = timezone.now()
+            self.motivo_cancelacion = f"Expirada automáticamente después de {self.tiempo_expiracion_minutos} minutos"
+            self.save()
+            return True
+        return False
 
     def cancelar(self, motivo="", cancelado_por=None):
         """Cancela la transacción."""

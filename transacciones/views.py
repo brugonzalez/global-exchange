@@ -11,6 +11,7 @@ from django.db import models
 from django.urls import reverse
 from decimal import Decimal
 from django.conf import settings
+from datetime import timedelta
 import csv
 import io
 from reportlab.pdfgen import canvas
@@ -856,3 +857,44 @@ def obtenerTasasMonedas():
             'ultima_actualizacion': tasa.ultima_actualizacion.isoformat() if tasa.ultima_actualizacion else None
         })
     return resultado
+
+class VistaConfiguracionTransaccion(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+    def get(self, request):
+        return render(request, 'transacciones/configuracion_transaccion.html')
+    
+    def post(self, request, *args, **kwargs):
+        nuevo_tiempo = request.POST.get('tiempo_expiracion')
+        
+        if nuevo_tiempo and nuevo_tiempo.isdigit():
+            nuevo_tiempo = int(nuevo_tiempo)
+            
+            if 1 <= nuevo_tiempo <= 1440:
+                # 1. Guardar en sesión
+                request.session['tiempo_expiracion_global'] = nuevo_tiempo
+                
+                # 2. ACTUALIZAR TRANSACCIONES PENDIENTES EXISTENTES
+                
+                # Actualizar el campo tiempo_expiracion_minutos
+                transacciones_actualizadas = Transaccion.objects.filter(
+                    estado='PENDIENTE'
+                ).update(
+                    tiempo_expiracion_minutos=nuevo_tiempo
+                )
+                
+                # Recalcular fecha_expiracion para transacciones pendientes
+                transacciones_pendientes = Transaccion.objects.filter(estado='PENDIENTE')
+                for transaccion in transacciones_pendientes:
+                    transaccion.calcular_fecha_expiracion(nuevo_tiempo)
+                    transaccion.save()
+                
+                messages.success(
+                    request, 
+                    f'✅ Tiempo actualizado a {nuevo_tiempo} minutos. '
+                    f'Se actualizaron {transacciones_actualizadas} transacciones pendientes.'
+                )
+            else:
+                messages.error(request, '❌ El tiempo debe estar entre 1 y 1440 minutos')
+        else:
+            messages.error(request, '❌ Ingrese un número válido')
+    
+        return redirect('transacciones:configurar_transaccion')
