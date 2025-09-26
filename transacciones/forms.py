@@ -304,10 +304,14 @@ class FormularioTransaccion(forms.Form):
         # Filtrar métodos de pago según el tipo de transacción
         if tipo_transaccion == 'COMPRA':
             monedas_activas = Moneda.objects.filter(esta_activa=True, es_moneda_base=False, disponible_para_compra=True).order_by('codigo')
-            tarjetasClientes = MedioPago.objects.filter(activo=True, cliente_id=cliente.id).order_by('id')
             self.fields['moneda_origen'].queryset = moneda_base
             self.fields['moneda_destino'].queryset = monedas_activas
-            self.fields['id_metodo_pago_stripe'].queryset = tarjetasClientes
+            # Cargar métodos de pago (tarjetas) solo si existe un cliente seleccionado
+            if cliente is not None:
+                tarjetas_clientes_qs = MedioPago.objects.filter(activo=True, cliente_id=cliente.id).order_by('id')
+            else:
+                tarjetas_clientes_qs = MedioPago.objects.none()
+            self.fields['id_metodo_pago_stripe'].queryset = tarjetas_clientes_qs
             metodos_pago = MetodoPago.objects.filter(
                 esta_activo=True, 
                 soporta_compra=True

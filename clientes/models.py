@@ -8,6 +8,7 @@ incluyendo datos personales, preferencias y relaciones con cuentas de usuario
 from django.db import models
 from django.core.validators import RegexValidator
 from decimal import Decimal
+import clientes.utils as utils 
 
 
 class CategoriaCliente(models.Model):
@@ -309,34 +310,16 @@ class Cliente(models.Model):
         from django.utils import timezone
         from datetime import timedelta
         
-        hoy = timezone.now().date()
-        mes_actual = timezone.now().replace(day=1).date()
-        
-        # Calcular transacciones diarias
-        transacciones_diarias = self.transacciones.filter(
-            fecha_creacion__date=hoy,
-            estado__in=['COMPLETADA', 'PAGADA']
-        ).aggregate(
-            total=models.Sum('monto_origen')
-        )['total'] or Decimal('0.00')
-        
-        # Calcular transacciones mensuales
-        transacciones_mensuales = self.transacciones.filter(
-            fecha_creacion__date__gte=mes_actual,
-            estado__in=['COMPLETADA', 'PAGADA']
-        ).aggregate(
-            total=models.Sum('monto_origen')
-        )['total'] or Decimal('0.00')
-        
-        # Comprobar límites
-        limite_diario = self.categoria.limite_transaccion_diario
-        limite_mensual = self.categoria.limite_transaccion_mensual
-        
-        return (
-            transacciones_diarias + monto <= limite_diario and
-            transacciones_mensuales + monto <= limite_mensual
-        )
+        # Obtener límites
+        limite_diario = utils.obtener_limite_diario(self)
+        limite_mensual = utils.obtener_limite_mensual(self)
+        monto_hoy = utils.obtener_monto_transacciones_hoy(self)
+        monto_mes = utils.obtener_monto_transacciones_mes(self)
 
+        return (
+            monto_hoy + monto <= limite_diario and
+            monto_mes + monto <= limite_mensual
+        )
 
 class ClienteUsuario(models.Model):
     """
@@ -524,7 +507,7 @@ class LimiteTransaccionCliente(models.Model):
         Usuario que realizó la última modificación de los límites.
 
     """
-    cliente = models.ForeignKey(
+    cliente = models.OneToOneField(
         Cliente, 
         on_delete=models.CASCADE, 
         related_name='limites'
@@ -536,14 +519,14 @@ class LimiteTransaccionCliente(models.Model):
     monto_limite_diario = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        default=Decimal('0.00'),
-        help_text="Límite máximo diario de transacciones (0 = sin límite)"
+        default=Decimal('0'),
+        help_text="Límite diario en PYG aplicado al total acumulado del monto de transacciones."
     )
     monto_limite_mensual = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        default=Decimal('0.00'),
-        help_text="Límite máximo mensual de transacciones (0 = sin límite)"
+        default=Decimal('0'),
+        help_text="Límite mensual en PYG aplicado al total acumulado del monto de transacciones."
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
@@ -557,29 +540,3 @@ class LimiteTransaccionCliente(models.Model):
     def __str__(self):
         return f"Limites de {self.cliente.obtener_nombre_completo()}"
 
-class LimiteTransaccion(models.Model):
-    """
-    Modelo para límites de transacciones para todos los clientes
-    
-    Permite definir el límite del monto total con los que los clientes pueden operar
-    por día y por mes.
-    El monto es definido en guaraníes.
-    """
-    moneda_limites = models.ForeignKey(
-        'divisas.Moneda',
-        on_delete=models.PROTECT,
-        help_text="Moneda en la que está expresada los límites")
-    monto_limite_diario = models.DecimalField(
-        max_digits=20, 
-        decimal_places=8, 
-        default=Decimal('100000000.00'),
-        help_text="El monto máximo total con el que pueden operar los clientes en un día")
-    monto_limite_mensual = models.DecimalField(
-        max_digits=20, 
-        decimal_places=8, 
-        default=Decimal('800000000.00'),
-        help_text="El monto máximo total con el que pueden operar los clientes en el mes")
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Límites - Diario: {self.monto_limite_diario}, Mensual: {self.monto_limite_mensual}"
