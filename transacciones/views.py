@@ -868,7 +868,7 @@ class VistaConfiguracionTransaccion(LoginRequiredMixin, MixinPermisosAdmin, Temp
         if nuevo_tiempo and nuevo_tiempo.isdigit():
             nuevo_tiempo = int(nuevo_tiempo)
             
-            if 1 <= nuevo_tiempo <= 1440:
+            if 1 <= nuevo_tiempo <= 30:
                 # 1. Guardar en sesión
                 request.session['tiempo_expiracion_global'] = nuevo_tiempo
                 
@@ -893,7 +893,7 @@ class VistaConfiguracionTransaccion(LoginRequiredMixin, MixinPermisosAdmin, Temp
                     f'Se actualizaron {transacciones_actualizadas} transacciones pendientes.'
                 )
             else:
-                messages.error(request, 'El tiempo debe estar entre 1 y 1440 minutos')
+                messages.error(request, 'El tiempo debe estar entre 1 y 30 minutos')
         else:
             messages.error(request, 'Ingrese un número válido')
     
