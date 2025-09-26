@@ -86,6 +86,7 @@
                                         <label for="monto_destino" class="form-label">Cantidad a recibir</label>
                                         <input type="text" id="monto_destino" class="form-control" readonly placeholder="0.00">
                                         <!--<small class="form-text text-muted">Calculado automáticamente</small>-->
+                                        <input type="hidden" name="monto_destino" id="id_moneda_destino_hidden">
                                     </div>
                                 </div>
                             </div>
@@ -303,6 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const monedaDestino = document.getElementById('id_moneda_destino');
     const montoOrigen = document.getElementById('id_monto_origen');
     const montoDestino = document.getElementById('monto_destino');
+    const moneda_destino_hidden = document.getElementById('id_moneda_destino_hidden');
     const infoTasa = document.getElementById('infoTasa');
     const infoComision = document.getElementById('infoComision');
     const infoTotal = document.getElementById('infoTotal');
@@ -441,6 +443,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         const calculado = monto / tasaCompra;
 
                         montoDestino.value = calculado.toFixed(2);
+                        moneda_destino_hidden.value = calculado.toFixed(2);
+
                         if(nombreMetodoCobro && nombreMetodoCobro.includes('Efectivo')){
                             selectorMetodoCobro.value = '';
                             document.getElementById('campos-tauser').style.display = 'block';

@@ -33,8 +33,8 @@ class ProcesadorPagos:
             return self._procesar_pago_stripe(datos_pago)
         elif tipo_metodo == 'DIGITAL_WALLET':
             return self._procesar_pago_billetera_digital(datos_pago)
-        elif tipo_metodo == 'CASH':
-            return self._procesar_pago_retiro_efectivo(datos_pago)
+        # elif tipo_metodo == 'CASH':
+        #     return self._procesar_pago_retiro_efectivo(datos_pago)
         elif tipo_metodo == 'BANK_TRANSFER':
             return self._procesar_pago_transferencia_bancaria(datos_pago)
         else:
