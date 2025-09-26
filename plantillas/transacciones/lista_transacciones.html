@@ -169,7 +169,6 @@
                                 </button>
                             </div>
                         </div>
-                        {% if es_administrador %}
                         <div class="col-md-3">
                             <label for="cliente" class="form-label">Cliente</label>
                             <select name="cliente" id="cliente" class="form-select">
@@ -186,6 +185,7 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        {% if es_administrador %}
                         <div class="col-md-3">
                             <label for="usuario" class="form-label">Usuario</label>
                             <select name="usuario" id="usuario" class="form-select">
@@ -210,7 +210,6 @@
     </div>
 
     <!-- Botones de Exportación -->
-    {% if es_administrador %}
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -237,7 +236,6 @@
             </div>
         </div>
     </div>
-    {% endif %}
 
     <!-- Tabla de Transacciones -->
     <div class="row">

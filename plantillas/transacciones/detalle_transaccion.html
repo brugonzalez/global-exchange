@@ -174,20 +174,20 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Monto Origen:</label>
                             <p class="mb-0 fs-5">
-                                <strong>{{ transaccion.monto_origen|floatformat:2 }}</strong>
+                                {{ transaccion.monto_origen|floatformat:2 }}
                                 {{ transaccion.moneda_origen.codigo }}
                             </p>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Monto Destino:</label>
                             <p class="mb-0 fs-5">
-                                <strong>{{ transaccion.monto_destino|floatformat:2 }}</strong>
+                                {{ transaccion.monto_destino|floatformat:2 }}
                                 {{ transaccion.moneda_destino.codigo }}
                             </p>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Tasa de Cambio:</label>
-                            <p class="mb-0">{{ transaccion.tasa_cambio|floatformat:6 }}</p>
+                            <p class="mb-0">{{ transaccion.tasa_cambio|floatformat:2 }}</p>
                         </div>
                         {% if transaccion.monto_comision > 0 %}
                         <div class="col-md-6 mb-3">
