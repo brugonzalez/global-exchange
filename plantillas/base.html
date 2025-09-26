@@ -97,6 +97,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Navegación -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -122,7 +123,7 @@
                             <i class="fas fa-chart-line me-1"></i>Tasas de Cambio
                         </a>
                     </li>
-                                        <li class="nav-item">
+                    <li class="nav-item">
                         <a href="{% url 'tauser_login' %}" class="nav-link">Ir a Tauser</a>
                     </li>
                     {% if user.is_authenticated %}
@@ -259,7 +260,7 @@
     {% if messages %}
         <div class="container mt-3">
             {% for message in messages %}
-                {# Mapear 'error' -> 'danger' para aprovechar .alert-danger (var(--ig-peligro)) #}
+                {# Mapear 'error' -> 'danger'  #}
                 <div class="alert alert-{% if 'error' in message.tags %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -267,6 +268,15 @@
             {% endfor %}
         </div>
     {% endif %}
+
+    {% if request.GET.exp == '1' %}
+        <div class="container mt-3">
+            <div class="alert alert-warning mb-3">
+                Su sesión expiró. Inicie sesión nuevamente.
+            </div>
+        </div>
+    {% endif %}
+
 
     <!-- Contenido Principal -->
     <main>
@@ -299,14 +309,17 @@
     <!-- JavaScript Personalizado -->
     <script src="{% static 'js/global-exchange.js' %}"></script>
     
-  <!-- Establecer URLs de API y modo debug para JavaScript -->
-<script>
-document.querySelector('body').setAttribute('data-rates-api', '{% url "divisas:api_tasas" %}');
-{% if debug %}
-document.querySelector('body').setAttribute('data-debug', 'true');
-{% endif %}
-</script>
-    
-    {% block extra_js %}{% endblock %}
-</body>
+    <!-- Establecer URLs de API y modo debug para JavaScript -->
+    <script>
+    document.body.setAttribute('data-rates-api', '{% url "divisas:api_tasas" %}');
+    </script>
+
+    {% if debug %}
+    <script>
+    document.body.setAttribute('data-debug', 'true');
+    </script>
+    {% endif %}
+        
+        {% block extra_js %}{% endblock %}
+    </body>
 </html>
