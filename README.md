@@ -201,7 +201,35 @@ python manage.py createsuperuser
       }
    }
    ```
-   
+
+   Para tareas asincronas
+   ```bash
+   pip install celery redis
+   ```
+   para correr redis
+   ```bash
+   redis-server
+   ```
+   Celery worker
+   ```bash
+   celery -A global_exchange worker --loglevel=info
+   ```
+   Celery beat
+   ```bash
+   celery -A global_exchange beat --loglevel=info
+   ```
+
+   ```bash
+   global_exchange/
+   ├── __init__.py          # Con la importación de Celery
+   ├── celery.py           # Configuración centralizada
+   ├── settings.py         # Variables de entorno
+   └── tu_app/
+      ├── tasks.py        # Tareas específicas
+      └── models.py       # Modelos con métodos
+   ```
+
+
 ## 📚 Generar o Actualizar la Documentación
 
 Para crear o actualizar la documentación en HTML con Sphinx:
