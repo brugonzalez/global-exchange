@@ -69,12 +69,12 @@
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-6">
-                                    <label for="moneda_origen" class="form-label mb-0">Moneda Origen</label>
-                                    <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control mb-2" id="moneda_origen_display">
-                                    <input type="hidden" name="moneda_origen" value="{{ moneda_base.id }}">
+                                    {{ formulario.moneda_origen|as_crispy_field }}
                                 </div>
                                 <div class="col-md-6">
-                                    {{ formulario.moneda_destino|as_crispy_field }}
+                                    <label for="moneda_destino" class="form-label mb-0">Moneda Destino</label>
+                                <input readonly value="{{ moneda_base.codigo }} - {{ moneda_base.nombre }}" class="form-control" id="moneda_destino_display">
+                                     <input type="hidden" id="moneda_destino" name="moneda_destino" value="{{ moneda_base.id }}">
                                 </div>
                             </div>
                             <div class="row">
@@ -83,9 +83,9 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="monto_destino" class="form-label">Cantidad a recibir</label>
-                                        <input type="text" id="monto_destino" class="form-control" readonly placeholder="0.00">
-                                        <!--<small class="form-text text-muted">Calculado automáticamente</small>-->
+                                        <label for="monto_destino" class="form-label">Monto a pagar (PYG)</label>
+                                        <input type="text" id="monto_destino" class="form-control" readonly placeholder="0">
+                                        <small class="form-text text-muted">Calculado automáticamente</small>
                                     </div>
                                 </div>
                             </div>
@@ -299,8 +299,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let tarjetaMontada = false;
     
-    // Variable global para almacenar la comisión del método de pago
+    // Variables globales para comisión del método de pago y denominación mínima
     let comisionMetodoPago = 0;
+    let denominacionMinimaPYG = 0;
     
     function actualizarCamposPago() {
         const metodoPagoId = selectorMetodoPago.value;
@@ -350,91 +351,95 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 function actualizarCalculos() {
-    const destino = monedaDestino.value;
+    const origen = monedaOrigen.value;
     const monto = parseFloat(montoOrigen.value) || 0;
     
-    if (destino && monto > 0) {
+    if (origen && monto > 0) {
         const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
         if (!urlApi) return;
         
         ajax({
-            url: `${urlApi}?currency_id=${destino}`,
+            url: `${urlApi}?currency_id=${origen}`,
             method: 'GET',
             success: function(datos) {
-                if (datos) {
-                    const tasaCompra = datos.tasa_compra;
-                    const denominacionMinima = datos.denominacion_minima || 0;
-                    const comision_compra = datos.comision_compra / 100 || 0;
-                    
-                    // Calcular monto sin ajustar denominación
-                    const calculadoSinAjuste = monto / tasaCompra;
+                if (datos && datos.tasa_compra) {
+                    const tasaCompra = parseFloat(datos.tasa_compra) || 0;
+                    const comision_compra = parseFloat(datos.comision_compra) / 100 || 0;
                     
                     console.log('=== CÁLCULOS INICIALES ===');
-                    console.log('Monto origen (PYG):', monto);
+                    console.log('Monto origen (moneda extranjera):', monto);
                     console.log('Tasa de compra:', tasaCompra);
-                    console.log('Calculado sin ajuste:', calculadoSinAjuste);
-                    console.log('Denominación mínima:', denominacionMinima);
                     console.log('Comision base:', comision_compra);
                     
-                    let montoDestinoFinal = calculadoSinAjuste;
+                    // Validar que tenemos datos válidos
+                    if (tasaCompra <= 0) {
+                        console.error('Tasa de compra inválida:', tasaCompra);
+                        return;
+                    }
+                    
+                    // Calcular cuánto PYG necesitamos para comprar la moneda extranjera
+                    const pygSinComisiones = monto * tasaCompra;
+                    
+                    // Calcular comisiones sobre la moneda extranjera
+                    const comisionMoneda = monto * comision_compra;
+                    const comisionMetodo = monto * comisionMetodoPago;
+                    const montoComisionTotal = comisionMoneda + comisionMetodo;
+                    
+                    // El PYG total incluye el costo base más las comisiones en PYG
+                    const comisionesEnPYG = montoComisionTotal * tasaCompra;
+                    const pygTotalSinAjuste = pygSinComisiones + comisionesEnPYG;
+                    
+                    // Aplicar denominación mínima de PYG
+                    let pygTotalFinal = pygTotalSinAjuste;
                     let advertenciaDenominacion = '';
                     let montoAjustadoPorDenominacion = false;
                     
-                    // Calcular comisiones
-                    const comisionMoneda = montoDestinoFinal * comision_compra;
-                    // CORREGIDO: comisionMetodoPago ya viene como decimal (ej: 0.025 = 2.5%)
-                    const comisionMetodo = montoDestinoFinal * comisionMetodoPago;
-                    const montoComisionTotal = comisionMoneda + comisionMetodo;
-                    const montoTotalConComision = montoDestinoFinal - montoComisionTotal;
-                    
-                    // Calcular cuánto PYG se usará realmente
-                    const montoRealEnPYG = montoDestinoFinal * tasaCompra;
-                    const diferenciaPYG = monto - montoRealEnPYG;
-                    
-                    // Validar y ajustar denominación mínima
-                    if (denominacionMinima > 0 && (calculadoSinAjuste % denominacionMinima !== 0)) {
-                        // Ajustar hacia abajo para no exceder lo disponible
-                        montoDestinoFinal = Math.floor(calculadoSinAjuste / denominacionMinima) * denominacionMinima;
+                    if (denominacionMinimaPYG > 0 && (pygTotalSinAjuste % denominacionMinimaPYG !== 0)) {
+                        pygTotalFinal = Math.ceil(pygTotalSinAjuste / denominacionMinimaPYG) * denominacionMinimaPYG;
                         montoAjustadoPorDenominacion = true;
-                        
-                        const diferencia = calculadoSinAjuste - montoDestinoFinal;
+                        const diferencia = pygTotalFinal - pygTotalSinAjuste;
                         
                         advertenciaDenominacion = `
                             <div class="alert alert-info mt-2 py-2">
                                 <small><i class="fas fa-info-circle me-1"></i>
-                                Ajustado por denominación mínima (${denominacionMinima} unidades)
+                                Monto PYG ajustado por denominación mínima (${denominacionMinimaPYG.toLocaleString()} Gs)
+                                <br>Diferencia: +${diferencia.toLocaleString()} Gs
                                 </small>
                             </div>
                         `;
                         
-                        console.log('=== AJUSTE POR DENOMINACIÓN ===');
-                        console.log('Monto ajustado:', montoDestinoFinal);
+                        console.log('=== AJUSTE POR DENOMINACIÓN PYG ===');
+                        console.log('PYG calculado:', pygTotalSinAjuste);
+                        console.log('PYG ajustado:', pygTotalFinal);
                         console.log('Diferencia:', diferencia);
                     }
                     
                     console.log('=== CÁLCULOS FINALES ===');
-                    console.log('Monto destino final:', montoDestinoFinal);
-                    console.log('Comisión moneda:', comisionMoneda);
-                    console.log('Comisión método pago (%):', comisionMetodoPago);
-                    console.log('Comisión método pago (monto):', comisionMetodo);
-                    console.log('Comisión total aplicada:', montoComisionTotal);
-                    console.log('Total con comisión:', montoTotalConComision);
-                    console.log('PYG realmente usado:', montoRealEnPYG);
-                    console.log('PYG sobrantes:', diferenciaPYG);
+                    console.log('Moneda extranjera a comprar:', monto);
+                    console.log('PYG base necesario:', pygSinComisiones);
+                    console.log('Comisiones:', montoComisionTotal);
+                    console.log('Comisiones en PYG:', comisionesEnPYG);
+                    console.log('PYG total sin ajuste:', pygTotalSinAjuste);
+                    console.log('PYG total final:', pygTotalFinal);
                     
-                    // Actualizar el campo del monto destino
-                    montoDestino.value = montoDestinoFinal.toFixed(2);
+                    // Actualizar el campo del monto destino (PYG)
+                    montoDestino.value = Math.round(pygTotalFinal).toLocaleString('es-ES', {
+                        minimumFractionDigits: 0, 
+                        maximumFractionDigits: 0
+                    });
                     
-                    // Obtener información de la moneda seleccionada
-                    const opcionSeleccionada = monedaDestino.options[monedaDestino.selectedIndex];
+                    // Obtener información de la moneda seleccionada (origen)
+                    const opcionSeleccionada = monedaOrigen.options[monedaOrigen.selectedIndex];
                     const nombreMoneda = opcionSeleccionada?.text || '';
                     const codigoMoneda = nombreMoneda.split(' ')[0] || '';
                     
-                    // CORREGIDO: Usar tasaCompra en lugar de tasaVenta
+                    // Mostrar información de tasa
                     infoTasa.innerHTML = `
                         <div>
                             <p><strong>Tasa de Cambio (Compra):</strong><br>
                             1 ${codigoMoneda} = ${tasaCompra.toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} Gs</p>
+                            <p><strong>Comprando:</strong> ${monto} ${codigoMoneda}</p>
+                            <p><strong>Total a pagar:</strong> ${Math.round(pygTotalFinal).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} Gs</p>
                             ${advertenciaDenominacion}
                         </div>
                     `;
@@ -515,12 +520,38 @@ function mostrarDetallesTransaccion(datos) {
     }
 }
      // Listeners de eventos
-    //monedaOrigen.addEventListener('change', actualizarCalculos);
-    monedaDestino.addEventListener('change', actualizarCalculos);
+    monedaOrigen.addEventListener('change', actualizarCalculos);
     montoOrigen.addEventListener('input', actualizarCalculos);
     selectorMetodoPago.addEventListener('change', actualizarCamposPago);
     
-    // Inicializar campos de pago
+    // Función para obtener denominación mínima de PYG
+    function obtenerDenominacionMinimaPYG() {
+        const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
+        if (urlApi) {
+            // Buscar por código de moneda PYG
+            ajax({
+                url: `${urlApi}?currency_id=1`, // Asumiendo que PYG tiene ID 1
+                method: 'GET',
+                success: function(datos) {
+                    if (datos && datos.denominacion_minima) {
+                        denominacionMinimaPYG = parseFloat(datos.denominacion_minima);
+                        console.log('Denominación mínima PYG obtenida:', denominacionMinimaPYG);
+                    } else {
+                        denominacionMinimaPYG = 1000; // Valor por defecto
+                    }
+                },
+                error: function() {
+                    console.log('Error obteniendo denominación mínima de PYG');
+                    denominacionMinimaPYG = 1000; // Valor por defecto de 1000 Gs
+                }
+            });
+        } else {
+            denominacionMinimaPYG = 1000; // Valor por defecto si no hay API
+        }
+    }
+    
+    // Inicializar campos de pago y obtener denominación mínima
+    obtenerDenominacionMinimaPYG();
     actualizarCamposPago();
     actualizarCalculos();  
     // Manejar errores de la tarjeta de Stripe
