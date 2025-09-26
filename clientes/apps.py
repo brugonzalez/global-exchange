@@ -10,3 +10,7 @@ class ConfiguracionClientes(AppConfig):
     """
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'clientes'
+
+    def ready(self):  # pragma: no cover
+        # Importa las señales para que se registren al iniciar la app
+        from . import signals  # noqa: F401

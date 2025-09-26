@@ -1,6 +1,7 @@
 import builtins
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import get_user_model
 from django.contrib import messages
@@ -17,8 +18,8 @@ from django.views.decorators.csrf import csrf_protect
 from django.middleware.csrf import get_token
 from django.conf import settings
 
-from .models import PreferenciaCliente
-from .forms import FormularioPreferenciaCliente, FormularioEditarCategoriaCliente
+from .models import LimiteTransaccionCliente, PreferenciaCliente
+from .forms import FormularioPreferenciaCliente, FormularioEditarCategoriaCliente, FormularioLimiteCliente
 
 from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita, SaldoCliente
 from .forms import (
@@ -199,6 +200,13 @@ class VistaCrearCliente(LoginRequiredMixin, MixinStaffRequerido, CreateView):
         HttpResponseRedirect
             Redirección tras guardar a la lista de clientes.
         """
+        # Interpretar checkbox visible si existe (nueva y antigua plantilla)
+        # Si el checkbox de personalizados está marcado => usa_limites_default False
+        chk_personalizados = self.request.POST.get('chk_limites_personalizados')
+        if chk_personalizados is not None:
+            # Valor 'on' significa marcado
+            formulario.instance.usa_limites_default = not (chk_personalizados == 'on')
+        # Guardar creador
         formulario.instance.creado_por = self.request.user
         messages.success(self.request, f'Cliente {formulario.instance.obtener_nombre_completo()} creado exitosamente.')
         return super().form_valid(formulario)
@@ -215,7 +223,7 @@ class VistaCrearCliente(LoginRequiredMixin, MixinStaffRequerido, CreateView):
             Diccionario con datos extra para la plantilla.
         """
         contexto = super().get_context_data(**kwargs)
-        contexto['titulo'] = 'Crear Cliente'
+        contexto['titulo_accion'] = 'Crear Cliente'
         contexto['texto_submit'] = 'Crear Cliente'
         # Agregar Formulario para la compatibilidad de la plantilla
         #contexto['formulario'] = contexto.get('form')
@@ -319,23 +327,51 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
 
     def form_valid(self, formulario):
         """
-        Maneja el guardado cuando el formulario principal es válido.
+        Además de guardar el cliente, procesa el formulario de límites.
 
-        Muestra un mensaje de confirmación y luego continúa con
-        el flujo normal de actualización.
+        La plantilla invierte la lógica: el checkbox visible (chk_limites_personalizados)
+        marca límites personalizados => backend debe recibir usa_limites_default = False.
+        El campo real ``usa_limites_default`` se envía ya invertido, pero aquí
+        decidimos si persistir cambios en los límites o ignorarlos.
 
-        Parameters
-        ----------
-        formulario : Form
-            El formulario que fue validado y procesado.
-
-        Returns
-        -------
-        HttpResponseRedirect
-            Redirección tras actualizar el cliente hacia el detalle del cliente actualizado
+        Reglas:
+        - Si ``usa_limites_default`` es True => se ignoran valores enviados de límites y se ponen en 0.
+        - Si ``usa_limites_default`` es False => se valida y guarda el formulario de límites.
         """
+        # Sincronizar valor de usa_limites_default con el checkbox visible si viene en POST
+        chk_personalizados = self.request.POST.get('chk_limites_personalizados')
+        if chk_personalizados is not None:
+            formulario.instance.usa_limites_default = not (chk_personalizados == 'on')
+        # Guardar primero el cliente
+        respuesta = super().form_valid(formulario)
+        usa_default = formulario.instance.usa_limites_default  # usar el valor posiblemente actualizado
+        try:
+            limites = self.object.limites  # type: ignore[attr-defined]
+        except LimiteTransaccionCliente.DoesNotExist:
+            limites = None
+        if usa_default:
+            if limites:
+                cambios = []
+                if limites.monto_limite_diario != 0:
+                    limites.monto_limite_diario = 0
+                    cambios.append('monto_limite_diario')
+                if limites.monto_limite_mensual != 0:
+                    limites.monto_limite_mensual = 0
+                    cambios.append('monto_limite_mensual')
+                if cambios:
+                    limites.save(update_fields=cambios)
+        else:
+            form_limites = FormularioLimiteCliente(self.request.POST, instance=limites)
+            if form_limites.is_valid():
+                limites_obj = form_limites.save(commit=False)
+                limites_obj.cliente = self.object
+                limites_obj.save()
+            else:
+                for campo, lista in form_limites.errors.items():
+                    for err in lista:
+                        messages.warning(self.request, f'Error en límite ({campo}): {err}')
         messages.success(self.request, f'Cliente {formulario.instance.obtener_nombre_completo()} actualizado exitosamente.')
-        return super().form_valid(formulario)
+        return respuesta
 
     def get_context_data(self, **kwargs):
         """
@@ -353,7 +389,8 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
             Diccionario con los elementos extra para el contexto.
         """
         contexto = super().get_context_data(**kwargs)
-        contexto['titulo'] = f'Editar Cliente: {self.object.obtener_nombre_completo()}'
+        contexto['titulo_accion'] = 'Editar Cliente'
+        contexto['titulo_cliente'] = self.object.obtener_nombre_completo()
         contexto['texto_submit'] = 'Actualizar Cliente'
         #contexto['formulario'] = contexto.get('form')
         if 'form' in contexto:
@@ -361,23 +398,48 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
         else:
             # Si no hay 'form', crear uno vacío o manejar el caso
             contexto['formulario'] = self.get_form()
-        # Obtener o crear preferencias
-        preferencias = getattr(self.object, 'preferencias', None)
-        if not preferencias:
-            preferencias = PreferenciaCliente.objects.create(
-                cliente=self.object,
-                limite_compra=0,
-                limite_venta=0,
-                frecuencia_maxima=0,
-                preferencia_tipo_cambio=''
-            )
-        contexto['preferencias'] = preferencias
-        # Agregar el formulario de preferencias al contexto
+        # Obtener o crear límites
+        # Debido a OneToOneField, acceder a self.object.limites puede lanzar LimiteTransaccionCliente.DoesNotExist
+        try:
+            limites = self.object.limites  # type: ignore[attr-defined]
+        except LimiteTransaccionCliente.DoesNotExist:
+            limites = None
+
+        if limites is None:
+            # Estrategia de selección de moneda: base -> activa -> primera
+            moneda = None
+            # es_moneda_base si existe
+            if hasattr(Moneda, 'es_moneda_base'):
+                moneda = Moneda.objects.filter(es_moneda_base=True).first()
+            # esta_activa si no se encontró base
+            if moneda is None and hasattr(Moneda, 'esta_activa'):
+                moneda = Moneda.objects.filter(esta_activa=True).first()
+            # fallback cualquier moneda
+            if moneda is None:
+                moneda = Moneda.objects.order_by('id').first()
+            if moneda is not None:
+                limites, _creado = LimiteTransaccionCliente.objects.get_or_create(
+                    cliente=self.object,
+                    defaults={
+                        'moneda_limite': moneda,
+                        'monto_limite_diario': 0,
+                        'monto_limite_mensual': 0,
+                    }
+                )
+        contexto['limites'] = limites
+        # Agregar el formulario de límites al contexto
         if self.request.method == 'POST':
-            contexto['formulario_preferencias'] = FormularioPreferenciaCliente(self.request.POST, instance=preferencias)
+            contexto['formulario_limites'] = FormularioLimiteCliente(self.request.POST, instance=limites)
         else:
-            contexto['formulario_preferencias'] = FormularioPreferenciaCliente(instance=preferencias)
+            contexto['formulario_limites'] = FormularioLimiteCliente(instance=limites)
         return contexto
+
+class VistaEstablecerLimitesGeneralesTransacciones(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
+    """
+    Vista para establecer límites generales para montos de transacciones.
+    """
+    template_name = 'clientes/gestionar_limite_general.html'
+
 
 
 class VistaGestionarUsuariosCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):

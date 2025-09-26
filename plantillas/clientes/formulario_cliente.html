@@ -26,10 +26,19 @@
     .hidden {
         display: none !important;
     }
-    
-    .required-field label:after {
-        content: " *";
-        color: red;
+    /* Unificar asterisco: eliminamos pseudo-elemento que generaba duplicados.
+       Usaremos solo spans .asteriskField (crispy) o los que añadimos dinámicamente. */
+    .asteriskField { color: red !important; margin-left: 2px; font-weight: 600; }
+    /* (Opcional) si quieres resaltar grupos marcados como required dinámicamente: */
+    .required-field label { font-weight: 600; }
+    .cliente-nombre {
+        display:block;
+        margin-top:.25rem;
+        font-size:2.05rem;
+        font-weight:600;
+        color:#0953c2;
+        letter-spacing:.5px;
+        text-transform:capitalize;
     }
 </style>
 {% endblock %}
@@ -37,13 +46,16 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
+        <div class="col-md-8 col-lg-8">
             <div class="card shadow">
                 <div class="card-body">
                     <div class="text-center mb-4">
+                        <i class="fas fa-user-plus fa-3x text-primary me-1"></i>
                         <h3>
-                            <i class="fas fa-user-plus text-primary me-2"></i>
-                            {{ titulo }}
+                            {{ titulo_accion }}
+                            {% if titulo_cliente %}
+                            <span class="cliente-nombre">{{ titulo_cliente }}</span>
+                            {% endif %}
                         </h3>
                         <p class="text-muted mb-0">
                             {% if form.instance.pk %}
@@ -59,82 +71,48 @@
 
                         <!-- Sección de Información Básica -->
                         <div class="row mb-4">
+                        <div class="col-12">
                             <h5 class="section-title">
-                                <i class="fas fa-info-circle me-2"></i>Información Básica
+                            <i class="fas fa-info-circle me-2"></i>Información Básica
                             </h5>
-                            
-                            <div class="row">
-                                <div class="col-md-4">
-                                    {{ form.tipo_cliente|as_crispy_field }}
-                                </div>
-                                <div class="col-md-4">
-                                    {{ form.estado|as_crispy_field }}
-                                </div>
-                                <div class="col-md-4">
-                                    {{ form.categoria|as_crispy_field }}
-                                </div>
-                            </div>
                         </div>
+
+                        <div class="col-md-4">
+                            {{ form.tipo_cliente|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.estado|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.categoria|as_crispy_field }}
+                        </div>
+                        </div>
+
 
                         <!-- Campos Específicos por Tipo de Persona -->
-                        <div class="row">
-                            <h5 id="titulo-informacion-p-e" class="section-title">
+
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 id="titulo-informacion-p-e" class="section-title">
                                 <i class="fas fa-user me-2"></i>Información Personal/Empresarial
-                            </h5>
-                            
-                            <!-- Campos de Persona Física -->
-                            <div id="campos-fisica" class="conditional-fields">
-                                <div class="row mb-4">
-                                    <div class="col-md-6">
-                                        {{ form.nombre|as_crispy_field }}
-                                    </div>
-                                    <div class="col-md-6">
-                                        {{ form.apellido|as_crispy_field }}
-                                    </div>
-                                </div>
+                                </h5>
                             </div>
 
-                            <!-- Campos de Persona Jurídica -->
-                            <div id="campos-juridica" class="conditional-fields hidden">
-                                <div class="row mb-4">
-                                    <div class="col-md-8">
-                                        {{ form.nombre_empresa|as_crispy_field }}
-                                    </div>
-                                </div>
+                            <!-- FÍSICA -->
+                            <div id="campos-fisica" class="conditional-fields row ">
+                                <div class="col-12 col-md-6">{{ form.nombre|as_crispy_field }}</div>
+                                <div class="col-12 col-md-6">{{ form.apellido|as_crispy_field }}</div>
                             </div>
-                            <!-- Preferencias Específicas del Cliente -->
-                            <div class="row mb-4">
-                                <h5 class="section-title">
-                                    <i class="fas fa-sliders-h me-2"></i>Preferencias Específicas
-                                </h5>
-                                {% if preferencias and preferencias.id %}
-                                    <div class="mb-2">
-                                        <small class="text-muted">Límite de Compra:</small>
-                                        <div class="h6">${{ preferencias.limite_compra|floatformat:2 }}</div>
-                                    </div>
-                                    <div class="mb-2">
-                                        <small class="text-muted">Límite de Venta:</small>
-                                        <div class="h6">${{ preferencias.limite_venta|floatformat:2 }}</div>
-                                    </div>
-                                    <div class="mb-2">
-                                        <small class="text-muted">Frecuencia Máxima (día):</small>
-                                        <div class="h6">{{ preferencias.frecuencia_maxima }}</div>
-                                    </div>
-                                    <div class="mb-0">
-                                        <small class="text-muted">Preferencia Tipo de Cambio:</small>
-                                        <div class="h6">{{ preferencias.preferencia_tipo_cambio|default:'-' }}</div>
-                                    </div>
-                                    <a href="{% url 'clientes:editar_preferencias_cliente' form.instance.id preferencias.id %}" class="btn btn-outline-primary btn-sm mt-2">
-                                        Editar Preferencias
-                                    </a>
-                                {% else %}
-                                    <div class="text-muted mb-4">No hay preferencias específicas configuradas para este cliente.</div>
-                                {% endif %}
-                                    <div class="col-md-4">
-                                        {{ form.representante_legal|as_crispy_field }}
-                                    </div>
+
+                            <!-- JURÍDICA -->
+                            <div id="campos-juridica" class="conditional-fields row  hidden">
+                                <div class="col-12 col-md-6">{{ form.nombre_empresa|as_crispy_field }}</div>
+                                <div class="col-12 col-md-6">{{ form.representante_legal|as_crispy_field }}</div>
                             </div>
-                        </div>
+                            </div>
+
+
+
 
                         <!-- Sección de Información de Contacto -->
                         <div class="row mb-4">
@@ -160,7 +138,47 @@
                                 </div>
                             </div>
                         </div>
-
+                        <!-- Preferencias Específicas del Cliente -->
+                            <div class="row mb-4">
+                                <h5 class="section-title">
+                                    <i class="fas fa-sliders-h me-2"></i>Límites de transacciones
+                                </h5>
+                                <div class="col-md-12 mb-3">
+                                    <!-- Campo original (usa_limites_default) oculto: True = usar límites por defecto -->
+                                    <span style="display:none;">{{ form.usa_limites_default }}</span>
+                                    <!-- Nuevo checkbox inverso: checked = definir personalizados (=> backend False) -->
+                                    <div class="form-check">
+                                        <input type="checkbox" id="chk_limites_personalizados" class="form-check-input"
+                                            {% if form.instance.pk %}
+                                                {% if not form.instance.usa_limites_default %}checked{% endif %}
+                                            {% else %}checked{% endif %}>
+                                        <label for="chk_limites_personalizados" class="form-check-label">
+                                            Definir límites de transacciones específicos para este cliente
+                                        </label>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Si no se marcan límites personalizados, se usarán los límites generales por defecto.</small>  
+                                    <hr class="mt-3 mb-3"/>                                  
+                                </div>
+                                {% if limites and limites.id %}                                    
+                                    <div class="row mb-2 limites-personalizados">
+                                        
+                                        <div class="col-md-6">
+                                            {{ formulario_limites.monto_limite_diario|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ formulario_limites.monto_limite_mensual|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-warning py-2 mb-3">
+                                        No existen límites personalizados aún. Puede definirlos a continuación.
+                                    </div>
+                                    <div class="row limites-personalizados">
+                                        <div class="col-md-6">{{ formulario_limites.monto_limite_diario|as_crispy_field }}</div>
+                                        <div class="col-md-6">{{ formulario_limites.monto_limite_mensual|as_crispy_field }}</div>
+                                    </div>
+                                {% endif %}
+                            </div>
                         <!-- Botones de Acción -->
                         <div class="d-flex justify-content-between mb-2">
                             <a href="{% url 'clientes:lista_clientes' %}" class="mt-4 btn btn-secondary">
@@ -181,6 +199,39 @@
 
 {% block extra_js %}
 <script>
+// Inversión de lógica: chk_limites_personalizados.checked => límites personalizados (backend usa_limites_default = false)
+function toggleCamposLimites() {
+    const chkPersonalizados = document.getElementById('chk_limites_personalizados');
+    const chkBackend = document.getElementById('id_usa_limites_default'); // checkbox oculto original
+    const diario = document.getElementById('id_monto_limite_diario');
+    const mensual = document.getElementById('id_monto_limite_mensual');
+    const filasPersonalizadas = document.querySelectorAll('.limites-personalizados');
+    const msgDefault = document.getElementById('mensaje-limites-default');
+    if (!chkPersonalizados || !chkBackend || !diario || !mensual) return;
+
+    if (chkPersonalizados.checked) {
+        // Mostrar y habilitar campos personalizados
+        chkBackend.checked = false; // False = no usar límites por defecto
+        diario.removeAttribute('disabled');
+        mensual.removeAttribute('disabled');
+        if (diario.dataset.prevValue !== undefined) diario.value = diario.dataset.prevValue;
+        if (mensual.dataset.prevValue !== undefined) mensual.value = mensual.dataset.prevValue;
+        filasPersonalizadas.forEach(f => f.classList.remove('d-none'));
+        if (msgDefault) msgDefault.classList.add('d-none');
+    } else {
+        // Usar límites por defecto => ocultar y limpiar campos personalizados
+        chkBackend.checked = true; // True = usar límites por defecto
+        if (diario.dataset.prevValue === undefined) diario.dataset.prevValue = diario.value;
+        if (mensual.dataset.prevValue === undefined) mensual.dataset.prevValue = mensual.value;
+        diario.value = '';
+        mensual.value = '';
+        diario.setAttribute('disabled', 'disabled');
+        mensual.setAttribute('disabled', 'disabled');
+        filasPersonalizadas.forEach(f => f.classList.add('d-none'));
+        if (msgDefault) msgDefault.classList.remove('d-none');
+    }
+}
+
 function alternarCamposPorTipoCliente() {
     const tipoCliente = document.getElementById('id_tipo_cliente').value;
     const camposFisica = document.getElementById('campos-fisica');
@@ -194,6 +245,40 @@ function alternarCamposPorTipoCliente() {
         input.closest('.form-group')?.classList.remove('required-field');
     });
     
+    // Helper para asegurar un único asterisco span. Busca label dentro del form-group.
+    const ensureAsterisk = (inputId) => {
+        const inputEl = document.getElementById(inputId);
+        if (!inputEl) return;
+        // No agregar asterisco a campos deshabilitados (ej: tipo_cliente en modo edición)
+        if (inputEl.disabled) {
+            const groupDisabled = inputEl.closest('.form-group');
+            if (groupDisabled) {
+                const labelDisabled = groupDisabled.querySelector('label');
+                if (labelDisabled) {
+                    const existingDisabled = labelDisabled.querySelectorAll('span.asteriskField');
+                    existingDisabled.forEach(el=>el.remove());
+                }
+                groupDisabled.classList.remove('required-field');
+            }
+            return;
+        }
+        const group = inputEl.closest('.form-group');
+        if (!group) return;
+        const label = group.querySelector('label');
+        if (!label) return;
+        // Eliminar asteriscos previos creados manualmente (span.asteriskField duplicados).
+        const existing = label.querySelectorAll('span.asteriskField');
+        if (existing.length > 1) {
+            existing.forEach((el, idx) => { if (idx > 0) el.remove(); });
+        } else if (existing.length === 0) {
+            const span = document.createElement('span');
+            span.className = 'asteriskField';
+            span.textContent = ' *';
+            label.appendChild(span);
+        }
+        group.classList.add('required-field');
+    };
+
     if (tipoCliente === 'FISICA') {
         campoTitulo.classList.remove('hidden');
         camposFisica.classList.remove('hidden');
@@ -202,8 +287,8 @@ function alternarCamposPorTipoCliente() {
         // Añadir atributos 'required' a los campos de persona física
         document.getElementById('id_nombre').setAttribute('required', 'required');
         document.getElementById('id_apellido').setAttribute('required', 'required');
-        document.getElementById('id_nombre').closest('.form-group')?.classList.add('required-field');
-        document.getElementById('id_apellido').closest('.form-group')?.classList.add('required-field');
+        ensureAsterisk('id_nombre');
+        ensureAsterisk('id_apellido');
         
         // Limpiar campos de persona jurídica
         document.getElementById('id_nombre_empresa').value = '';
@@ -216,7 +301,7 @@ function alternarCamposPorTipoCliente() {
         
         // Añadir atributos 'required' a los campos de persona jurídica
         document.getElementById('id_nombre_empresa').setAttribute('required', 'required');
-        document.getElementById('id_nombre_empresa').closest('.form-group')?.classList.add('required-field');
+        ensureAsterisk('id_nombre_empresa');
         
         // Limpiar campos de persona física
         document.getElementById('id_nombre').value = '';
@@ -267,6 +352,57 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
         }
     });
+
+    // Manejo de límites por defecto
+    const chkPersonalizados = document.getElementById('chk_limites_personalizados');
+    if (chkPersonalizados) {
+        chkPersonalizados.addEventListener('change', toggleCamposLimites);
+        toggleCamposLimites(); // Estado inicial acorde a su valor
+    }
+
+    // Formateo en miles para inputs con clase .numero-miles
+    const formatMiles = (valor) => {
+        if (valor === '' || valor === null || valor === undefined) return '';
+        // Eliminar todo excepto dígitos
+        const soloDigitos = valor.toString().replace(/[^0-9]/g, '');
+        if (soloDigitos === '') return '';
+        return soloDigitos.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    const parseMiles = (valor) => {
+        if (!valor) return '';
+        return valor.toString().replace(/\./g, '');
+    };
+
+    const inputsMiles = document.querySelectorAll('input.numero-miles[data-formato="miles"]');
+    inputsMiles.forEach(inp => {
+        // Formatear valor inicial (solo presentación)
+        if (inp.value) inp.value = formatMiles(inp.value);
+        inp.addEventListener('input', () => {
+            const sinFormato = parseMiles(inp.value);
+            inp.value = formatMiles(sinFormato);
+        });
+    });
+
+    // Enviar valores sin formato SIN alterar lo que ve el usuario
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', () => {
+            inputsMiles.forEach(inp => {
+                // Evitar duplicados si ya se procesó
+                if (!inp.name) return; // ya sin name => ya procesado
+                const raw = parseMiles(inp.value);
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = inp.name; // mismo nombre para Django
+                hidden.value = raw || '0';
+                form.appendChild(hidden);
+                // Quitar name del visible para que no mande formateado
+                inp.dataset.originalName = inp.name;
+                inp.removeAttribute('name');
+            });
+        });
+    }
 });
 </script>
 {% endblock %}

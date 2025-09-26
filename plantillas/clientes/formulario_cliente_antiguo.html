@@ -102,39 +102,33 @@
                             <div class="col-md-8">
                                 {{ form.nombre_empresa|as_crispy_field }}
                             </div>
+                            <div class="col-md-8">
+                                {{ form.representante_legal|as_crispy_field }}  
+                            </div>
                         </div>
                     </div>
-                    <!-- Preferencias Específicas del Cliente -->
-                    <div class="form-section">
+
+                    <!-- NUEVA Sección Límites de Transacciones -->
+                    <div class="form-section mt-3">
                         <h5 class="section-title">
-                            <i class="fas fa-sliders-h me-2"></i>Preferencias Específicas
+                            <i class="fas fa-sliders-h me-2"></i>Límites de transacciones
                         </h5>
-                        {% if preferencias and preferencias.id %}
-                            <div class="mb-2">
-                                <small class="text-muted">Límite de Compra:</small>
-                                <div class="h6">${{ preferencias.limite_compra|floatformat:2 }}</div>
+                        <!-- Campo original oculto -->
+                        <span style="display:none;">{{ form.usa_limites_default }}</span>
+                        <div class="form-check mb-2">
+                            <input type="checkbox" id="chk_limites_personalizados" class="form-check-input"
+                                   {% if form.instance.pk %}{% if not form.instance.usa_limites_default %}checked{% endif %}{% else %}checked{% endif %}>
+                            <label for="chk_limites_personalizados" class="form-check-label">
+                                Definir límites personalizados para este cliente
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mb-2">Si se desmarca, se aplicarán los límites generales por defecto.</small>
+                        <div id="contenedor-limites-personalizados" class="row">
+                            <div class="col-md-6">
+                                {{ formulario_limites.monto_limite_diario|as_crispy_field }}
                             </div>
-                            <div class="mb-2">
-                                <small class="text-muted">Límite de Venta:</small>
-                                <div class="h6">${{ preferencias.limite_venta|floatformat:2 }}</div>
-                            </div>
-                            <div class="mb-2">
-                                <small class="text-muted">Frecuencia Máxima (día):</small>
-                                <div class="h6">{{ preferencias.frecuencia_maxima }}</div>
-                            </div>
-                            <div class="mb-0">
-                                <small class="text-muted">Preferencia Tipo de Cambio:</small>
-                                <div class="h6">{{ preferencias.preferencia_tipo_cambio|default:'-' }}</div>
-                            </div>
-                            <a href="{% url 'clientes:editar_preferencias_cliente' form.instance.id preferencias.id %}" class="btn btn-outline-primary btn-sm mt-2">
-                                Editar Preferencias
-                            </a>
-                        {% else %}
-                            <div class="text-muted">No hay preferencias específicas configuradas para este cliente.</div>
-                        {% endif %}
-                    <!-- </div> -->
-                            <div class="col-md-4">
-                                {{ form.representante_legal|as_crispy_field }}
+                            <div class="col-md-6">
+                                {{ formulario_limites.monto_limite_mensual|as_crispy_field }}
                             </div>
                         </div>
                     </div>
@@ -265,6 +259,33 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
         }
     });
+});
+
+// --- Lógica de límites personalizados (antiguo formulario) ---
+function syncCheckboxLimites(){
+  const chkPersonalizados = document.getElementById('chk_limites_personalizados');
+  const chkBackend = document.getElementById('id_usa_limites_default');
+  const diario = document.getElementById('id_monto_limite_diario');
+  const mensual = document.getElementById('id_monto_limite_mensual');
+  const contenedor = document.getElementById('contenedor-limites-personalizados');
+  if(!chkPersonalizados || !chkBackend){return;}
+  if(chkPersonalizados.checked){
+     chkBackend.checked = false; // usar personalizados => backend false
+     if(diario){diario.removeAttribute('disabled');}
+     if(mensual){mensual.removeAttribute('disabled');}
+     if(contenedor){contenedor.classList.remove('d-none');}
+  } else {
+     chkBackend.checked = true; // usar defaults => backend true
+     if(diario){diario.value='';diario.setAttribute('disabled','disabled');}
+     if(mensual){mensual.value='';mensual.setAttribute('disabled','disabled');}
+     if(contenedor){contenedor.classList.add('d-none');}
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  syncCheckboxLimites();
+  const chkPersonalizados = document.getElementById('chk_limites_personalizados');
+  if(chkPersonalizados){ chkPersonalizados.addEventListener('change', syncCheckboxLimites); }
 });
 </script>
 {% endblock %}
