@@ -65,7 +65,7 @@
                             </div>
                         </div>
                     {% else %}
-                        <form method="post" id="formularioTransaccionVenta">
+                        <form method="post" id="formularioTransaccionVenta" data-rates-api="{% url 'divisas:api_tasas' %}">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-6">
@@ -85,6 +85,7 @@
                                     <div class="form-group">
                                         <label for="monto_destino" class="form-label">Cantidad a recibir</label>
                                         <input type="text" id="monto_destino" class="form-control" readonly placeholder="0">
+                                        <input type="hidden" name="monto_destino" id="id_moneda_destino_hidden" value="0">
                                         <!--<small class="form-text text-muted">Calculado automáticamente</small>-->
                                     </div>
                                 </div>
@@ -122,19 +123,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div id="campos-billetera" class="campos-pago" style="display: none;">
-                                        <div class=" ">
-                                            <label for="nroComprobanteBilletera" class="mb-2 requiredField">
-                                                Nro Comprobante de tu Pago/Transferencia<span
-                                                    class="asteriskField">*</span>
-                                            </label>
-                                            <div>
-                                                <input type="number" name="nroComprobanteBilletera"
-                                                       class="form-control"
-                                                       placeholder="12345"    id="nroComprobanteBilletera">
-                                            </div>
-                                        </div>
-                                    </div>
                                     <div id="campos-pago-error" class="campos-pago mt-3" style="display: none;">
                                         <div class=" ">
                                             <label for="nroCuenta" class=" requiredField">
@@ -161,6 +149,19 @@
                                                 <input type="text" name="nroCuenta"
                                                        class="form-control"
                                                        placeholder="12345"    id="nroCuenta">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="campos-billetera" class="campos-pago" style="display: none;">
+                                        <div class=" ">
+                                            <label for="nroComprobanteBilletera" class="mb-2 requiredField">
+                                                Nro Comprobante de tu Pago/Transferencia<span
+                                                    class="asteriskField">*</span>
+                                            </label>
+                                            <div>
+                                                <input type="number" name="nroComprobanteBilletera"
+                                                       class="form-control"
+                                                       placeholder="12345"    id="nroComprobanteBilletera">
                                             </div>
                                         </div>
                                     </div>
@@ -272,6 +273,37 @@
 
 {% if not advertencia_sin_cliente %}
 <script>
+// Función AJAX auxiliar
+function ajax(options) {
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method || 'GET', options.url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    // Agregar token CSRF si es POST
+    if (options.method === 'POST') {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        xhr.setRequestHeader('X-CSRFToken', csrfToken);
+    }
+    
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (options.success) options.success(response);
+                } catch (e) {
+                    console.error('Error parsing JSON:', e);
+                    if (options.error) options.error(xhr);
+                }
+            } else {
+                if (options.error) options.error(xhr);
+            }
+        }
+    };
+    
+    xhr.send(options.data ? JSON.stringify(options.data) : null);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const formulario = document.getElementById('formularioTransaccionVenta');
     const monedaOrigenBackup = document.getElementById('id_moneda_origen');
@@ -279,6 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const monedaDestino = document.getElementById('moneda_destino');
     const montoOrigen = document.getElementById('id_monto_origen');
     const montoDestino = document.getElementById('monto_destino');
+    const moneda_destino_hidden = document.getElementById('id_moneda_destino_hidden');
     const infoTasa = document.getElementById('infoTasa');
     const infoComision = document.getElementById('infoComision');
     const infoTotal = document.getElementById('infoTotal');
@@ -288,27 +321,67 @@ document.addEventListener('DOMContentLoaded', function() {
     var selectorTauser = document.getElementById('id_tausers');
     const moneda_base = '{{ moneda_base }}';
     
+    // Variables globales para comisiones y denominación mínima
+    var comisionMetodoPago = 0;
+    var comisionMetodoCobro = 0;
+    var denominacionMinimaPYG = 0;
+    
     function actualizarCamposPago() {
+        const metodoPagoId = selectorMetodoPago.value;
         const opcionSeleccionada = selectorMetodoPago.options[selectorMetodoPago.selectedIndex];
-        const opcionSeleccionadaCobro = selectorMetodoCobro.options[selectorMetodoCobro.selectedIndex];
         const nombreMetodoPago = opcionSeleccionada.text;
-        const nombreMetodoCobro = opcionSeleccionadaCobro.text;
-
+        
         // Ocultar todos los campos de pago
         document.querySelectorAll('.campos-pago').forEach(campo => {
             campo.style.display = 'none';
         });
-
-        if (monedaOrigen && nombreMetodoPago.includes('Transferencia') && (monedaOrigen.value == '2' || monedaOrigen.value == '3')) {
+        
+        // Mostrar campos relevantes según el método de pago
+        if (nombreMetodoPago.includes('Tarjeta') || nombreMetodoPago.includes('Stripe')) {
+            document.getElementById('campos-stripe').style.display = 'block';
+        } else if (nombreMetodoPago.includes('Transferencia')) {
             document.getElementById('campos-transferencia').style.display = 'block';
-        } else if (monedaOrigen.value != '' && nombreMetodoPago.includes('Transferencia') ){
-            document.getElementById('campos-pago-error').style.display = 'block'
-        }
-
-        if(nombreMetodoPago.includes('Efectivo')) {
+        } else if (nombreMetodoPago.includes('Western Union')) {
+            document.getElementById('campos-western-union').style.display = 'block';
+        } else if (nombreMetodoPago.includes('Efectivo')) {
             document.getElementById('campos-efectivo').style.display = 'block';
         }
-
+        
+        // Obtener comisión del método de pago seleccionado
+        if (metodoPagoId) {
+            const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
+            if (urlApi) {
+                ajax({
+                    url: `${urlApi}?metodo_pago_id=${metodoPagoId}`,
+                    method: 'GET',
+                    success: function(datos) {
+                        if (datos && datos.metodo_pago_porcentaje_comision !== undefined) {
+                            comisionMetodoPago = parseFloat(datos.metodo_pago_porcentaje_comision)|| 0;
+                            console.log('Comisión método de pago obtenida:', comisionMetodoPago);
+                            // Recalcular con la nueva comisión
+                            actualizarCalculos();
+                        }
+                    },
+                    error: function() {
+                        comisionMetodoPago = 0;
+                        console.log('Error obteniendo comisión del método de pago');
+                    }
+                });
+            }
+        } else {
+            comisionMetodoPago = 0;
+        }
+        
+        // Obtener información del método de cobro seleccionado
+        const metodoCobroId = selectorMetodoCobro.value;
+        const opcionSeleccionadaCobro = selectorMetodoCobro.options[selectorMetodoCobro.selectedIndex];
+        const nombreMetodoCobro = opcionSeleccionadaCobro.text;
+        
+        // Ocultar todos los campos de cobro
+        document.querySelectorAll('.campos-cobro').forEach(campo => {
+            campo.style.display = 'none';
+        });
+        
         // Mostrar campos relevantes según el método de cobro
         if (nombreMetodoCobro.includes('Efectivo')) {
             document.getElementById('campos-tauser').style.display = 'block';
@@ -517,9 +590,31 @@ function mostrarDetallesTransaccion(datos) {
     selectorMetodoPago.addEventListener('change', actualizarCamposPago);
     selectorMetodoCobro.addEventListener('change', actualizarCamposPago);
 
-    // Inicializar campos de pago
+    // Función para obtener denominación mínima de PYG
+    function obtenerDenominacionMinimaPYG() {
+        const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
+        if (urlApi) {
+            ajax({
+                url: `${urlApi}?currency=PYG`,
+                method: 'GET',
+                success: function(datos) {
+                    if (datos && datos.denominacion_minima) {
+                        denominacionMinimaPYG = parseFloat(datos.denominacion_minima);
+                        console.log('Denominación mínima PYG obtenida:', denominacionMinimaPYG);
+                    }
+                },
+                error: function() {
+                    console.log('Error obteniendo denominación mínima de PYG');
+                    denominacionMinimaPYG = 1000; // Valor por defecto de 1000 Gs
+                }
+            });
+        }
+    }
+    
+    // Inicializar campos de pago y obtener denominación mínima
+    obtenerDenominacionMinimaPYG();
     actualizarCamposPago();
-     actualizarCalculos(); 
+    actualizarCalculos(); 
 });
 
 // Hacer que actualizarCamposPago sea global para el onchange del HTML
