@@ -381,9 +381,9 @@ function actualizarCalculos() {
                     const pygSinComisiones = monto * tasaCompra;
                     
                     // Calcular comisiones sobre la moneda extranjera
-                    const comisionMoneda = monto * comision_compra;
+           
                     const comisionMetodo = monto * comisionMetodoPago;
-                    const montoComisionTotal = comisionMoneda + comisionMetodo;
+                    const montoComisionTotal =   comisionMetodo;
                     
                     // El PYG total incluye el costo base más las comisiones en PYG
                     const comisionesEnPYG = montoComisionTotal * tasaCompra;
@@ -395,18 +395,10 @@ function actualizarCalculos() {
                     let montoAjustadoPorDenominacion = false;
                     
                     if (denominacionMinimaPYG > 0 && (pygTotalSinAjuste % denominacionMinimaPYG !== 0)) {
-                        pygTotalFinal = Math.ceil(pygTotalSinAjuste / denominacionMinimaPYG) * denominacionMinimaPYG;
+                        pygTotalFinal = Math.round(pygTotalSinAjuste / denominacionMinimaPYG) * denominacionMinimaPYG;
                         montoAjustadoPorDenominacion = true;
                         const diferencia = pygTotalFinal - pygTotalSinAjuste;
-                        
-                        advertenciaDenominacion = `
-                            <div class="alert alert-info mt-2 py-2">
-                                <small><i class="fas fa-info-circle me-1"></i>
-                                Monto PYG ajustado por denominación mínima (${denominacionMinimaPYG.toLocaleString()} Gs)
-                                <br>Diferencia: +${diferencia.toLocaleString()} Gs
-                                </small>
-                            </div>
-                        `;
+                       
                         
                         console.log('=== AJUSTE POR DENOMINACIÓN PYG ===');
                         console.log('PYG calculado:', pygTotalSinAjuste);
@@ -439,6 +431,7 @@ function actualizarCalculos() {
                             <p><strong>Tasa de Cambio (Compra):</strong><br>
                             1 ${codigoMoneda} = ${tasaCompra.toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} Gs</p>
                             <p><strong>Comprando:</strong> ${monto} ${codigoMoneda}</p>
+                            <p><strong>Comision metodo pago:</strong> ${(comisionMetodoPago * 100).toFixed(1)}%</p>
                             <p><strong>Total a pagar:</strong> ${Math.round(pygTotalFinal).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} Gs</p>
                             ${advertenciaDenominacion}
                         </div>
@@ -447,8 +440,7 @@ function actualizarCalculos() {
                     // Mostrar información de comisión - COMPLETADO
                     infoComision.style.display = 'block';
                     document.getElementById('detallesComision').innerHTML = `
-                        <p class="mb-1">Comisión moneda: <span class="text-muted">${(comision_compra * 100).toFixed(1)}%</span></p>
-                        <p class="mb-1">Monto comisión moneda: <span class="text-muted">${comisionMoneda.toFixed(2)} ${codigoMoneda}</span></p>
+                        
                         ${comisionMetodoPago? `
                             <p class="mb-1">Comisión método pago: <span class="text-muted">${(comisionMetodoPago * 100).toFixed(1)}%</span></p>
                             <p class="mb-1">Monto comisión método: <span class="text-muted">${comisionMetodo.toFixed(2)} ${codigoMoneda}</span></p>
@@ -494,6 +486,8 @@ function actualizarCalculos() {
         infoTotal.style.display = 'none';
     }
 }
+
+
 // Función auxiliar para mostrar detalles adicionales (opcional)
 function mostrarDetallesTransaccion(datos) {
     const detallesElement = document.getElementById('detalles-adicionales');
@@ -526,28 +520,25 @@ function mostrarDetallesTransaccion(datos) {
     
     // Función para obtener denominación mínima de PYG
     function obtenerDenominacionMinimaPYG() {
-        const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
-        if (urlApi) {
-            // Buscar por código de moneda PYG
-            ajax({
-                url: `${urlApi}?currency_id=1`, // Asumiendo que PYG tiene ID 1
-                method: 'GET',
-                success: function(datos) {
-                    if (datos && datos.denominacion_minima) {
-                        denominacionMinimaPYG = parseFloat(datos.denominacion_minima);
-                        console.log('Denominación mínima PYG obtenida:', denominacionMinimaPYG);
-                    } else {
-                        denominacionMinimaPYG = 1000; // Valor por defecto
-                    }
-                },
-                error: function() {
-                    console.log('Error obteniendo denominación mínima de PYG');
-                    denominacionMinimaPYG = 1000; // Valor por defecto de 1000 Gs
+        // Usar la nueva API específica para moneda base
+        ajax({
+            url: '/divisas/api/moneda-base/', // API específica para PYG
+            method: 'GET',
+            success: function(datos) {
+                console.log('Respuesta API moneda base PYG:', datos);
+                if (datos && datos.denominacion_minima) {
+                    denominacionMinimaPYG = parseFloat(datos.denominacion_minima);
+                    console.log('Denominación mínima PYG obtenida:', denominacionMinimaPYG);
+                } else {
+                    console.log('Denominación mínima de PYG no encontrada en la respuesta');
+                    denominacionMinimaPYG = 1000; // Valor por defecto
                 }
-            });
-        } else {
-            denominacionMinimaPYG = 1000; // Valor por defecto si no hay API
-        }
+            },
+            error: function() {
+                console.log('Error obteniendo denominación mínima de PYG');
+                denominacionMinimaPYG = 1000; // Valor por defecto de 1000 Gs
+            }
+        });
     }
     
     // Inicializar campos de pago y obtener denominación mínima

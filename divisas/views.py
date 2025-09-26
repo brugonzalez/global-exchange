@@ -653,6 +653,39 @@ class APIVistaTasasActuales(TemplateView):
             return JsonResponse(response_data)
 
 
+class APIMonedaBase(TemplateView):
+    """
+    Endpoint de API para obtener información específica de la moneda base (PYG).
+    Incluye denominación mínima y otros datos específicos de la moneda base.
+    """
+    
+    def get(self, solicitud, *args, **kwargs):
+        try:
+            # Buscar la moneda PYG (moneda base)
+            moneda_pyg = Moneda.objects.get(codigo='PYG', esta_activa=True)
+            
+            response_data = {
+                'moneda': moneda_pyg.codigo,
+                'nombre': moneda_pyg.nombre,
+                'moneda_id': moneda_pyg.id,
+                'denominacion_minima': float(moneda_pyg.denominacion_minima) if moneda_pyg.denominacion_minima else 1000,
+                'lugares_decimales': moneda_pyg.lugares_decimales,
+                'es_moneda_base': True,
+                'comision_compra': float(moneda_pyg.comision_compra),
+                'comision_venta': float(moneda_pyg.comision_venta),
+            }
+            
+            print(f"Información de moneda base PYG: {response_data}")
+            return JsonResponse(response_data)
+            
+        except Moneda.DoesNotExist:
+            return JsonResponse({
+                'error': 'Moneda base PYG no encontrada',
+                'denominacion_minima': 1000,  # Valor por defecto
+                'es_moneda_base': True
+            }, status=404)
+
+
 class APIVistaActualizarTasas(LoginRequiredMixin, TemplateView):
     """
     Endpoint de API para actualizar las tasas de cambio (solo admin).
