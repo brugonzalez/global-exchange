@@ -552,7 +552,7 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
                 'cliente': cliente_filtro,
                 'usuario': usuario_filtro,
             },
-            'opciones_estado': [estado for estado in Transaccion.ESTADOS if estado[0] != 'ANULADA'],  # Excluir ANULADA
+            'opciones_estado': [estado for estado in Transaccion.ESTADOS if estado[0] not in ['ANULADA', 'FALLIDA']],  # Excluir ANULADA y FALLIDA
             'opciones_tipo': Transaccion.TIPOS_TRANSACCION,
             'monedas': Moneda.objects.filter(esta_activa=True).order_by('codigo'),
             'clientes': Cliente.objects.filter(estado='ACTIVO').order_by('nombre', 'nombre_empresa'),
@@ -562,11 +562,10 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
         
         return contexto
 
-class VistaExportarHistorial(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
+class VistaExportarHistorial(LoginRequiredMixin, TemplateView):
     """
     Exporta el historial de transacciones a varios formatos.
     """
-    permiso_requerido = 'consultar_transacciones'
     
     def get(self, solicitud, *args, **kwargs):
         formato = solicitud.GET.get('formato', 'csv')
@@ -711,7 +710,7 @@ class VistaExportarHistorial(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
         
         # Tabla de datos
         datos_tabla = [
-            ['Fecha', 'Número', 'Tipo', 'Monedas', 'Monto Origen', 'Tasa', 'Estado', 'Cliente']
+            ['Fecha', 'Número', 'Tipo', 'Monedas', 'Monto Origen', 'Monto Destino', 'Tasa', 'Estado', 'Cliente']
         ]
         
         for transaccion in transacciones[:50]:  # Limitar a 50 para no sobrecargar el PDF
@@ -721,6 +720,7 @@ class VistaExportarHistorial(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
                 transaccion.get_tipo_transaccion_display()[:6],
                 f"{transaccion.moneda_origen.codigo}→{transaccion.moneda_destino.codigo}",
                 f"{transaccion.monto_origen:,.2f}",
+                f"{transaccion.monto_destino:,.2f}",
                 f"{transaccion.tasa_cambio:,.4f}",
                 transaccion.get_estado_display()[:8],
                 transaccion.cliente.obtener_nombre_completo()[:20],
