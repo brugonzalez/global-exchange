@@ -4,6 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
+from celery import shared_task
 import uuid
 import logging
 
@@ -381,9 +382,11 @@ class Transaccion(models.Model):
         """Devuelve los minutos restantes (para clases CSS)"""
         segundos = self.tiempo_restante
         return segundos // 60
-    
+    # @shared_task
     def expirar_automaticamente(self):
         """Marca la transacción como expirada automáticamente"""
+        print("HOLA")
+        print(self.estado)
         if self.ha_expirado and self.estado == 'PENDIENTE':
             self.estado = 'CANCELADA'
             self.fecha_cancelacion = timezone.now()

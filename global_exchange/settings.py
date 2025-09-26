@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'django_countries',
-    'django_q',
     # Aplicaciones de terceros
     'django_extensions',
     'crispy_forms',
@@ -263,20 +262,15 @@ LOGGING = {
         },
     },
 }
-# Configuración de Django-Q
-Q_CLUSTER = {
-    'name': 'DjangoQ',
-    'workers': 4,                    # Número de procesos worker
-    'recycle': 500,                  # Reiniciar workers después de 500 tareas
-    'timeout': 60,                   # Tiempo máximo por tarea
-    'compress': True,                # Comprimir resultados
-    'save_limit': 250,               # Máximo resultados guardados
-    'queue_limit': 50,               # Máximo tareas en cola
-    'cpu_affinity': 1,               # Afinidad de CPU
-    'label': 'Django Q',             # Etiqueta para admin
-    # 'redis': {                       # Opcional: usar Redis en lugar de DB
-    #     'host': '127.0.0.1',
-    #     'port': 6379,
-    #     'db': 0,
-    # }
-}
+# settings.py
+# Configuración de Celery
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # O 'redis://redis:6379/0' si usas Docker
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Asuncion'  # Ajusta a tu zona horaria
+
+# Opcional: Configurar colas específicas
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_CREATE_MISSING_QUEUES = True
