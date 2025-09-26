@@ -9,6 +9,7 @@ Subpackages
 
    divisas.management
    divisas.migrations
+   divisas.templatetags
 
 Submodules
 ----------
@@ -22,6 +23,7 @@ Submodules
    divisas.models
    divisas.signals
    divisas.urls
+   divisas.utils
    divisas.views
 
 Module contents

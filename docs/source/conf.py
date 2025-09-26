@@ -29,8 +29,7 @@ extensions = [
     "sphinx.ext.viewcode", # Vista del código fuente
     "sphinx.ext.napoleon", # Google y NumPy style
     "sphinx.ext.autosummary", # Resumen automático de módulos
-    "sphinx_togglebutton",
-    "sphinx-autobuild"
+    "sphinx_togglebutton"
 ]
 autosummary_generate = True
 

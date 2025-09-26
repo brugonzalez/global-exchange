@@ -232,7 +232,15 @@ class ProcesadorPagos:
     
     def _procesar_pago_retiro_efectivo(self, datos_pago: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Procesa retiro en efectivo para Peso Chileno.
+        Procesa retiro en efectivo 
+        Parameters
+        ----------
+        datos_pago : Dict[str, Any]
+            Debe incluir 'lugar_retiro' (ubicación del retiro) y 'identificacion' (documento de identidad).
+        Returns
+        -------
+        Dict[str, Any]
+            Resultado del intento de pago con detalles relevantes.
         """
         lugar_retiro = datos_pago.get('lugar_retiro')
         identificacion = datos_pago.get('identificacion')
@@ -271,6 +279,14 @@ class ProcesadorPagos:
     def _procesar_pago_predeterminado(self, datos_pago: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesamiento de pago predeterminado para otros métodos.
+        Parameters
+        ----------
+        datos_pago : Dict[str, Any]
+            Datos específicos necesarios para procesar el pago.
+        Returns
+        -------
+        Dict[str, Any]
+            Resultado del procesamiento del pago, incluyendo estado y mensajes.
         """
         return {
             'success': True,
@@ -296,6 +312,17 @@ class ProcesadorPagos:
 def crear_intento_pago_stripe(transaccion, id_metodo_pago: str) -> Dict[str, Any]:
     """
     Crea un Intento de Pago de Stripe para una transacción.
+    Parameters
+    ----------
+    transaccion : Transaccion
+        Instancia de la transacción a pagar.
+    id_metodo_pago : str
+        ID del método de pago de Stripe (PaymentMethod).
+    Returns
+    -------
+    Dict[str, Any]
+        Resultado del intento de pago con detalles relevantes.
+
     """
     try:
         monto_centavos = int(transaccion.monto_destino * 100)
@@ -327,6 +354,14 @@ def crear_intento_pago_stripe(transaccion, id_metodo_pago: str) -> Dict[str, Any
 def confirmar_pago_stripe(id_intento_pago: str) -> Dict[str, Any]:
     """
     Confirma un Intento de Pago de Stripe.
+    Parameters
+    ----------
+    id_intento_pago : str
+        ID del Intento de Pago de Stripe a confirmar.
+    Returns
+    -------
+    Dict[str, Any]
+        Resultado de la confirmación del pago.
     """
     try:
         intento_pago = stripe.PaymentIntent.confirm(id_intento_pago)

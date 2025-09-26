@@ -20,7 +20,9 @@ Submodules
    clientes.apps
    clientes.forms
    clientes.models
+   clientes.signals
    clientes.urls
+   clientes.utils
    clientes.views
 
 Module contents

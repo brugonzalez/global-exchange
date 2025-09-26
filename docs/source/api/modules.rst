@@ -1,5 +1,5 @@
-app
-===
+global-exchange
+===============
 
 .. toctree::
    :maxdepth: 2
@@ -11,6 +11,7 @@ app
    gunicorn
    manage
    notificaciones
+   pagos
    reportes
    tauser
    tests

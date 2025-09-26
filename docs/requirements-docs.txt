@@ -1,0 +1,7 @@
+sphinx>=7.0
+sphinx-autobuild>=2021.3.14
+myst-parser
+sphinx-design
+sphinx-copybutton
+sphinx-togglebutton
+sphinx_rtd_theme

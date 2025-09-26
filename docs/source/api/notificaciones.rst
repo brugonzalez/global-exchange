@@ -17,6 +17,7 @@ Submodules
 
    notificaciones.admin
    notificaciones.apps
+   notificaciones.context_processors
    notificaciones.forms
    notificaciones.models
    notificaciones.signals
