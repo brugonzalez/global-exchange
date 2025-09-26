@@ -528,10 +528,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Hacer que actualizarCamposPago sea global para el onchange del HTML
-window.actualizarCamposPago = function() {
-    const evento = new Event('change');
-    document.getElementById('id_metodo_pago').dispatchEvent(evento);
-};
+// window.actualizarCamposPago = function() {
+//     const evento = new Event('change');
+//     document.getElementById('id_metodo_pago').dispatchEvent(evento);
+// };
 </script>
 {% endif %}
 {% endblock %}

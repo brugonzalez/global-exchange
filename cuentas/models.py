@@ -788,6 +788,7 @@ class Configuracion (models.Model):
         ('BOOLEAN', 'Booleano'),
         ('EMAIL', 'Email'),
         ('URL', 'URL'),
+        ('MONTO', 'Monto'),
     ]
 
     clave = models.CharField(max_length=50, unique=True)

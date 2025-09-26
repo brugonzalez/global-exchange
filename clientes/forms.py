@@ -15,7 +15,7 @@ from django import forms
 from .models import PreferenciaCliente
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita
+from .models import Cliente, CategoriaCliente, ClienteUsuario, MonedaFavorita, LimiteTransaccionCliente
 from divisas.models import Moneda
 
 Usuario = get_user_model()
@@ -46,6 +46,126 @@ class FormularioPreferenciaCliente(forms.ModelForm):
             'preferencia_tipo_cambio': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+
+class FormularioLimiteCliente(forms.ModelForm):
+    """ 
+    Formulario para definir límites de transacciones específicos para un cliente.
+    Estos límites sobrescriben los límites generales y de categoría del cliente.
+
+    Attributes
+    -------------
+    cliente : Cliente
+        Cliente al que se aplican los límites personalizados.
+    monto_limite_diario : NumberInput
+        Límite diario para transacciones (0 = sin límite).
+    monto_limite_mensual : NumberInput
+        Límite mensual para transacciones (0 = sin límite).
+    """
+    class Meta:
+        model = LimiteTransaccionCliente
+        fields = ['monto_limite_diario', 'monto_limite_mensual']
+        widgets = {
+            'monto_limite_diario': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'step': '1',
+                'placeholder': '0',
+                'help_text': 'El monto límite diario para transacciones en PYG'
+            }),
+            'monto_limite_mensual': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'step': '1',
+                'placeholder': '0',
+                'help_text': 'El monto límite mensual para transacciones en PYG'
+            }),
+        }
+        labels = {
+            'monto_limite_diario': 'Límite Diario (PYG)',
+            'monto_limite_mensual': 'Límite Mensual (PYG)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        """Hace que los campos de límites no sean obligatorios.
+
+        Si el usuario deja un campo vacío, se interpretará como 0 (sin límite).
+        """
+        super().__init__(*args, **kwargs)
+        # Reemplazar widgets y tipos para forzar enteros en la UI
+        self.fields['monto_limite_diario'] = forms.IntegerField(
+            required=False,
+            min_value=0,
+            label=self.fields['monto_limite_diario'].label,
+            widget=forms.TextInput(attrs={
+                'class': 'form-control numero-miles',
+                'inputmode': 'numeric',
+                'autocomplete': 'off',
+                'placeholder': '0',
+                'data-formato': 'miles'
+            })
+        )
+        self.fields['monto_limite_mensual'] = forms.IntegerField(
+            required=False,
+            min_value=0,
+            label=self.fields['monto_limite_mensual'].label,
+            widget=forms.TextInput(attrs={
+                'class': 'form-control numero-miles',
+                'inputmode': 'numeric',
+                'autocomplete': 'off',
+                'placeholder': '0',
+                'data-formato': 'miles'
+            })
+        )
+        # Ajustar valores iniciales (remover decimales si vienen del modelo DecimalField)
+        for campo in ['monto_limite_diario', 'monto_limite_mensual']:
+            val = self.initial.get(campo)
+            if val is not None:
+                try:
+                    self.initial[campo] = int(Decimal(val))
+                except Exception:
+                    pass
+
+    def clean_monto_limite_diario(self):
+        val = self.cleaned_data.get('monto_limite_diario')
+        if val in (None, ''):
+            return Decimal('0')
+        return Decimal(int(val))
+
+    def clean_monto_limite_mensual(self):
+        val = self.cleaned_data.get('monto_limite_mensual')
+        if val in (None, ''):
+            return Decimal('0')
+        return Decimal(int(val))
+
+    def clean(self):
+        """
+        Valida que los límites sean números no negativos y que se seleccione un cliente.
+        
+        Returns
+        -------
+        dict
+            Datos limpios después de la validación.
+        Raises
+        -------
+        ValidationError
+            Si los límites son negativos o no se selecciona un cliente.
+        """
+        cleaned_data = super().clean()
+        monto_diario = cleaned_data.get('monto_limite_diario')
+        monto_mensual = cleaned_data.get('monto_limite_mensual')
+
+        # Valores ya limpiados por clean_field individuales (enteros envueltos en Decimal)
+
+
+        if monto_diario is not None and monto_diario < 0:
+            self.add_error('monto_limite_diario', 'El límite diario no puede ser negativo.')
+
+        if monto_mensual is not None and monto_mensual < 0:
+            self.add_error('monto_limite_mensual', 'El límite mensual no puede ser negativo.')
+
+        return cleaned_data
+    
+    
 class FormularioCliente(forms.ModelForm):
     """
     Formulario para crear y editar clientes.
@@ -87,7 +207,7 @@ class FormularioCliente(forms.ModelForm):
         fields = [
             'tipo_cliente', 'estado', 'categoria',
             'nombre', 'apellido', 'nombre_empresa', 'representante_legal',
-            'numero_identificacion', 'email', 'telefono', 'direccion'
+            'numero_identificacion', 'email', 'telefono', 'direccion', 'usa_limites_default'
         ]
         widgets = {
             'tipo_cliente': forms.Select(attrs={'class': 'form-control'}),
@@ -100,7 +220,23 @@ class FormularioCliente(forms.ModelForm):
             'numero_identificacion': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control'}),
-            'direccion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            # Usar Textarea para direccion y evitar que el usuario la redimensione
+            'direccion': forms.TextInput(attrs={'class': 'form-control'}),
+            'usa_limites_default': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'tipo_cliente': 'Tipo de Cliente',
+            'estado': 'Estado',
+            'categoria': 'Categoría del Cliente',
+            'nombre': 'Nombre(s)',
+            'apellido': 'Apellido(s)',
+            'nombre_empresa': 'Nombre de la Empresa',
+            'representante_legal': 'Representante Legal',
+            'numero_identificacion': 'Número de Identificación',
+            'email': 'Correo Electrónico',
+            'telefono': 'Teléfono de Contacto',
+            'direccion': 'Dirección',
+            'usa_limites_default': 'Usar Límites por Defecto'
         }
 
     def __init__(self, *args, **kwargs):
@@ -117,6 +253,14 @@ class FormularioCliente(forms.ModelForm):
         # Hacer campos requeridos según el tipo de cliente
         if self.instance and self.instance.pk:
             self._establecer_requerimientos_campos()
+            # Deshabilitar edición de tipo_cliente cuando el registro ya existe
+            self.fields['tipo_cliente'].disabled = True  # Django mantendrá el valor original
+            # Quitar 'required' para evitar que crispy genere asterisco y validaciones sobre campo deshabilitado
+            self.fields['tipo_cliente'].required = False
+            # (Opcional) añadir una clase visual para indicar que está bloqueado
+            clases = self.fields['tipo_cliente'].widget.attrs.get('class', '')
+            if 'is-disabled' not in clases:
+                self.fields['tipo_cliente'].widget.attrs['class'] = (clases + ' is-disabled').strip()
         
         # Añadir clases JavaScript para el comportamiento dinámico del formulario
         self.fields['tipo_cliente'].widget.attrs['onchange'] = 'alternarCamposPorTipoCliente()'

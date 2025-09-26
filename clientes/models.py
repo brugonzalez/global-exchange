@@ -8,6 +8,7 @@ incluyendo datos personales, preferencias y relaciones con cuentas de usuario
 from django.db import models
 from django.core.validators import RegexValidator
 from decimal import Decimal
+import clientes.utils as utils 
 
 
 class CategoriaCliente(models.Model):
@@ -228,6 +229,9 @@ class Cliente(models.Model):
     stripe_customer_id = models.CharField(max_length=100, default="")
 
     # Información Financiera
+    usa_limites_default = models.BooleanField(
+        default=True,
+        help_text="Usar límites definidos generales definidos por el administrador")
     saldo_cuenta = models.DecimalField(
         max_digits=15, 
         decimal_places=2, 
@@ -306,34 +310,16 @@ class Cliente(models.Model):
         from django.utils import timezone
         from datetime import timedelta
         
-        hoy = timezone.now().date()
-        mes_actual = timezone.now().replace(day=1).date()
-        
-        # Calcular transacciones diarias
-        transacciones_diarias = self.transacciones.filter(
-            fecha_creacion__date=hoy,
-            estado__in=['COMPLETADA', 'PAGADA']
-        ).aggregate(
-            total=models.Sum('monto_origen')
-        )['total'] or Decimal('0.00')
-        
-        # Calcular transacciones mensuales
-        transacciones_mensuales = self.transacciones.filter(
-            fecha_creacion__date__gte=mes_actual,
-            estado__in=['COMPLETADA', 'PAGADA']
-        ).aggregate(
-            total=models.Sum('monto_origen')
-        )['total'] or Decimal('0.00')
-        
-        # Comprobar límites
-        limite_diario = self.categoria.limite_transaccion_diario
-        limite_mensual = self.categoria.limite_transaccion_mensual
-        
-        return (
-            transacciones_diarias + monto <= limite_diario and
-            transacciones_mensuales + monto <= limite_mensual
-        )
+        # Obtener límites
+        limite_diario = utils.obtener_limite_diario(self)
+        limite_mensual = utils.obtener_limite_mensual(self)
+        monto_hoy = utils.obtener_monto_transacciones_hoy(self)
+        monto_mes = utils.obtener_monto_transacciones_mes(self)
 
+        return (
+            monto_hoy + monto <= limite_diario and
+            monto_mes + monto <= limite_mensual
+        )
 
 class ClienteUsuario(models.Model):
     """
@@ -439,6 +425,7 @@ class MonedaFavorita(models.Model):
 
 
 class SaldoCliente(models.Model):
+
     """
     Modelo para rastrear los saldos disponibles para retiro de los clientes por moneda.
 
@@ -489,3 +476,67 @@ class SaldoCliente(models.Model):
             Formato "Nombre Cliente - Código Moneda: Saldo".
         """
         return f"{self.cliente.obtener_nombre_completo()} - {self.moneda.codigo}: {self.saldo}"
+
+
+class LimiteTransaccionCliente(models.Model):
+    """
+    Modelo para definir límites específicos de transacción para clientes.
+
+    Permite establecer límites diarios y mensuales personalizados para un cliente.
+
+    Attributes
+    ----------
+    cliente : Cliente
+        El cliente al que se le aplican los límites.
+    moneda_limite : Moneda
+        Moneda en la que están expresados los límites.
+    monto_limite_diario : DecimalField
+        Límite máximo diario de monto acumulado de las transacciones que se han
+        realizado en el día.
+    monto_limite_mensual : DecimalField
+        Límite máximo mensual de monto acumulado de las transacciones que se han
+        realizado en el mes.
+    usa_default : bool
+        Indica si se usan los límites definidos generalmente por el administrador
+        o los límites definidos específicamente para este cliente.
+    fecha_creacion : DateTimeField
+        Fecha de creación del registro.
+    fecha_actualizacion : DateTimeField 
+        Fecha de la última actualización del registro.
+    usuario_modificacion : Usuario
+        Usuario que realizó la última modificación de los límites.
+
+    """
+    cliente = models.OneToOneField(
+        Cliente, 
+        on_delete=models.CASCADE, 
+        related_name='limites'
+    )
+    moneda_limite = models.ForeignKey(
+        'divisas.Moneda',
+        on_delete=models.PROTECT,
+        help_text="Moneda en la que están expresados los límites")
+    monto_limite_diario = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0'),
+        help_text="Límite diario en PYG aplicado al total acumulado del monto de transacciones."
+    )
+    monto_limite_mensual = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0'),
+        help_text="Límite mensual en PYG aplicado al total acumulado del monto de transacciones."
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    usuario_modificacion = models.ForeignKey(
+        'cuentas.Usuario',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='limites_transaccion_modificados'
+    )
+    def __str__(self):
+        return f"Limites de {self.cliente.obtener_nombre_completo()}"
+

@@ -571,3 +571,4 @@ class ComisionTransaccion(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_comision_display()} - {self.monto} {self.moneda.codigo}"
+    
