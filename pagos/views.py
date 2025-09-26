@@ -2,6 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 
 from clientes.models import Cliente
@@ -10,7 +11,7 @@ from cuentas.models import Usuario, RegistroAuditoria
 from cuentas.views import MixinPermisosAdmin
 from divisas.models import MetodoPago, MetodoCobro
 from global_exchange import settings
-from pagos.forms import FormularioMedioPago
+from pagos.forms import FormularioMedioPago, FormularioEditarPago, FormularioEditarCobro
 from pagos.models import MedioPago
 from pagos.services.stripe_service import StripeService
 
@@ -534,4 +535,121 @@ class VistaToggleMetodoCobro(MixinStaffRequerido, TemplateView):
             'accion_contraria': accion_contraria,
             'clase_boton': clase_boton,
             'icono': icono
+        })
+
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class VistaEditarPago(MixinStaffRequerido, View):
+    """Vista para editar la comisión de un método de pago."""
+
+    def get(self, request, metodo_id):
+        metodo_pago = get_object_or_404(MetodoPago, id=metodo_id)
+        formulario = FormularioEditarPago(instance=metodo_pago)
+
+        return render(request, 'pagos/editar_metodo_pago.html', {
+            'formulario': formulario,
+            'metodo_pago': metodo_pago
+        })
+
+    def post(self, request, metodo_id):
+        metodo_pago = get_object_or_404(MetodoPago, id=metodo_id)
+        formulario = FormularioEditarPago(request.POST, instance=metodo_pago)
+
+        # Debug: Imprimir datos recibidos
+        logger.info(f"Datos POST recibidos: {request.POST}")
+        logger.info(f"Formulario válido: {formulario.is_valid()}")
+
+        if not formulario.is_valid():
+            logger.error(f"Errores del formulario: {formulario.errors}")
+            # Agregar errores a los mensajes para que el usuario los vea
+            for field, errors in formulario.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+
+        if formulario.is_valid():
+            try:
+                formulario.save()
+
+                # Registro de auditoría
+                RegistroAuditoria.objects.create(
+                    usuario=request.user,
+                    accion='METODO_PAGO_EDIT',
+                    descripcion=f'Se editó la comisión del método de pago: {metodo_pago.nombre}',
+                    agente_usuario='N/A',
+                    datos_adicionales={
+                        'metodo_pago_id': metodo_pago.id,
+                        'usuario_id': request.user.id,
+                    }
+                )
+
+                messages.success(request, f'Comisión del método "{metodo_pago.nombre}" actualizada correctamente.')
+                return redirect('pagos:gestion_metodos_pago')
+
+            except Exception as e:
+                logger.error(f"Error al guardar: {str(e)}")
+                messages.error(request, f'Error al guardar los cambios: {str(e)}')
+
+        return render(request, 'pagos/editar_metodo_pago.html', {
+            'formulario': formulario,
+            'metodo_pago': metodo_pago
+        })
+
+
+class VistaEditarCobro(MixinStaffRequerido, View):
+    """Vista para editar la comisión de un método de cobro."""
+
+    def get(self, request, metodo_id):
+        metodo_cobro = get_object_or_404(MetodoCobro, id=metodo_id)
+        formulario = FormularioEditarCobro(instance=metodo_cobro)
+
+        return render(request, 'pagos/editar_metodo_cobro.html', {
+            'formulario': formulario,
+            'metodo_cobro': metodo_cobro
+        })
+
+    def post(self, request, metodo_id):
+        metodo_cobro = get_object_or_404(MetodoCobro, id=metodo_id)
+        formulario = FormularioEditarCobro(request.POST, instance=metodo_cobro)
+
+        # Debug: Imprimir datos recibidos
+        logger.info(f"Datos POST recibidos: {request.POST}")
+        logger.info(f"Formulario válido: {formulario.is_valid()}")
+
+        if not formulario.is_valid():
+            logger.error(f"Errores del formulario: {formulario.errors}")
+            # Agregar errores a los mensajes para que el usuario los vea
+            for field, errors in formulario.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+
+        if formulario.is_valid():
+            try:
+                formulario.save()
+
+                # Registro de auditoría
+                RegistroAuditoria.objects.create(
+                    usuario=request.user,
+                    accion='METODO_COBRO_EDIT',
+                    descripcion=f'Se editó la comisión del método de cobro: {metodo_cobro.nombre}',
+                    agente_usuario='N/A',
+                    datos_adicionales={
+                        'metodo_cobro_id': metodo_cobro.id,
+                        'usuario_id': request.user.id,
+                    }
+                )
+
+                messages.success(request, f'Comisión del método "{metodo_cobro.nombre}" actualizada correctamente.')
+                return redirect('pagos:gestion_metodos_cobro')
+
+            except Exception as e:
+                logger.error(f"Error al guardar: {str(e)}")
+                messages.error(request, f'Error al guardar los cambios: {str(e)}')
+
+        return render(request, 'pagos/editar_metodo_cobro.html', {
+            'formulario': formulario,
+            'metodo_cobro': metodo_cobro
         })

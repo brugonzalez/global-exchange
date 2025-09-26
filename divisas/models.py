@@ -661,6 +661,8 @@ class MetodoPago(models.Model):
     
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    # Nuevo campo (0-100) para mostrar al usuario
+    porcentaje_visual = models.IntegerField(default=0)
 
     class Meta:
         db_table = 'divisas_metodo_pago'
@@ -676,6 +678,24 @@ class MetodoPago(models.Model):
         """Calcula la comisión para un monto dado."""
         comision_porcentual = monto * (self.porcentaje_comision / 100)
         return comision_porcentual + self.comision_fija
+
+    def save(self, *args, **kwargs):
+        # Sincronizar ambos campos automáticamente
+        if hasattr(self, '_updating_from_visual') and self._updating_from_visual:
+            # Si se está actualizando desde porcentaje_visual
+            self.porcentaje_comision = self.porcentaje_visual / 100
+        else:
+            # Si se está actualizando desde porcentaje_comision
+            self.porcentaje_visual = self.porcentaje_comision * 100
+
+        super().save(*args, **kwargs)
+
+    def actualizar_desde_visual(self, porcentaje_visual):
+        """Actualiza ambos campos cuando se modifica el porcentaje visual."""
+        self._updating_from_visual = True
+        self.porcentaje_visual = porcentaje_visual
+        self.porcentaje_comision = porcentaje_visual / 100
+        self.save()
 
 
 class AlertaTasa(models.Model):
@@ -799,6 +819,22 @@ class MetodoCobro(models.Model):
         null=True
     )
 
+    porcentaje_comision = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        default=Decimal('0.0000'),
+        help_text="Comisión como porcentaje"
+    )
+    comision_fija = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Comisión fija"
+    )
+
+    # Nuevo campo (0-100) para mostrar al usuario
+    porcentaje_visual = models.IntegerField(default=0)
+
     class Meta:
         db_table = 'divisas_metodo_cobro'
         verbose_name = 'Método de Cobro'
@@ -808,3 +844,21 @@ class MetodoCobro(models.Model):
     def __str__(self):
         return self.nombre
 
+
+    def save(self, *args, **kwargs):
+        # Sincronizar ambos campos automáticamente
+        if hasattr(self, '_updating_from_visual') and self._updating_from_visual:
+            # Si se está actualizando desde porcentaje_visual
+            self.porcentaje_comision = self.porcentaje_visual / 100
+        else:
+            # Si se está actualizando desde porcentaje_comision
+            self.porcentaje_visual = self.porcentaje_comision * 100
+
+        super().save(*args, **kwargs)
+
+    def actualizar_desde_visual(self, porcentaje_visual):
+        """Actualiza ambos campos cuando se modifica el porcentaje visual."""
+        self._updating_from_visual = True
+        self.porcentaje_visual = porcentaje_visual
+        self.porcentaje_comision = porcentaje_visual / 100
+        self.save()

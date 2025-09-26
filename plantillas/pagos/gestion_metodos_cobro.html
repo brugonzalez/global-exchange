@@ -80,7 +80,7 @@
                                     <tr>
                                         <!--<th>ID</th>-->
                                         <th>Nombre</th>
-                                        <!--<th>Comisión</th>-->
+                                        <th>Comisión %</th>
                                         <th>Estado</th>
                                         <th>Fecha Creación</th>
                                         <th>Acciones</th>
@@ -93,9 +93,9 @@
                                             <td>
                                                 <strong>{{ metodo.nombre }}</strong>
                                             </td>
-                                            <!--<td>
-                                                {{ metodo.porcentaje_comision|default:"Sin descripción"|truncatechars:50 }}
-                                            </td>-->
+                                            <td>
+                                                {{ metodo.porcentaje_visual|default:"No aplica"|truncatechars:50 }}
+                                            </td>
                                             <td>
                                                 <span class="badge {% if metodo.esta_activo %}bg-success{% else %}bg-danger{% endif %}">
                                                     {% if metodo.esta_activo %}
@@ -118,6 +118,11 @@
                                                     <i class="fas {% if metodo.esta_activo %}fa-eye-slash{% else %}fa-eye{% endif %} me-1"></i>
                                                     {% if metodo.esta_activo %}Deshabilitar{% else %}Habilitar{% endif %}
                                                 </button>
+                                                <a href="{% url 'pagos:editar_cobro' metodo.id %}"
+                                                   class="btn btn-sm btn-primary"
+                                                   title="Editar configuración">
+                                                    <i class="fas fa-edit me-1"></i>Editar
+                                                </a>
                                             </td>
                                         </tr>
                                     {% endfor %}

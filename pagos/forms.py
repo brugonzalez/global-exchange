@@ -1,5 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
+
+from divisas.models import MetodoPago, MetodoCobro
 from .models import MedioPago
 
 
@@ -340,3 +342,98 @@ class FormularioMedioPago(forms.ModelForm):
             'proveedor': self.cleaned_data['proveedor_billetera'],
             'cuenta': self.cleaned_data['cuenta_billetera']
         }
+
+
+# pagos/forms.py
+class FormularioEditarPago(forms.ModelForm):
+    """Formulario para editar el porcentaje de comisión de métodos de pago."""
+
+    porcentaje_visual = forms.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        required=True,
+        label="Porcentaje de Comisión (%)",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Ej: 15'
+        })
+    )
+
+    class Meta:
+        model = MetodoPago
+        fields = ['porcentaje_visual']
+
+    def clean_porcentaje_visual(self):
+        porcentaje = self.cleaned_data.get('porcentaje_visual')
+
+        if porcentaje is None:
+            raise forms.ValidationError('Este campo es requerido.')
+
+        if porcentaje < 0:
+            raise forms.ValidationError('El porcentaje no puede ser negativo.')
+
+        if porcentaje >= 100:
+            raise forms.ValidationError('El porcentaje de comisión no puede ser mayor al 100%.')
+
+        return porcentaje
+
+    def save(self, commit=True):
+        """Sobrescribir save para actualizar ambos campos automáticamente."""
+        instance = super().save(commit=False)
+
+        # Calcular el porcentaje_comision basado en porcentaje_visual
+        porcentaje_visual = self.cleaned_data.get('porcentaje_visual', 0)
+        instance.porcentaje_comision = porcentaje_visual / 100
+
+        if commit:
+            instance.save()
+
+        return instance
+
+
+class FormularioEditarCobro(forms.ModelForm):
+    """Formulario para editar el porcentaje de comisión de métodos de cobro."""
+
+    porcentaje_visual = forms.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        required=True,
+        label="Porcentaje de Comisión (%)",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Ej: 15'
+        })
+    )
+
+    class Meta:
+        model = MetodoCobro
+        fields = ['porcentaje_visual']
+
+    def clean_porcentaje_visual(self):
+        porcentaje = self.cleaned_data.get('porcentaje_visual')
+
+        if porcentaje is None:
+            raise forms.ValidationError('Este campo es requerido.')
+
+        if porcentaje < 0:
+            raise forms.ValidationError('El porcentaje no puede ser negativo.')
+
+        if porcentaje >= 100:
+            raise forms.ValidationError('El porcentaje de comisión no puede ser mayor al 100%.')
+
+        return porcentaje
+
+    def save(self, commit=True):
+        """Sobrescribir save para actualizar ambos campos automáticamente."""
+        instance = super().save(commit=False)
+
+        # Calcular el porcentaje_comision basado en porcentaje_visual
+        porcentaje_visual = self.cleaned_data.get('porcentaje_visual', 0)
+        instance.porcentaje_comision = porcentaje_visual / 100
+
+        if commit:
+            instance.save()
+
+        return instance
