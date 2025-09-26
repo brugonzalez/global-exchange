@@ -70,7 +70,7 @@ class VistaPanelControl(TemplateView):
         if self.request.user.is_authenticated and hasattr(self.request.user, 'ultimo_cliente_seleccionado') and self.request.user.ultimo_cliente_seleccionado:
             categoria = self.request.user.ultimo_cliente_seleccionado.categoria
         else:
-            categoria = CategoriaCliente.objects.get(nombre='Minorista')
+            categoria = CategoriaCliente.objects.get(nombre='RETAIL')
 
 
         for moneda in monedas:
