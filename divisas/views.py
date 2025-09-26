@@ -23,7 +23,8 @@ import json
 from django.core.serializers.json import DjangoJSONEncoder
 from tauser.models import StockTauser, StockTauserSerializer
 
-
+import logging
+_logger = logging.getLogger(__name__)
 class VistaPanelControl(TemplateView):
     """
     Vista del panel principal con las tasas actuales por moneda.
@@ -526,30 +527,79 @@ class APIVistaTasasActuales(TemplateView):
         if solicitud.user.is_authenticated and hasattr(solicitud.user, 'ultimo_cliente_seleccionado') and solicitud.user.ultimo_cliente_seleccionado:
             categoria = solicitud.user.ultimo_cliente_seleccionado.categoria
         else:
-            categoria = CategoriaCliente.objects.get(nombre='Minorista')
+            try:
+                categoria = CategoriaCliente.objects.get(nombre='RETAIL')
+            except CategoriaCliente.DoesNotExist:
+                categoria, created = CategoriaCliente.objects.get_or_create(
+                    nombre='RETAIL',
+                    defaults={'descripcion': 'Categoría minorista por defecto'}
+                )
 
         codigo_moneda = solicitud.GET.get('currency')
         id_moneda = solicitud.GET.get('currency_id')
+        metodo_pago_id = solicitud.GET.get('metodo_pago_id')
+        metodo_cobro_id = solicitud.GET.get('metodo_cobro_id')
+
+        # Obtener información del método de pago si se proporciona
+        metodo_pago_info = {}
+        if metodo_pago_id:
+            try:
+                metodo_pago = MetodoPago.objects.get(id=metodo_pago_id, esta_activo=True)
+                metodo_pago_info = {
+                    'metodo_pago_id': metodo_pago.id,
+                    'metodo_pago_nombre': metodo_pago.nombre,
+                    'metodo_pago_porcentaje_comision': float(metodo_pago.porcentaje_comision),
+                    'metodo_pago_comision_fija': float(metodo_pago.comision_fija),
+                    'metodo_pago_tiempo_procesamiento': metodo_pago.tiempo_procesamiento_horas,
+                }
+                print(f"Método de pago encontrado: {metodo_pago.nombre}, comisión: {metodo_pago.porcentaje_comision}%")
+            except MetodoPago.DoesNotExist:
+                metodo_pago_info = {'error_metodo_pago': 'Método de pago no encontrado'}
+                print(f"Método de pago con ID {metodo_pago_id} no encontrado")
+
+        # Obtener información del método de cobro si se proporciona
+        metodo_cobro_info = {}
+        if metodo_cobro_id:
+            try:
+                metodo_cobro = MetodoPago.objects.get(id=metodo_cobro_id, esta_activo=True)
+                metodo_cobro_info = {
+                    'metodo_cobro_id': metodo_cobro.id,
+                    'metodo_cobro_nombre': metodo_cobro.nombre,
+                    'metodo_cobro_porcentaje_comision': float(metodo_cobro.porcentaje_comision),
+                    'metodo_cobro_comision_fija': float(metodo_cobro.comision_fija),
+                    'metodo_cobro_tiempo_procesamiento': metodo_cobro.tiempo_procesamiento_horas,
+                }
+                print(f"Método de cobro encontrado: {metodo_cobro.nombre}, comisión: {metodo_cobro.porcentaje_comision}%")
+            except MetodoPago.DoesNotExist:
+                metodo_cobro_info = {'error_metodo_cobro': 'Método de cobro no encontrado'}
+                print(f"Método de cobro con ID {metodo_cobro_id} no encontrado")
 
         #retornaremos tambien el stock de los tausers
         stocks = StockTauser.objects.all()
         serializer = StockTauserSerializer(stocks, many=True)
-
+        print("Codigo moneda--->", codigo_moneda)
+        print("Id moneda--->", id_moneda)   
         if codigo_moneda:
             moneda = get_object_or_404(Moneda, codigo=codigo_moneda, esta_activa=True)
             tasa = moneda.obtener_tasa_actual(categoria)
 
             if tasa:
-                return JsonResponse({
+                response_data = {
                     'moneda': moneda.codigo,
                     'nombre': moneda.nombre,
                     'tasa_compra': float(tasa.tasa_compra),
                     'tasa_venta': float(tasa.tasa_venta),
+                    'comision_compra': float(moneda.comision_compra),
+                    'comision_venta': float(moneda.comision_venta),
                     'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
                     'lugares_decimales': tasa.moneda.lugares_decimales,
                     'moneda_id': moneda.id,
+                    'denominacion_minima': float(moneda.denominacion_minima) if moneda.denominacion_minima else 0,
                     'stock_tausers': serializer.data,
-                })
+                }
+                response_data.update(metodo_pago_info)
+                response_data.update(metodo_cobro_info)
+                return JsonResponse(response_data)
             else:
                 return JsonResponse({'error': 'No se encontró tasa'}, status=404)
         elif id_moneda:
@@ -557,16 +607,22 @@ class APIVistaTasasActuales(TemplateView):
             tasa = moneda.obtener_tasa_actual(categoria)
 
             if tasa:
-                return JsonResponse({
+                response_data = {
                     'moneda': moneda.codigo,
                     'nombre': moneda.nombre,
                     'tasa_compra': float(tasa.tasa_compra),
                     'tasa_venta': float(tasa.tasa_venta),
+                    'comision_compra': float(moneda.comision_compra),
+                    'comision_venta': float(moneda.comision_venta),
                     'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
                     'lugares_decimales': tasa.moneda.lugares_decimales,
                     'moneda_id': moneda.id,
+                    'denominacion_minima': float(moneda.denominacion_minima) if moneda.denominacion_minima else 0,
                     'stock_tausers': serializer.data,
-                })
+                }
+                response_data.update(metodo_pago_info)
+                response_data.update(metodo_cobro_info)
+                return JsonResponse(response_data)
             else:
                 return JsonResponse({'error': 'No se encontró tasa'}, status=404)
 
@@ -583,12 +639,18 @@ class APIVistaTasasActuales(TemplateView):
                         'nombre': moneda.nombre,
                         'tasa_compra': float(tasa.tasa_compra),
                         'tasa_venta': float(tasa.tasa_venta),
+                        'comision_compra': float(moneda.comision_compra),
+                        'comision_venta': float(moneda.comision_venta),
                         'ultima_actualizacion': tasa.fecha_actualizacion.isoformat(),
                         'lugares_decimales': tasa.moneda.lugares_decimales,
                         'moneda_id': moneda.id,
+                        'denominacion_minima': float(moneda.denominacion_minima) if moneda.denominacion_minima else 0,
                     })
 
-            return JsonResponse({'tasas': tasas, 'stock_tausers': serializer.data})
+            response_data = {'tasas': tasas, 'stock_tausers': serializer.data}
+            response_data.update(metodo_pago_info)
+            response_data.update(metodo_cobro_info)
+            return JsonResponse(response_data)
 
 
 class APIVistaActualizarTasas(LoginRequiredMixin, TemplateView):

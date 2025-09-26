@@ -172,8 +172,7 @@ class FormularioTransaccion(forms.Form):
         queryset=None,
         widget=forms.Select(attrs={
             'class': 'form-select',
-            'id': 'id_metodo_pago',
-            'onchange': 'actualizarCamposPago()'
+            'id': 'id_metodo_pago'
         }),
         label='Método de pago',
         #help_text='Método de pago para esta transacción'

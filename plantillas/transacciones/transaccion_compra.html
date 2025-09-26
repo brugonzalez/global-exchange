@@ -65,7 +65,7 @@
                             </div>
                         </div>
                     {% else %}
-                        <form method="post" id="formularioTransaccionCompra">
+                        <form method="post" id="formularioTransaccionCompra" data-rates-api="{% url 'divisas:api_tasas' %}">
                             {% csrf_token %}
                             <div class="row">
                                 <div class="col-md-6">
@@ -89,19 +89,16 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="row mb-3 mt-3">
+                            <div class="row mb-3">
                                 {{ formulario.cliente }}
-                                <div class="col-md-6">
+                                <div class="col-md-12">
                                     {{ formulario.metodo_pago|as_crispy_field }}
                                 </div>
-                                <div class="col-md-6">
-                                    {{ formulario.metodo_cobro|as_crispy_field }}
-                                </div>
                             </div>
-                            <div class="row mb-3">
-                                <div id="campos-metodo-pago" class="col-md-6">
-                                    <div id="campos-efectivo" class="campos-pago" style="display: none;">
-                                        <div class=" ">
+                            <div id="campos-metodo-pago">
+                                <div id="campos-efectivo" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-12">
                                             <p class="text-muted">
                                                 <i class="fas fa-info-circle me-2"></i>
                                                 Deposite su dinero en el tauser más cercano.
@@ -109,19 +106,22 @@
                                             </p>
                                         </div>
                                     </div>
-                                    <div id="campos-stripe" class="campos-pago" style="display: none;">
-                                        <div>
+                                </div>
+                                <div id="campos-stripe" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-12">
                                             <label class="form-label">Tarjetas Asociadas</label>
                                             <!--<div id="elemento-tarjeta" class="form-control" style="padding: 12px;"></div>
                                             <div id="errores-tarjeta" role="alert" class="text-danger mt-2"></div>-->
                                             {{ formulario.id_metodo_pago_stripe }}
                                         </div>
                                     </div>
-                                    <div id="campos-transferencia" class="campos-pago mb-3" style="display: none;">
-                                        <div class=" ">
-                                            <label for="nroComprobante" class="mb-2 requiredField">
-                                                Nro Comprobante de tu Transferencia<span
-                                                    class="asteriskField">*</span>
+                                </div>
+                                <div id="campos-transferencia" class="campos-pago mb-3" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="nroComprobante" class=" requiredField">
+                                                Nro Comprobante de tu Transferencia<span class="asteriskField">*</span>
                                             </label>
                                             <div>
                                                 <input type="number" name="nroComprobante"
@@ -130,57 +130,28 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div id="campos-cheque" class="campos-pago" style="display: none;">
-                                        <div class=" ">
-                                            <p class="text-muted">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                Deposite su cheque en el tauser más cercano.
-                                                No se requieren datos adicionales para pagos con cheque.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div id="campos-billetera" class="campos-pago" style="display: none;">
-                                        <div class=" ">
-                                            <label for="nroComprobanteBilletera" class="mb-2 requiredField">
-                                                Nro Comprobante de tu Pago/Transferencia<span
-                                                    class="asteriskField">*</span>
-                                            </label>
-                                            <div>
-                                                <input type="number" name="nroComprobanteBilletera"
-                                                       class="form-control"
-                                                       placeholder="12345"    id="nroComprobanteBilletera">
-                                            </div>
+                                </div>
+                                <div id="campos-western-union" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ formulario.destinatario_western_union|as_crispy_field }}
                                         </div>
                                     </div>
                                 </div>
-                                <div id="campos-metodo-cobro mt-3" class="col-md-6">
-                                    <div id="campos-tauser" class="campos-pago" style="display: none;">
-                                        <div class=" ">
-                                            <label class="form-label">Tausers</label>
-                                            {{ formulario.tausers }}
+                                <div id="campos-retiro-caja" class="campos-pago" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ formulario.lugar_retiro|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ formulario.identificacion_retiro|as_crispy_field }}
                                         </div>
                                     </div>
-                                    <div id="campos-cobro-transferencia" class="campos-pago mt-3"
-                                         style="display: none;">
-                                        <div class=" ">
-                                            <label for="nroCuenta" class=" requiredField">
-                                                Nro Cuenta para la transferencia<span class="asteriskField">*</span>
-                                            </label>
-                                            <div>
-                                                <input type="text" name="nroCuenta"
-                                                       class="form-control"
-                                                       placeholder="12345"    id="nroCuenta">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div id="campos-cobro-error" class="campos-pago mt-3" style="display: none;">
-                                        <div class=" ">
-                                            <label for="nroCuenta" class=" requiredField">
-                                                No se puede realizar transferencia a la divisa seleccionada<span
-                                                    class="error">*</span>
-                                            </label>
-                                        </div>
-                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    {{ formulario.metodo_cobro|as_crispy_field }}
                                 </div>
                             </div>
                             <div class="row d-none">
@@ -307,9 +278,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const infoComision = document.getElementById('infoComision');
     const infoTotal = document.getElementById('infoTotal');
     const selectorMetodoPago = document.getElementById('id_metodo_pago');
-    var selectorMetodoCobro = document.getElementById('id_metodo_cobro');
-    var selectorMetodoCobroBackup = document.getElementById('id_metodo_cobro');
-    var selectorTauser = document.getElementById('id_tausers');
     const moneda_base = '{{ moneda_base }}';
     
     // Inicializar Stripe
@@ -331,12 +299,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let tarjetaMontada = false;
     
+    // Variable global para almacenar la comisión del método de pago
+    let comisionMetodoPago = 0;
+    
     function actualizarCamposPago() {
+        const metodoPagoId = selectorMetodoPago.value;
         const opcionSeleccionada = selectorMetodoPago.options[selectorMetodoPago.selectedIndex];
-        const opcionSeleccionadaCobro = selectorMetodoCobro.options[selectorMetodoCobro.selectedIndex];
         const nombreMetodoPago = opcionSeleccionada.text;
-        const nombreMetodoCobro = opcionSeleccionadaCobro.text;
-
+        
         // Ocultar todos los campos de pago
         document.querySelectorAll('.campos-pago').forEach(campo => {
             campo.style.display = 'none';
@@ -345,147 +315,211 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mostrar campos relevantes según el método de pago
         if (nombreMetodoPago.includes('Tarjeta') || nombreMetodoPago.includes('Stripe')) {
             document.getElementById('campos-stripe').style.display = 'block';
-            /*if (!tarjetaMontada) {
-                elementoTarjeta.mount('#elemento-tarjeta');
-                tarjetaMontada = true;
-            }*/
         } else if (nombreMetodoPago.includes('Transferencia')) {
             document.getElementById('campos-transferencia').style.display = 'block';
-        } else if (nombreMetodoPago.includes('Cheque')) {
-            document.getElementById('campos-cheque').style.display = 'block';
+        } else if (nombreMetodoPago.includes('Western Union')) {
+            document.getElementById('campos-western-union').style.display = 'block';
         } else if (nombreMetodoPago.includes('Efectivo')) {
             document.getElementById('campos-efectivo').style.display = 'block';
-        }else if (nombreMetodoPago.includes('Billetera')) {
-            document.getElementById('campos-billetera').style.display = 'block';
         }
-
-        // Mostrar campos relevantes según el método de cobro
-        if (nombreMetodoCobro.includes('Efectivo')) {
-
-            document.getElementById('campos-tauser').style.display = 'block';
-        } else if (nombreMetodoCobro.includes('Transferencia')) {
-            if(monedaDestino && (monedaDestino.value == '2' || monedaDestino.value == '3')){
-                document.getElementById('campos-cobro-transferencia').style.display = 'block';
-            } else {
-                document.getElementById('campos-cobro-error').style.display = 'block';
+        
+        // Obtener comisión del método de pago seleccionado
+        if (metodoPagoId) {
+            const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
+            if (urlApi) {
+                ajax({
+                    url: `${urlApi}?metodo_pago_id=${metodoPagoId}`,
+                    method: 'GET',
+                    success: function(datos) {
+                        if (datos && datos.metodo_pago_porcentaje_comision !== undefined) {
+                            comisionMetodoPago = parseFloat(datos.metodo_pago_porcentaje_comision)|| 0;
+                            console.log('Comisión método de pago obtenida:', comisionMetodoPago);
+                            // Recalcular con la nueva comisión
+                            actualizarCalculos();
+                        }
+                    },
+                    error: function() {
+                        comisionMetodoPago = 0;
+                        console.log('Error obteniendo comisión del método de pago');
+                    }
+                });
             }
+        } else {
+            comisionMetodoPago = 0;
         }
+    }
 
+function actualizarCalculos() {
+    const destino = monedaDestino.value;
+    const monto = parseFloat(montoOrigen.value) || 0;
+    
+    if (destino && monto > 0) {
         const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
         if (!urlApi) return;
-        let tasaCompra;
-        const destino = monedaDestino.value;
-        if(destino) {
-            montoDestinoValor = montoDestino.value;
-            ajax({
-                url: `${urlApi}?currency_id=${destino}`,
-                method: 'GET',
-                success: function (datos) {
-                    if (datos) {
-                        console.log(datos.stock_tausers);
-
-                        /*for (let i = 0; i < select.options.length; i++) {
-                            const opt = select.options[i];
-                            const item = data2.find(d => d.id == opt.value);
-
-                            if (item && item.monto >= montoIngresado) {
-                                opt.hidden = false;
-                            } else if (item) {
-                                opt.hidden = true;
-                            }
-                        }*/
-
-
-                        selectorTauser.innerHTML = '<option value="">---</option>';
-
-                        // Recorrer data2 y agregar solo los que cumplen la condición
-                        datos.stock_tausers.forEach(item => {
-                            let bNum = parseFloat(item.cantidad_disponible);
-                            let aNum = parseFloat(montoDestinoValor);
-                            if (item.moneda == destino && bNum >= aNum) {
-                                const opt = document.createElement('option');
-                                opt.value = item.id;
-                                opt.textContent = `${item.tauser_nombre}`;
-                                selectorTauser.appendChild(opt);
-                            }
-                        });
-                    }
-                },
-                error: function (xhr) {
-                    console.error('Error al refrescar las tasas:', xhr.statusText);
-                }
-            });
-        }
-    }
-    
-    function actualizarCalculos() {
-        //const origen = monedaOrigen.value;
-        const opcionSeleccionadaCobro = selectorMetodoCobro.options[selectorMetodoCobro.selectedIndex];
-        const destino = monedaDestino.value;
-        const monto = parseFloat(montoOrigen.value) || 0;
-        const nombreMetodoCobro = opcionSeleccionadaCobro.text;
         
-        if (destino && monto > 0) {
-            const urlApi = document.querySelector('[data-rates-api]')?.getAttribute('data-rates-api');
-            if (!urlApi) return;
-            let tasaCompra;
-
-            ajax({
-                url: `${urlApi}?currency_id=${destino}`,
-                method: 'GET',
-                success: function(datos) {
-                    if (datos) {
-                        tasaCompra = datos.tasa_venta;
-                        console.log(datos.stock_tausers)
-
-                        const calculado = monto / tasaCompra;
-
-                        montoDestino.value = calculado.toFixed(2);
-                        if(nombreMetodoCobro && nombreMetodoCobro.includes('Efectivo')){
-                            selectorMetodoCobro.value = '';
-                            document.getElementById('campos-tauser').style.display = 'block';
-                        }
-                        infoTasa.innerHTML = `
-                            <p><strong>Tasa de Cambio:</strong><br>
-                            1 ${monedaDestino.options[monedaDestino.selectedIndex].text}</p>
-                            <p class="mb-0">Equivalente en <strong>${tasaCompra} Gs</strong><br>
+        ajax({
+            url: `${urlApi}?currency_id=${destino}`,
+            method: 'GET',
+            success: function(datos) {
+                if (datos) {
+                    const tasaCompra = datos.tasa_compra;
+                    const denominacionMinima = datos.denominacion_minima || 0;
+                    const comision_compra = datos.comision_compra / 100 || 0;
+                    
+                    // Calcular monto sin ajustar denominación
+                    const calculadoSinAjuste = monto / tasaCompra;
+                    
+                    console.log('=== CÁLCULOS INICIALES ===');
+                    console.log('Monto origen (PYG):', monto);
+                    console.log('Tasa de compra:', tasaCompra);
+                    console.log('Calculado sin ajuste:', calculadoSinAjuste);
+                    console.log('Denominación mínima:', denominacionMinima);
+                    console.log('Comision base:', comision_compra);
+                    
+                    let montoDestinoFinal = calculadoSinAjuste;
+                    let advertenciaDenominacion = '';
+                    let montoAjustadoPorDenominacion = false;
+                    
+                    // Calcular comisiones
+                    const comisionMoneda = montoDestinoFinal * comision_compra;
+                    // CORREGIDO: comisionMetodoPago ya viene como decimal (ej: 0.025 = 2.5%)
+                    const comisionMetodo = montoDestinoFinal * comisionMetodoPago;
+                    const montoComisionTotal = comisionMoneda + comisionMetodo;
+                    const montoTotalConComision = montoDestinoFinal - montoComisionTotal;
+                    
+                    // Calcular cuánto PYG se usará realmente
+                    const montoRealEnPYG = montoDestinoFinal * tasaCompra;
+                    const diferenciaPYG = monto - montoRealEnPYG;
+                    
+                    // Validar y ajustar denominación mínima
+                    if (denominacionMinima > 0 && (calculadoSinAjuste % denominacionMinima !== 0)) {
+                        // Ajustar hacia abajo para no exceder lo disponible
+                        montoDestinoFinal = Math.floor(calculadoSinAjuste / denominacionMinima) * denominacionMinima;
+                        montoAjustadoPorDenominacion = true;
+                        
+                        const diferencia = calculadoSinAjuste - montoDestinoFinal;
+                        
+                        advertenciaDenominacion = `
+                            <div class="alert alert-info mt-2 py-2">
+                                <small><i class="fas fa-info-circle me-1"></i>
+                                Ajustado por denominación mínima (${denominacionMinima} unidades)
+                                </small>
+                            </div>
                         `;
-
-                        infoComision.style.display = 'block';
-                        document.getElementById('detallesComision').innerHTML = `
-                            <p class="mb-1">Comisión: <span class="text-muted">2.5%</span></p>
-                            <p class="mb-0">Monto: <span class="text-muted">${(calculado * 0.025).toFixed(2)}</span></p>
-                        `;
-
-                        infoTotal.style.display = 'block';
-                        const monedaCodigo = monedaDestino.options[monedaDestino.selectedIndex]?.text?.split(' ')[0] || '';
-                        document.getElementById('detallesTotal').innerHTML = `
-                            <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${(calculado).toFixed(2)} ${monedaCodigo}</span></p>
-                        `;
+                        
+                        console.log('=== AJUSTE POR DENOMINACIÓN ===');
+                        console.log('Monto ajustado:', montoDestinoFinal);
+                        console.log('Diferencia:', diferencia);
                     }
-                },
-                error: function(xhr) {
-                    console.error('Error al refrescar las tasas:', xhr.statusText);
+                    
+                    console.log('=== CÁLCULOS FINALES ===');
+                    console.log('Monto destino final:', montoDestinoFinal);
+                    console.log('Comisión moneda:', comisionMoneda);
+                    console.log('Comisión método pago (%):', comisionMetodoPago);
+                    console.log('Comisión método pago (monto):', comisionMetodo);
+                    console.log('Comisión total aplicada:', montoComisionTotal);
+                    console.log('Total con comisión:', montoTotalConComision);
+                    console.log('PYG realmente usado:', montoRealEnPYG);
+                    console.log('PYG sobrantes:', diferenciaPYG);
+                    
+                    // Actualizar el campo del monto destino
+                    montoDestino.value = montoDestinoFinal.toFixed(2);
+                    
+                    // Obtener información de la moneda seleccionada
+                    const opcionSeleccionada = monedaDestino.options[monedaDestino.selectedIndex];
+                    const nombreMoneda = opcionSeleccionada?.text || '';
+                    const codigoMoneda = nombreMoneda.split(' ')[0] || '';
+                    
+                    // CORREGIDO: Usar tasaCompra en lugar de tasaVenta
+                    infoTasa.innerHTML = `
+                        <div>
+                            <p><strong>Tasa de Cambio (Compra):</strong><br>
+                            1 ${codigoMoneda} = ${tasaCompra.toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0})} Gs</p>
+                            ${advertenciaDenominacion}
+                        </div>
+                    `;
+                    
+                    // Mostrar información de comisión - COMPLETADO
+                    infoComision.style.display = 'block';
+                    document.getElementById('detallesComision').innerHTML = `
+                        <p class="mb-1">Comisión moneda: <span class="text-muted">${(comision_compra * 100).toFixed(1)}%</span></p>
+                        <p class="mb-1">Monto comisión moneda: <span class="text-muted">${comisionMoneda.toFixed(2)} ${codigoMoneda}</span></p>
+                        ${comisionMetodoPago? `
+                            <p class="mb-1">Comisión método pago: <span class="text-muted">${(comisionMetodoPago * 100).toFixed(1)}%</span></p>
+                            <p class="mb-1">Monto comisión método: <span class="text-muted">${comisionMetodo.toFixed(2)} ${codigoMoneda}</span></p>
+                        ` : ''}
+                        <hr class="my-2">
+                        <p class="mb-0"><strong>Comisión total: <span class="text-danger">${montoComisionTotal.toFixed(2)} ${codigoMoneda}</span></strong></p>
+                    `;
+
+                    // Mostrar total - AGREGADO
+                    infoTotal.style.display = 'block';
+                    document.getElementById('detallesTotal').innerHTML = `
+                        <p class="mb-1">Subtotal: <span class="fw-bold">${montoDestinoFinal.toFixed(2)} ${codigoMoneda}</span></p>
+                        <p class="mb-0">Total con comisiones: <span class="fw-bold text-success">${montoTotalConComision.toFixed(2)} ${codigoMoneda}</span></p>
+                        ${montoAjustadoPorDenominacion ? `
+                            <p class="mb-0 mt-1">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Monto real usado: ${montoRealEnPYG.toLocaleString('es-ES')} Gs
+                                </small>
+                            </p>
+                        ` : ''}
+                    `;
                 }
-            });
-
-
-        } else {
-            montoDestino.value = '';
-            infoTasa.innerHTML = '<p class="text-muted"><i class="fas fa-info-circle me-2"></i>Seleccione las monedas para ver la tasa de cambio</p>';
-            infoComision.style.display = 'none';
-            infoTotal.style.display = 'none';
-        }
+            },
+            error: function(xhr) {
+                console.error('Error al refrescar las tasas:', xhr.statusText);
+                // Mostrar error en la UI
+                infoTasa.innerHTML = `
+                    <p class="text-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error al cargar las tasas de cambio. Intente nuevamente.
+                    </p>
+                `;
+                infoComision.style.display = 'none';
+                infoTotal.style.display = 'none';
+            }
+        });
+    } else {
+        // Limpiar campos cuando no hay datos válidos
+        montoDestino.value = '';
+        infoTasa.innerHTML = '<p class="text-muted"><i class="fas fa-info-circle me-2"></i>Seleccione las monedas y ingrese un monto para ver la tasa de cambio</p>';
+        infoComision.style.display = 'none';
+        infoTotal.style.display = 'none';
     }
-    
-    // Listeners de eventos
+}
+// Función auxiliar para mostrar detalles adicionales (opcional)
+function mostrarDetallesTransaccion(datos) {
+    const detallesElement = document.getElementById('detalles-adicionales');
+    if (detallesElement) {
+        detallesElement.innerHTML = `
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Detalles de la Transacción</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Monto original:</strong> ${datos.montoOriginal}</p>
+                            <p class="mb-1"><strong>Monto ajustado:</strong> ${datos.montoAjustado}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Comisión:</strong> ${datos.comision}</p>
+                            <p class="mb-1"><strong>Total:</strong> ${datos.total}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+     // Listeners de eventos
     //monedaOrigen.addEventListener('change', actualizarCalculos);
     monedaDestino.addEventListener('change', actualizarCalculos);
-    monedaDestino.addEventListener('change', actualizarCamposPago);
     montoOrigen.addEventListener('input', actualizarCalculos);
     selectorMetodoPago.addEventListener('change', actualizarCamposPago);
-    selectorMetodoCobro.addEventListener('change', actualizarCamposPago);
-
+    
     // Inicializar campos de pago
     actualizarCamposPago();
     actualizarCalculos();  
