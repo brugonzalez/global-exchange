@@ -26,11 +26,15 @@ from django.db.models import Case, When, DecimalField, Value, Q
 
 
 def _config_decimal(clave: str, fallback: any) -> Decimal:
-	"""Obtiene un valor desde Configuracion y lo convierte a Decimal.
+	"""
+    Obtiene un valor desde Configuracion y lo convierte a Decimal.
 
-	NOTA: El tipo 'MONTO' actualmente no se convierte en el modelo Configuracion,
-	por lo que aquí forzamos la conversión segura. Si la clave no existe o
-	el valor no es convertible, se devuelve el fallback.
+    Parameters
+	----------
+	clave : str
+		Clave de configuración a buscar.
+	
+
 	"""
 	valor = Configuracion.obtener_valor(clave, valor_por_defecto=None)
 	if valor is None:
@@ -52,7 +56,7 @@ def obtener_limite_diario(cliente) -> Decimal:
 	Returns
 	-------
 	Decimal
-		Valor del límite diario.
+		Valor del límite diario en gs.
 	"""
 	if getattr(cliente, "usa_limites_default", True):
 		return _config_decimal('LIMITE_TRANSACCION_DIARIO_DEFAULT', None)
@@ -73,7 +77,7 @@ def obtener_limite_mensual(cliente) -> Decimal:
 	Returns
 	-------
 	Decimal
-		Valor del límite mensual.
+		Valor del límite mensual en gs.
 	"""
 	if getattr(cliente, "usa_limites_default", True):
 		return _config_decimal('LIMITE_TRANSACCION_MENSUAL_DEFAULT', None)
@@ -89,10 +93,20 @@ def obtener_monto_transacciones_hoy(cliente) -> Decimal:
     Criterio (alineado con la función mensual):
     - Para transacciones de tipo COMPRA se suma `monto_origen` SOLO si `moneda_origen.codigo == 'PYG'`.
     - Para transacciones de tipo VENTA  se suma `monto_destino` SOLO si `moneda_destino.codigo == 'PYG'`.
-    - Estados considerados: COMPLETADA, PAGADA, PENDIENTE (ajustar si negocio requiere solo confirmadas).
+    - Estados considerados: COMPLETADA, PAGADA, PENDIENTE.
 
     Se usa un solo aggregate con Case/When para evitar dos consultas y asegurar consistencia.
     Si no existen transacciones válidas devuelve Decimal('0.00').
+    
+    Parameters
+	----------
+	cliente : Cliente
+		Instancia del modelo Cliente.
+            
+	Returns
+	-------
+	Decimal
+		Monto total de transacciones realizadas por el cliente en la fecha especificada.
     """
 
     hoy = timezone.localdate()
@@ -180,18 +194,23 @@ def obtener_monto_transacciones_mes(cliente) -> Decimal:
 def verificar_limites(cliente, monto_propuesto: Decimal):
     """Devuelve un dict con el estado de límites para un monto propuesto.
 
-    Estructura retornada:
-        {
-          'limite_diario': Decimal|None,
-          'limite_mensual': Decimal|None,
-          'usado_diario': Decimal,
-          'usado_mensual': Decimal,
-          'restante_diario': Decimal|None,
-          'restante_mensual': Decimal|None,
-          'excede_diario': bool,
-          'excede_mensual': bool,
-        }
-    Si un límite es None o 0 se interpreta como "ilimitado" y no bloquea.
+	Parameters
+	----------
+	cliente : Cliente
+		Instancia del modelo Cliente.
+	monto_propuesto : Decimal
+		Monto que se quiere evaluar contra los límites.
+		Se asume que está en la moneda base (PYG).
+            
+	Returns
+	-------
+	dict
+		Un diccionario con las siguientes claves:
+		- 'limite_diario': Decimal o None
+		- 'limite_mensual': Decimal o None
+		- 'usado_diario': Decimal
+		- 'usado_mensual': Decimal
+		- 'restante_diario': Decimal o None	
     """
     from . import utils as _u  # por si se importa indirectamente
     # Para evitar recursión si renombrado, usamos funciones locales ya definidas

@@ -24,10 +24,10 @@ except Exception:  # pragma: no cover - fallback si todavía no migró app divis
 def crear_limites_cliente_post_creacion(sender, instance: Cliente, created: bool, **kwargs):
 	"""Crea automáticamente un registro de límites de transacción para el cliente recién creado.
 
-	Estrategia de moneda:
-		1. Intentar una moneda marcada como activa (campo 'esta_activa' si existe).
-		2. Si no existe ese campo o no hay activas, tomar la primera moneda ordenada por PK.
-		3. Si no hay monedas -> abortar silenciosamente.
+	Parameters
+    ----------
+	instance : Cliente
+        Instancia del cliente recién creado.          
 
 	Idempotencia:
 		- Usa get_or_create para evitar violar la relación OneToOne.

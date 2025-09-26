@@ -499,12 +499,6 @@ class VistaEditarCliente(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
             contexto['formulario_limites'] = FormularioLimiteCliente(instance=limites)
         return contexto
 
-class VistaEstablecerLimitesGeneralesTransacciones(LoginRequiredMixin, MixinStaffRequerido, UpdateView):
-    """
-    Vista para establecer límites generales para montos de transacciones.
-    """
-    template_name = 'clientes/gestionar_limite_general.html'
-
 
 
 class VistaGestionarUsuariosCliente(LoginRequiredMixin, MixinStaffRequerido, DetailView):
@@ -1346,7 +1340,10 @@ class VistaDetallesUsuario(LoginRequiredMixin, MixinStaffRequerido, View):
             }, status=500)
 
 class VistaConfiguracionCategorias(MixinStaffRequerido, TemplateView):
-    """Vista para gestionar configuraciones del sistema."""
+    """
+    Vista para gestionar configuraciones del sistema.
+    Sirve para ver y modificar diferentes parámetros globales relacionados con las categorías de clientes.
+    """
     template_name = 'clientes/gestionar_categorias.html'
 
     def get_context_data(self, **kwargs):

@@ -12,6 +12,7 @@ Subpackages
    tests.divisas
    tests.notificaciones
    tests.reportes
+   tests.transacciones
 
 Module contents
 ---------------

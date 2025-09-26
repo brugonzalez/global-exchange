@@ -72,6 +72,60 @@ class TransaccionManager(models.Manager):
 class Transaccion(models.Model):
     """
     Modelo para transacciones de compra/venta.
+
+    Attributes
+    ----------
+    id_transaccion : UUID
+        Identificador único de la transacción.
+    numero_transaccion : str
+        Número secuencial legible de la transacción.
+    tipo_transaccion : str
+        Tipo de transacción: 'COMPRA' o 'VENTA'.
+    estado : str
+        Estado actual de la transacción.
+    cliente : ForeignKey
+        Cliente
+    usuario : ForeignKey
+        Usuario que creó la transacción.
+    moneda_origen : ForeignKey
+        Moneda de origen.
+    moneda_destino : ForeignKey
+        Moneda de destino.
+    monto_origen : Decimal
+        Monto en moneda de origen.
+    monto_destino : Decimal
+        Monto en moneda de destino.
+    tasa_cambio : Decimal
+        Tasa de cambio aplicada.
+    fuente_tasa : str
+        Fuente de la tasa de cambio.
+    monto_comision : Decimal    
+        Monto de comisión aplicada.
+    moneda_comision : ForeignKey
+        Moneda en la que se cobra la comisión.
+    metodo_pago : ForeignKey
+        Método de pago utilizado.
+    referencia_pago : str
+        Referencia del pago.
+    metodo_cobro : ForeignKey   
+        Método de cobro utilizado.
+    referencia_cobro : str  
+        Referencia del cobro.
+    info_cuenta_bancaria : JSONField
+        Información de cuenta bancaria o billetera.
+    fecha_creacion : DateTime
+        Fecha y hora de creación.
+    fecha_actualizacion : DateTime
+        Fecha y hora de la última actualización.
+    fecha_completado : DateTime
+        Fecha y hora en que se completó la transacción.
+    fecha_cancelacion : DateTime
+        Fecha y hora en que se canceló la transacción.
+    notas : Text
+        Notas adicionales.
+    motivo_cancelacion : Text
+        Motivo de la cancelación.
+    
     """
     TIPOS_TRANSACCION = [
         ('COMPRA', 'Compra'),
@@ -631,6 +685,22 @@ class Factura(models.Model):
 class ComisionTransaccion(models.Model):
     """
     Modelo para el desglose de comisiones de una transacción.
+    Sirve para registrar diferentes tipos de comisiones
+    asociadas a una transacción específica.
+
+    Attributes
+    ----------
+    transaccion : ForeignKey
+        Transacción a la que pertenece la comisión.
+    tipo_comision : str
+        Tipo de comisión (e.g., 'CAMBIO', 'PROCESAMIENTO', etc.).
+    monto : Decimal
+        Monto de la comisión.
+    moneda : ForeignKey
+        Moneda en la que se cobra la comisión.
+    descripcion : str
+        Descripción adicional de la comisión.
+        
     """
     transaccion = models.ForeignKey(
         Transaccion,

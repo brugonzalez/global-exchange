@@ -12,6 +12,13 @@ Submodules
    divisas.migrations.0003_moneda_pais
    divisas.migrations.0004_alter_preciobase_precio_base
    divisas.migrations.0005_agregar_campos_crud_monedas
+   divisas.migrations.0006_eliminar_decimales_denominacion_stock
+   divisas.migrations.0007_metodocobro
+   divisas.migrations.0008_metodocobro_fecha_actualizacion_and_more
+   divisas.migrations.0009_metodocobro_comision_fija_and_more
+   divisas.migrations.0010_metodocobro_porcentaje_visual_and_more
+   divisas.migrations.0011_alter_metodocobro_porcentaje_comision_and_more
+   divisas.migrations.0012_alter_metodocobro_porcentaje_comision
 
 Module contents
 ---------------

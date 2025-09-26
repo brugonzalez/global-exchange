@@ -30,6 +30,13 @@ goto end
 
 :help
 %SPHINXBUILD% -M help %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+echo.
+echo.Additional commands:
+echo.  livehtml   Build HTML and watch for changes using sphinx-autobuild
+echo.
+if "%1" == "livehtml" (
+	sphinx-autobuild -b html %SOURCEDIR% %BUILDDIR%/html %SPHINXOPTS% %O%
+)
 
 :end
 popd

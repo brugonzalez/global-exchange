@@ -20,6 +20,8 @@ Submodules
    transacciones.forms
    transacciones.models
    transacciones.payments
+   transacciones.signals
+   transacciones.tasks
    transacciones.tests
    transacciones.urls
    transacciones.views
