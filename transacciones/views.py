@@ -41,7 +41,7 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
         contexto = super().get_context_data(**kwargs)
         
         # Comprobar si el usuario tiene un cliente seleccionado
-        if not self.request.user.ultimo_cliente_seleccionado and not self.request.user.clientes.exists():
+        if not self.request.user.ultimo_cliente_seleccionado or not self.request.user.clientes.exists():
             contexto['advertencia_sin_cliente'] = True
             contexto['formulario'] = None
         else:
@@ -186,7 +186,7 @@ class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView
         contexto = super().get_context_data(**kwargs)
         
         # Comprobar si el usuario tiene un cliente seleccionado
-        if not self.request.user.ultimo_cliente_seleccionado and not self.request.user.clientes.exists():
+        if not self.request.user.ultimo_cliente_seleccionado or not self.request.user.clientes.exists():
             contexto['advertencia_sin_cliente'] = True
             contexto['formulario'] = None
         else:
