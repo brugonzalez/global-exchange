@@ -181,6 +181,15 @@ class Transaccion(models.Model):
         help_text="Referencia del cobro (número de transferencia, etc.)"
     )
 
+    dato_cobro = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+    dato_pago = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
     # Información de banco/billetera
     info_cuenta_bancaria = models.JSONField(
         blank=True,

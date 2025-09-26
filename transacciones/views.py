@@ -23,7 +23,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from .models import Transaccion, SimulacionTransaccion, Factura
 from .forms import FormularioCancelarTransaccion, FormularioTransaccion, FormularioPagoStripe
 from .payments import ProcesadorPagos, crear_intento_pago_stripe
-from divisas.models import Moneda, TasaCambio
+from divisas.models import Moneda, TasaCambio, MetodoCobro
 from cuentas.views import MixinPermisosAdmin
 from clientes.models import Cliente
 from cuentas.models import Usuario
@@ -93,11 +93,29 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
             monto = formulario.cleaned_data['monto_origen']
 
             from decimal import Decimal
-            tasa_ejemplo = Decimal('7500.00')  # Tasa de ejemplo
             
             # Calcular monto de destino
-            monto_destino = monto / tasaCambio.tasa_venta
-            
+            monto_destino = formulario.data.get('monto_destino','')
+
+            #agregar monto comision
+
+            referencia_pago = ''
+            if formulario.data['metodo_pago'] == '4':
+                referencia_pago= formulario.data.get('id_metodo_pago_stripe', '')
+            elif formulario.data['metodo_pago'] == '1':
+                referencia_pago = formulario.data.get('nroComprobante', '')
+            elif formulario.data['metodo_pago'] == '12':
+                referencia_pago = formulario.data.get('nroComprobante', '')
+            elif formulario.data['metodo_pago'] == '2':
+                referencia_pago = formulario.data.get('nroComprobanteBilletera', '')
+
+
+            referencia_cobro = ''
+            if formulario.data['metodo_cobro'] == '3':
+                referencia_cobro = formulario.data.get('tausers', '')
+            elif formulario.data['metodo_cobro'] == '1':
+                referencia_cobro = formulario.data.get('nroCuenta', '')
+
             # Crear transacción usando método seguro
             objeto_transaccion = Transaccion.objects.create_safe(
                 tipo_transaccion='COMPRA',
@@ -107,12 +125,14 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
                 moneda_destino=formulario.cleaned_data['moneda_destino'],
                 monto_origen=formulario.cleaned_data['monto_origen'],
                 monto_destino=monto_destino,
-                tasa_cambio=tasa_ejemplo,
+                tasa_cambio=tasaCambio.tasa_venta,
                 metodo_pago=formulario.cleaned_data['metodo_pago'],
                 notas=formulario.cleaned_data['notas'] or '',
                 estado='PENDIENTE',
                 metodo_cobro=formulario.cleaned_data['metodo_cobro'],
                 referencia_cobro=formulario.cleaned_data.get('referencia_cobro', ''),
+                dato_cobro=referencia_cobro,
+                dato_pago=referencia_pago,
             )
             
             # Procesar pago según el método
@@ -232,9 +252,35 @@ class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView
             # En una implementación real, esto se obtendría del modelo TasaCambio
             from decimal import Decimal
             tasa_ejemplo = Decimal('7450.00')  # Tasa de venta de ejemplo (menor que la de compra)
-            
+
+
+            from divisas.models import TasaCambio
+            moneda = formulario.cleaned_data['moneda_origen']
+            moneda_destino = formulario.cleaned_data['moneda_destino']
+            tasaCambio = TasaCambio.objects.get(categoria_cliente_id=cliente.categoria_id, moneda_id=moneda.id, esta_activa=True)
+            monto = formulario.cleaned_data['monto_origen']
+
             # Calcular monto de destino
-            monto_destino = formulario.cleaned_data['monto_origen'] * tasa_ejemplo
+            # Calcular monto de destino
+            monto_destino = formulario.data.get('monto_destino','')
+
+            #agregar monto comision
+
+            referencia_pago = ''
+
+            if formulario.data['metodo_pago'] == '1':
+                referencia_pago = formulario.data.get('nroComprobante', '')
+            elif formulario.data['metodo_pago'] == '8':
+                referencia_pago = formulario.data.get('tausers', '')
+
+
+            referencia_cobro = ''
+            if formulario.data['metodo_cobro'] == '3':
+                referencia_cobro = formulario.data.get('tausers', '')
+            elif formulario.data['metodo_cobro'] == '1':
+                referencia_cobro = formulario.data.get('nroCuenta', '')
+            elif formulario.data['metodo_cobro'] == '2':
+                referencia_cobro = formulario.data.get('nroComprobanteBilletera', '')
             
             # Crear transacción usando método seguro
             objeto_transaccion = Transaccion.objects.create_safe(
@@ -245,10 +291,13 @@ class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView
                 moneda_destino=formulario.cleaned_data['moneda_destino'],
                 monto_origen=formulario.cleaned_data['monto_origen'],
                 monto_destino=monto_destino,
-                tasa_cambio=tasa_ejemplo,
+                tasa_cambio=tasaCambio.tasa_compra,
                 metodo_pago=formulario.cleaned_data['metodo_pago'],
+                metodo_cobro=MetodoCobro.objects.get(id=formulario.data['metodo_cobro']),
                 notas=formulario.cleaned_data['notas'] or '',
-                estado='PENDIENTE'
+                estado='PENDIENTE',
+                dato_cobro=referencia_cobro,
+                dato_pago=referencia_pago,
             )
             
             # Procesar pago según el método

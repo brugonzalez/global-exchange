@@ -390,11 +390,11 @@ class FormularioTransaccion(forms.Form):
             if not datos_limpios.get('destinatario_western_union'):
                 raise forms.ValidationError('Debe proporcionar el nombre del destinatario para Western Union')
         
-        elif metodo_pago.tipo_metodo == 'CASH':
-            if not datos_limpios.get('lugar_retiro'):
-                raise forms.ValidationError('Debe seleccionar una ubicación de retiro')
-            if not datos_limpios.get('identificacion_retiro'):
-                raise forms.ValidationError('Debe proporcionar su documento de identidad')
+        # elif metodo_pago.tipo_metodo == 'CASH':
+        #     if not datos_limpios.get('lugar_retiro'):
+        #         raise forms.ValidationError('Debe seleccionar una ubicación de retiro')
+        #     if not datos_limpios.get('identificacion_retiro'):
+        #         raise forms.ValidationError('Debe proporcionar su documento de identidad')
         
         elif 'Stripe' in metodo_pago.nombre:
             if not datos_limpios.get('id_metodo_pago_stripe'):

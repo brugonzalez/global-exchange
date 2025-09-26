@@ -85,6 +85,7 @@
                                     <div class="form-group">
                                         <label for="monto_destino" class="form-label">Cantidad a recibir</label>
                                         <input type="text" id="monto_destino" class="form-control" readonly placeholder="0">
+                                        <input type="hidden" name="monto_destino" id="id_moneda_destino_hidden" value="0">
                                         <!--<small class="form-text text-muted">Calculado automáticamente</small>-->
                                     </div>
                                 </div>
@@ -122,19 +123,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div id="campos-billetera" class="campos-pago" style="display: none;">
-                                        <div class=" ">
-                                            <label for="nroComprobanteBilletera" class="mb-2 requiredField">
-                                                Nro Comprobante de tu Pago/Transferencia<span
-                                                    class="asteriskField">*</span>
-                                            </label>
-                                            <div>
-                                                <input type="number" name="nroComprobanteBilletera"
-                                                       class="form-control"
-                                                       placeholder="12345"    id="nroComprobanteBilletera">
-                                            </div>
-                                        </div>
-                                    </div>
                                     <div id="campos-pago-error" class="campos-pago mt-3" style="display: none;">
                                         <div class=" ">
                                             <label for="nroCuenta" class=" requiredField">
@@ -161,6 +149,19 @@
                                                 <input type="text" name="nroCuenta"
                                                        class="form-control"
                                                        placeholder="12345"    id="nroCuenta">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="campos-billetera" class="campos-pago" style="display: none;">
+                                        <div class=" ">
+                                            <label for="nroComprobanteBilletera" class="mb-2 requiredField">
+                                                Nro Comprobante de tu Pago/Transferencia<span
+                                                    class="asteriskField">*</span>
+                                            </label>
+                                            <div>
+                                                <input type="number" name="nroComprobanteBilletera"
+                                                       class="form-control"
+                                                       placeholder="12345"    id="nroComprobanteBilletera">
                                             </div>
                                         </div>
                                     </div>
@@ -279,6 +280,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const monedaDestino = document.getElementById('moneda_destino');
     const montoOrigen = document.getElementById('id_monto_origen');
     const montoDestino = document.getElementById('monto_destino');
+    const moneda_destino_hidden = document.getElementById('id_moneda_destino_hidden');
     const infoTasa = document.getElementById('infoTasa');
     const infoComision = document.getElementById('infoComision');
     const infoTotal = document.getElementById('infoTotal');
@@ -314,6 +316,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('campos-tauser').style.display = 'block';
         } else if (nombreMetodoCobro.includes('Transferencia')) {
             document.getElementById('campos-cobro-transferencia').style.display = 'block';
+        } else if (nombreMetodoCobro.includes('Billetera')) {
+            document.getElementById('campos-billetera').style.display = 'block';
         }
 
 
@@ -376,6 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             //montoDestino.value = isFinite(calculado) ? Math.floor(calculado).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : '';
                         montoDestino.value = calculado;
+                        moneda_destino_hidden.value = calculado;
 
                         if(nombreMetodoCobro && (nombreMetodoCobro.includes('Efectivo') || nombreMetodoCobro.includes('---------'))) {
                             selectorMetodoCobro.value = '';
