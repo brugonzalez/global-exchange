@@ -13,6 +13,7 @@ urlpatterns = [
     
     # Endpoints de API para datos en tiempo real
     path('api/tasas/', views.APIVistaTasasActuales.as_view(), name='api_tasas'),
+    path('api/moneda-base/', views.APIMonedaBase.as_view(), name='api_moneda_base'),
     path('api/tasas/actualizar/', views.APIVistaActualizarTasas.as_view(), name='api_actualizar_tasas'),
     path('api/simular/', views.APIVistaSimulacion.as_view(), name='api_simular'),
     

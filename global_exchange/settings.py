@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django_countries',
     # Aplicaciones de terceros
+    'rest_framework',
     'django_extensions',
     'crispy_forms',
     'crispy_bootstrap4',

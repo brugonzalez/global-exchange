@@ -172,8 +172,7 @@ class FormularioTransaccion(forms.Form):
         queryset=None,
         widget=forms.Select(attrs={
             'class': 'form-select',
-            'id': 'id_metodo_pago',
-            'onchange': 'actualizarCamposPago()'
+            'id': 'id_metodo_pago'
         }),
         label='Método de pago',
         #help_text='Método de pago para esta transacción'
@@ -304,8 +303,8 @@ class FormularioTransaccion(forms.Form):
         # Filtrar métodos de pago según el tipo de transacción
         if tipo_transaccion == 'COMPRA':
             monedas_activas = Moneda.objects.filter(esta_activa=True, es_moneda_base=False, disponible_para_compra=True).order_by('codigo')
-            self.fields['moneda_origen'].queryset = moneda_base
-            self.fields['moneda_destino'].queryset = monedas_activas
+            self.fields['moneda_origen'].queryset = monedas_activas
+            self.fields['moneda_destino'].queryset = moneda_base
             # Cargar métodos de pago (tarjetas) solo si existe un cliente seleccionado
             if cliente is not None:
                 tarjetas_clientes_qs = MedioPago.objects.filter(activo=True, cliente_id=cliente.id).order_by('id')
