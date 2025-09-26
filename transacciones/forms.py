@@ -8,6 +8,8 @@ from .models import Transaccion, SimulacionTransaccion
 class FormularioCancelarTransaccion(forms.Form):
     """
     Formulario para cancelar una transacción con un motivo.
+    Incluye validaciones para asegurar que el motivo sea adecuado y que el usuario confirme la acción.
+
     """
     MOTIVOS = [
         ('SOLICITUD_USUARIO', 'Solicitud del usuario'),
@@ -60,6 +62,7 @@ class FormularioCancelarTransaccion(forms.Form):
 class FormularioFiltroTransaccion(forms.Form):
     """
     Formulario para filtrar la lista de transacciones.
+    Permite filtrar por estado, tipo de transacción y rango de fechas.
     """
     # Excluir 'ANULADA' de las opciones de estado disponibles
     ESTADOS_FILTRO = [estado for estado in Transaccion.ESTADOS if estado[0] != 'ANULADA']
@@ -132,6 +135,8 @@ class FormularioSimulacion(forms.ModelForm):
 class FormularioTransaccion(forms.Form):
     """
     Formulario para crear transacciones de compra/venta.
+    Incluye validaciones para asegurar que los datos ingresados sean correctos y consistentes.
+    
     """
     moneda_origen = forms.ModelChoiceField(
         queryset=None,

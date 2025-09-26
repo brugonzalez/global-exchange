@@ -588,6 +588,44 @@ class HistorialTasaCambio(models.Model):
 class MetodoPago(models.Model):
     """
     Modelo para la configuración de métodos de pago.
+    Representa un método de pago disponible en el sistema, con sus
+    características, comisiones y configuraciones específicas.
+
+    Attributes
+    ----------
+    nombre : str
+        Nombre descriptivo del método de pago (ej. "Transferencia Bancaria").
+    tipo_metodo : str
+        Tipo de método (ej. "BANK_TRANSFER", "DIGITAL_WALLET").
+    grupo_metodo : str
+        Grupo al que pertenece este método de pago (ej. "BANKING", "CARDS").
+    esta_activo : bool
+        Indica si el método está activo y disponible para uso.
+    soporta_compra : bool
+        Indica si el método soporta operaciones de compra.
+    soporta_venta : bool
+        Indica si el método soporta operaciones de venta.
+    monto_minimo : Decimal
+        Monto mínimo permitido para transacciones con este método.
+    monto_maximo : Decimal or None
+        Monto máximo permitido para transacciones con este método.
+    tiempo_procesamiento_horas : int
+        Tiempo estimado de procesamiento en horas.
+    porcentaje_comision : Decimal
+        Comisión aplicada como porcentaje del monto.
+    comision_fija : Decimal
+        Comisión fija aplicada por transacción.
+    instrucciones : str
+        Instrucciones específicas para el usuario al usar este método.
+    configuracion : dict
+        Configuración específica del método de pago (ej. detalles bancarios).
+    fecha_creacion : datetime
+        Fecha de creación del registro.
+    fecha_actualizacion : datetime
+        Fecha de última actualización del registro.
+    porcentaje_visual : int 
+        Campo adicional (0-100) para mostrar al usuario, sincronizado con porcentaje_comision.
+    
     """
     TIPOS_METODO = [
         ('BANK_TRANSFER', 'Transferencia Bancaria'),
@@ -779,7 +817,39 @@ class AlertaTasa(models.Model):
 
 class MetodoCobro(models.Model):
     """
-    Modelo para la configuración de métodos de cobro (cómo el usuario recibirá el dinero).
+    Modelo para la configuración de métodos de cobro.
+    Representa un método de cobro disponible en el sistema, con sus
+    características, comisiones y configuraciones específicas.
+    Attributes
+    ----------
+    nombre : str
+        Nombre descriptivo del método de cobro (ej. "Transferencia Bancaria").
+    tipo_metodo : str
+        Tipo de método (ej. "BANK_TRANSFER", "DIGITAL_WALLET").
+    grupo_metodo : str
+        Grupo al que pertenece este método de cobro (ej. "BANKING", "CASH_PICKUP").
+    esta_activo : bool
+        Indica si el método de cobro está activo.
+    soporta_compra : bool
+        Indica si el método soporta operaciones de compra.
+    soporta_venta : bool
+        Indica si el método soporta operaciones de venta.
+    monto_minimo : Decimal
+        Monto mínimo permitido para transacciones con este método.
+    monto_maximo : Decimal or None
+        Monto máximo permitido para transacciones con este método.
+    porcentaje_comision : Decimal
+        Comisión aplicada como porcentaje del monto.
+    comision_fija : Decimal 
+        Comisión
+        fija aplicada por transacción.
+    fecha_creacion : datetime   
+        Fecha de creación del registro.
+    fecha_actualizacion : datetime
+        Fecha de última actualización del registro.
+    porcentaje_visual : int
+        Campo adicional (0-100) para mostrar al usuario, sincronizado con porcentaje_comision.
+        
     """
     TIPOS_METODO = [
         ('BANK_TRANSFER', 'Transferencia Bancaria'),

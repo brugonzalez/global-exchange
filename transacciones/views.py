@@ -34,6 +34,7 @@ import divisas.utils as divisas_utils
 class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para crear transacciones de compra.
+    Permite a los usuarios con el permiso 'solicitar_cambio_compra' iniciar una transacción de compra de divisas.
     """
     template_name = 'transacciones/transaccion_compra.html'
     permiso_requerido = 'solicitar_cambio_compra'
@@ -199,6 +200,7 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
 class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
     Vista para crear transacciones de venta.
+    Permite a los usuarios con el permiso 'solicitar_cambio_venta' iniciar una transacción de venta de divisas.
     """
     template_name = 'transacciones/transaccion_venta.html'
     permiso_requerido = 'solicitar_cambio_venta'
@@ -362,6 +364,7 @@ class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView
 class VistaDetalleTransaccion(LoginRequiredMixin, DetailView):
     """
     Vista detallada de una transacción.
+    Permite ver los detalles de una transacción específica y, si es posible, cancelarla.
     """
     model = Transaccion
     template_name = 'transacciones/detalle_transaccion.html'
@@ -392,6 +395,7 @@ class VistaDetalleTransaccion(LoginRequiredMixin, DetailView):
 class VistaCancelarTransaccion(LoginRequiredMixin, TemplateView):
     """
     Cancela una transacción con un motivo.
+    Solo se permite cancelar si la transacción está en un estado que lo permita.
     """
     template_name = 'transacciones/cancelar_transaccion.html'
     
@@ -931,6 +935,7 @@ class APIVistaEstadoTransaccion(LoginRequiredMixin, TemplateView):
             })
 
 def obtenerTasasMonedas():
+    """"Obtiene las tasas de cambio entre monedas en formato JSON."""
     tasas = TasaCambio.objects.select_related('moneda_origen', 'moneda_destino').all()
     resultado = []
     for tasa in tasas:

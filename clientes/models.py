@@ -176,6 +176,11 @@ class Cliente(models.Model):
         Fecha de última actualización del registro.
     saldo_cuenta : DecimalField
         Saldo de la cuenta principal del cliente.
+    usa_limites_default : BooleanField
+        Indica si el cliente usa los límites definidos por defecto o personalizados.
+    stripe_customer_id : CharField
+        ID del cliente en Stripe para integraciones de pago.
+    
     """
     TIPOS_CLIENTE = [
         ('FISICA', 'Persona Física'),
@@ -289,8 +294,7 @@ class Cliente(models.Model):
         """
         Verifica si el cliente puede realizar la transacción según los límites establecidos.
 
-        Evalúa los límites diarios y mensuales de transacción basándose en la categoría del cliente y
-        las transacciones ya realizadas.
+        Evalúa los límites diarios y mensuales de transacción basándose en las configuraciones del cliente.
 
         Parameters
         ----------

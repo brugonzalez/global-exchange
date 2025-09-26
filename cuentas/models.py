@@ -780,7 +780,34 @@ class RegistroAuditoria(models.Model):
 class Configuracion (models.Model):
     """
     Modelo para almacenar configuraciones del sistema.
-    Permite gestionar parámetros configurables de la aplicación.
+    Permite gestionar parámetros globales configurables de la aplicación.
+
+    Attributes
+    ----------
+    clave : CharField
+        Nombre único de la configuración.
+    valor : TextField
+        Valor de la configuración (almacenado como texto).      
+    tipo_valor : CharField
+        Tipo de dato del valor (p.ej. texto, número, booleano).
+    descripcion : CharField
+        Descripción corta de la configuración.
+    categoria : CharField
+        Categoría o grupo al que pertenece la configuración.
+    es_editable : BooleanField
+        Indica si la configuración puede ser modificada por el usuario.
+    fecha_creacion : DateTimeField
+        Fecha y hora de creación de la configuración.
+    fecha_actualizacion : DateTimeField
+        Fecha y hora de la última actualización de la configuración.
+    nombre : CharField
+        Nombre legible para la configuración.
+    
+    Notes
+    -----
+    - El campo ``valor`` se almacena como texto y se convierte al tipo adecuado según ``tipo_valor``.
+    - Se implementan métodos estáticos para obtener y establecer configuraciones por clave.
+    - Útil para parámetros globales como tasas, límites, opciones de seguridad, etc.
     """
     TIPOS_VALOR = [
         ('TEXT', 'Texto'),

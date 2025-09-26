@@ -346,7 +346,11 @@ class FormularioMedioPago(forms.ModelForm):
 
 # pagos/forms.py
 class FormularioEditarPago(forms.ModelForm):
-    """Formulario para editar el porcentaje de comisión de métodos de pago."""
+    """Formulario para editar el porcentaje de comisión de métodos de pago.
+    En este formulario, el porcentaje se muestra como un valor visual (0-100)
+    para facilitar la edición por parte del usuario.
+    
+    """
 
     porcentaje_visual = forms.DecimalField(
         max_digits=6,

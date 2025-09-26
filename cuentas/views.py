@@ -2068,7 +2068,9 @@ def eliminar_usuario(request, usuario_id):
 
 
 class VistaConfiguracionSistema(MixinStaffRequerido, TemplateView):
-    """Vista para gestionar configuraciones del sistema con edición inline."""
+    """Vista para gestionar configuraciones del sistema con edición.
+    Permite ver y editar configuraciones agrupadas por categoría.
+    cada configuración editable se muestra con su propio formulario inline."""
     template_name = 'cuentas/configuracion_sistema.html'
 
     def _build_items_por_categoria(self, formulario_overrides=None):

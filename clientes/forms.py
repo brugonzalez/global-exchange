@@ -23,7 +23,7 @@ Usuario = get_user_model()
 class FormularioPreferenciaCliente(forms.ModelForm):
     """
     Formulario para la gestión de preferencias de clientes.
-    Permite establecer límites y preferencias personalizadas que sobrescriben los valores por defecto de la categoría del cliente.
+    Permite establecer límites y preferencias personalizadas que sobrescriben los valores por defecto.
 
     Attributes
     -------------
@@ -48,18 +48,16 @@ class FormularioPreferenciaCliente(forms.ModelForm):
 
 
 class FormularioLimiteCliente(forms.ModelForm):
-    """ 
-    Formulario para definir límites de transacciones específicos para un cliente.
-    Estos límites sobrescriben los límites generales y de categoría del cliente.
+    """
+    Permite establecer límites personalizados para un cliente específico.
 
     Attributes
     -------------
-    cliente : Cliente
-        Cliente al que se aplican los límites personalizados.
-    monto_limite_diario : NumberInput
-        Límite diario para transacciones (0 = sin límite).
-    monto_limite_mensual : NumberInput
-        Límite mensual para transacciones (0 = sin límite).
+    monto_limite_diario : IntegerField
+        Límite diario de transacciones en PYG.
+    monto_limite_mensual : IntegerField
+        Límite mensual de transacciones en PYG.
+
     """
     class Meta:
         model = LimiteTransaccionCliente
@@ -201,6 +199,10 @@ class FormularioCliente(forms.ModelForm):
         Número de teléfono del cliente.
     direccion : Textarea
         Dirección del cliente.
+    usa_limites_default : CheckboxInput
+        Indica si el cliente usa los límites definidos por defecto o personalizados.
+    
+    
     """
     class Meta:
         model = Cliente

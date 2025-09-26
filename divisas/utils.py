@@ -40,6 +40,20 @@ def _to_decimal(valor: NumberLike) -> Decimal:
 
 	Se aceptan int, float, str y Decimal. Para float se convierte a string
 	primero para minimizar errores binarios.
+	
+	Praameters
+    ----------
+	valor : int | float | str | Decimal
+        Valor a convertir.
+	
+    Returns
+    -------
+    Decimal
+	
+    Raises
+    ------
+    InvalidOperation
+        Si no se puede convertir a Decimal.
 	"""
 	if isinstance(valor, Decimal):
 		return valor

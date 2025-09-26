@@ -753,7 +753,11 @@ class FormularioRegistroUsuario(UserCreationForm):
 
 
 class FormularioConfiguracion(forms.ModelForm):
-    """Formulario para editar configuraciones del sistema."""
+    """
+    Formulario para editar configuraciones del sistema.
+    Permite modificar el nombre, valor y descripción de una configuración específica.
+    
+    """
 
     class Meta:
         model = Configuracion

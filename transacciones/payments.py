@@ -17,6 +17,15 @@ stripe.api_key = settings.STRIPE_CLAVE_SECRETA
 class ProcesadorPagos:
     """
     Procesador de pagos central que maneja diferentes métodos de pago.
+    Soporta tarjetas de crédito (Stripe), billeteras digitales y otros métodos.
+    Cada método de pago puede tener su propia lógica de procesamiento.
+    Parameters
+    ----------
+    metodo_pago : MetodoPago
+        Instancia del método de pago a utilizar.
+    transaccion : Transaccion
+        Instancia de la transacción asociada al pago.
+
     """
     
     def __init__(self, metodo_pago, transaccion):
@@ -26,6 +35,16 @@ class ProcesadorPagos:
     def procesar_pago(self, datos_pago: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesa el pago basado en el tipo de método de pago.
+
+        Parameters
+        ----------
+        datos_pago : Dict[str, Any]
+            Datos específicos necesarios para procesar el pago (e.g., id de método de pago, detalles de cuenta).
+
+        Returns
+        -------
+        Dict[str, Any]
+            Resultado del procesamiento del pago, incluyendo estado y mensajes.
         """
         tipo_metodo = self.metodo_pago.tipo_metodo
         
@@ -43,6 +62,14 @@ class ProcesadorPagos:
     def _procesar_pago_stripe(self, datos_pago: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesa el pago a través de Stripe.
+        Parameters
+        ----------
+        datos_pago : Dict[str, Any]
+            Debe incluir 'id_metodo_pago' (ID del método de pago de Stripe) y opcionalmente 'return_url'.
+        Returns
+        -------
+        Dict[str, Any]
+            Resultado del intento de pago con detalles relevantes.
         """
         try:
             # Crear intento de pago
@@ -113,6 +140,16 @@ class ProcesadorPagos:
     def _procesar_pago_sipap(self, datos_pago: Dict[str, Any]) -> Dict[str, Any]:
         """
         Pseudo-integración con SIPAP (Sistema de Pagos Paraguay).
+
+        Parameters
+        ----------
+        datos_pago : Dict[str, Any]
+            Debe incluir 'cuenta_sipap' (número de cuenta SIPAP del cliente).
+        
+        Returns
+        -------
+        Dict[str, Any]
+            Resultado del intento de pago con detalles relevantes.
         """
         # Simular llamada a la API de SIPAP
         cuenta_sipap = datos_pago.get('cuenta_sipap')
@@ -137,6 +174,16 @@ class ProcesadorPagos:
     def _procesar_pago_western_union(self, datos_pago: Dict[str, Any]) -> Dict[str, Any]:
         """
         Pseudo-integración con Western Union.
+
+        Parameters
+        ----------
+        datos_pago : Dict[str, Any]
+            Debe incluir 'info_destinatario' (información del destinatario).
+
+        Returns
+        -------
+        Dict[str, Any]
+            Resultado del intento de pago con detalles relevantes.
         """
         info_destinatario = datos_pago.get('info_destinatario', {})
         
@@ -152,6 +199,14 @@ class ProcesadorPagos:
     def _procesar_pago_eurotransfer(self, datos_pago: Dict[str, Any]) -> Dict[str, Any]:
         """
         Pseudo-integración con EuroTransfer.
+        Parameters
+        ----------
+        datos_pago : Dict[str, Any]
+            Debe incluir 'cuenta_eurotransfer' (número de cuenta EuroTransfer del cliente).
+        Returns
+        -------
+        Dict[str, Any]
+            Resultado del intento de pago con detalles relevantes.
         """
         return {
             'success': True,
