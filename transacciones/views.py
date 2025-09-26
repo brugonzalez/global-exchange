@@ -552,7 +552,7 @@ class VistaHistorialTransacciones(LoginRequiredMixin, MixinPermisosAdmin, Templa
                 'cliente': cliente_filtro,
                 'usuario': usuario_filtro,
             },
-            'opciones_estado': [estado for estado in Transaccion.ESTADOS if estado[0] != 'ANULADA'],  # Excluir ANULADA
+            'opciones_estado': [estado for estado in Transaccion.ESTADOS if estado[0] not in ['ANULADA', 'FALLIDA']],  # Excluir ANULADA y FALLIDA
             'opciones_tipo': Transaccion.TIPOS_TRANSACCION,
             'monedas': Moneda.objects.filter(esta_activa=True).order_by('codigo'),
             'clientes': Cliente.objects.filter(estado='ACTIVO').order_by('nombre', 'nombre_empresa'),

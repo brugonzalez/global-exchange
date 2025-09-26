@@ -189,10 +189,6 @@
                             <label class="form-label fw-bold">Tasa de Cambio:</label>
                             <p class="mb-0">{{ transaccion.tasa_cambio|floatformat:6 }}</p>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Fuente de Tasa:</label>
-                            <p class="mb-0">{{ transaccion.fuente_tasa }}</p>
-                        </div>
                         {% if transaccion.monto_comision > 0 %}
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Comisión:</label>

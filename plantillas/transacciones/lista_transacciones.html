@@ -311,7 +311,6 @@
                                     </td>
                                     <td>
                                         <span class="font-monospace">{{ transaccion.tasa_cambio|floatformat:4 }}</span>
-                                        <br><small class="text-muted">{{ transaccion.fuente_tasa }}</small>
                                     </td>
                                     <td>
                                         {% if transaccion.estado == 'PENDIENTE' %}
@@ -343,7 +342,6 @@
                                     </td>
                                     <td>
                                         <div>{{ transaccion.cliente.obtener_nombre_completo }}</div>
-                                        <small class="text-muted">{{ transaccion.cliente.get_tipo_cliente_display }}</small>
                                         {% if es_administrador %}<br><small class="text-muted">{{ transaccion.cliente.email }}</small>{% endif %}
                                     </td>
                                     {% if es_administrador %}
