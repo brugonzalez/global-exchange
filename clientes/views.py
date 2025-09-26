@@ -1170,28 +1170,30 @@ class VistaDetallesUsuario(LoginRequiredMixin, MixinStaffRequerido, View):
             cliente_usuario = get_object_or_404(ClienteUsuario, cliente=cliente, usuario=usuario)
             
             # Preparar detalles del usuario
-            detalles_usuario = {
-                'id': usuario.id,
-                'nombre_completo': usuario.nombre_completo,
-                'username': usuario.username,
-                'email': usuario.email,
-                'esta_activo': usuario.is_active,
-                'es_staff': usuario.is_staff,
-                'es_superuser': usuario.is_superuser,
-                'fecha_registro': usuario.date_joined.strftime('%d/%m/%Y %H:%M') if usuario.date_joined else None,
-                'ultimo_login': usuario.last_login.strftime('%d/%m/%Y %H:%M') if usuario.last_login else 'Nunca',
-                'email_verificado': usuario.email_verificado,
-                'autenticacion_dos_factores_activa': usuario.autenticacion_dos_factores_activa,
-                'intentos_fallidos_login': usuario.intentos_fallidos_login,
-                'cuenta_bloqueada': usuario.esta_cuenta_bloqueada(),
-                'relacion_cliente': {
-                    'rol': cliente_usuario.get_rol_display(),
-                    'esta_activo': cliente_usuario.esta_activo,
-                    'fecha_asignacion': cliente_usuario.fecha_asignacion.strftime('%d/%m/%Y %H:%M'),
-                    'asignado_por': cliente_usuario.asignado_por.nombre_completo if cliente_usuario.asignado_por else 'Sistema',
-                    'puede_realizar_transacciones': cliente_usuario.puede_realizar_transacciones(),
+            try:
+                detalles_usuario = {
+                    'id': usuario.id,
+                    'nombre_completo': usuario.nombre_completo,
+                    'username': usuario.username,
+                    'email': usuario.email,
+                    'esta_activo': usuario.is_active,
+                    'es_staff': usuario.is_staff,
+                    'es_superuser': usuario.is_superuser,
+                    'fecha_registro': usuario.date_joined.strftime('%d/%m/%Y %H:%M') if usuario.date_joined else None,
+                    'ultimo_login': usuario.last_login.strftime('%d/%m/%Y %H:%M') if usuario.last_login else 'Nunca',
+                    'email_verificado': usuario.email_verificado,
+                    'autenticacion_dos_factores_activa': usuario.autenticacion_dos_factores_activa,
+                    'intentos_fallidos_login': usuario.intentos_fallidos_login,
+                    'cuenta_bloqueada': usuario.esta_cuenta_bloqueada(),
+                    'relacion_cliente': {
+                        'rol': cliente_usuario.get_rol_display(),
+                        'esta_activo': cliente_usuario.esta_activo,
+                        'fecha_asignacion': cliente_usuario.fecha_asignacion.strftime('%d/%m/%Y %H:%M'),
+                        'asignado_por': cliente_usuario.asignado_por.nombre_completo if cliente_usuario.asignado_por else 'Sistema',
+                    }
                 }
-            }
+            except Exception as e:
+                raise Exception(f'Error al preparar los detalles del usuario: {str(e)}')
             
             # Obtener conteo de clientes asociados
             detalles_usuario['total_clientes'] = usuario.clientes.count()
