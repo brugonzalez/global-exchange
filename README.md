@@ -68,7 +68,7 @@ Global Exchange es una plataforma web desarrollada en Django que permite digital
 
 6. **Inicializar el sistema con datos básicos**
    ```bash
-   
+   python manage.py init_system
    ```
    
    Este comando creará:
