@@ -25,6 +25,8 @@ from .forms import FormularioCancelarTransaccion, FormularioTransaccion, Formula
 from .payments import ProcesadorPagos, crear_intento_pago_stripe
 from divisas.models import Moneda, TasaCambio
 from cuentas.views import MixinPermisosAdmin
+from clientes import utils as clientes_utils
+import divisas.utils as divisas_utils
 
 class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateView):
     """
@@ -59,17 +61,26 @@ class VistaTransaccionCompra(LoginRequiredMixin, MixinPermisosAdmin, TemplateVie
             return redirect('clientes:lista_clientes')
         
         formulario = FormularioTransaccion(solicitud.POST, transaction_type='COMPRA', user=solicitud.user, moneda_base=Moneda.objects.get(es_moneda_base=True))
-        
         if formulario.is_valid():
-            # Obtener el cliente - ya sea del formulario o del cliente seleccionado por el usuario
             cliente = formulario.cleaned_data.get('cliente') or solicitud.user.ultimo_cliente_seleccionado
-            
             if not cliente:
                 messages.error(solicitud, 'No se pudo determinar el cliente para la transacción.')
-                contexto = self.get_context_data(**kwargs)
-                contexto['formulario'] = formulario
-                return self.render_to_response(contexto)
-            
+                contexto = self.get_context_data(**kwargs); contexto['formulario'] = formulario; return self.render_to_response(contexto)
+            monto = formulario.cleaned_data['monto_origen']
+            info_lim = clientes_utils.verificar_limites(cliente, monto)
+            if info_lim['excede_diario'] or info_lim['excede_mensual']:
+                def _fmt(val):
+                    return f"{val:.2f}" if val not in (None, 0) else 'sin límite definido'
+                lim_d = divisas_utils.formatear_monto_moneda(info_lim.get('limite_diario'), 'PYG')
+                lim_m = divisas_utils.formatear_monto_moneda(info_lim.get('limite_mensual'), 'PYG')
+                if info_lim['excede_diario'] and info_lim['excede_mensual']:
+                    msg = f"Límites excedidos: diario ({lim_d} PYG) y mensual ({lim_m} PYG)."
+                elif info_lim['excede_diario']:
+                    msg = f"Límite diario excedido ({lim_d} PYG)."
+                else:
+                    msg = f"Límite mensual excedido ({lim_m} PYG)."
+                messages.error(solicitud, msg)
+                contexto = self.get_context_data(**kwargs); contexto['formulario'] = formulario; return self.render_to_response(contexto)
             # Obtener tasa de cambio (implementación de ejemplo)
             # En una implementación real, esto se obtendría del modelo TasaCambio
 
@@ -195,17 +206,26 @@ class VistaTransaccionVenta(LoginRequiredMixin, MixinPermisosAdmin, TemplateView
             return redirect('clientes:lista_clientes')
         
         formulario = FormularioTransaccion(solicitud.POST, transaction_type='VENTA', user=solicitud.user)
-        
         if formulario.is_valid():
-            # Obtener el cliente - ya sea del formulario o del cliente seleccionado por el usuario
             cliente = formulario.cleaned_data.get('cliente') or solicitud.user.ultimo_cliente_seleccionado
-            
             if not cliente:
                 messages.error(solicitud, 'No se pudo determinar el cliente para la transacción.')
-                contexto = self.get_context_data(**kwargs)
-                contexto['formulario'] = formulario
-                return self.render_to_response(contexto)
-            
+                contexto = self.get_context_data(**kwargs); contexto['formulario'] = formulario; return self.render_to_response(contexto)
+            monto = formulario.cleaned_data['monto_origen']
+            info_lim = clientes_utils.verificar_limites(cliente, monto)
+            if info_lim['excede_diario'] or info_lim['excede_mensual']:
+                def _fmt(val):
+                    return f"{val:.2f}" if val not in (None, 0) else 'sin límite definido'
+                lim_d = divisas_utils.formatear_monto_moneda(info_lim.get('limite_diario'), 'PYG')
+                lim_m = divisas_utils.formatear_monto_moneda(info_lim.get('limite_mensual'), 'PYG')
+                if info_lim['excede_diario'] and info_lim['excede_mensual']:
+                    msg = f"Límites excedidos: diario ({lim_d} PYG) y mensual ({lim_m} PYG)."
+                elif info_lim['excede_diario']:
+                    msg = f"Límite diario excedido ({lim_d} PYG)."
+                else:
+                    msg = f"Límite mensual excedido ({lim_m} PYG)."
+                messages.error(solicitud, msg)
+                contexto = self.get_context_data(**kwargs); contexto['formulario'] = formulario; return self.render_to_response(contexto)
             # Obtener tasa de cambio (implementación de ejemplo)
             # En una implementación real, esto se obtendría del modelo TasaCambio
             from decimal import Decimal
