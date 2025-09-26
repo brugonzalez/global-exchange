@@ -800,6 +800,7 @@ class Configuracion (models.Model):
                                       help_text="Si la configuración puede ser editada por el usuario")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    nombre = models.CharField(max_length=100, blank=True, help_text="Nombre legible para la configuración")
 
     class Meta:
         db_table = 'cuentas_configuracion'
