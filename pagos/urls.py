@@ -23,4 +23,6 @@ urlpatterns = [
     path('gestion-metodos-cobro/', views.VistaGestionMetodosCobro.as_view(), name='gestion_metodos_cobro'),
     path('toggle-metodo-pago/<int:metodo_id>/', views.VistaToggleMetodoPago.as_view(), name='toggle_metodo_pago'),
     path('toggle-metodo-cobro/<int:metodo_id>/', views.VistaToggleMetodoCobro.as_view(), name='toggle_metodo_cobro'),
+    path('medios/editar-pago/<int:metodo_id>/', views.VistaEditarPago.as_view(), name='editar_pago'),
+    path('medios/editar-cobro/<int:metodo_id>/', views.VistaEditarCobro.as_view(), name='editar_cobro'),
 ]
