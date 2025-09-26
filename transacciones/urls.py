@@ -25,4 +25,7 @@ urlpatterns = [
     # Patrones genéricos (deben ir al final)
     path('<uuid:id_transaccion>/', views.VistaDetalleTransaccion.as_view(), name='detalle_transaccion'),
     path('<uuid:id_transaccion>/cancelar/', views.VistaCancelarTransaccion.as_view(), name='cancelar_transaccion'),
+    
+    path('configurar/', views.VistaConfiguracionTransaccion.as_view(), name='configurar_transaccion'),
+    
 ]

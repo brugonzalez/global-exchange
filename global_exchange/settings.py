@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'django_countries',
-    
     # Aplicaciones de terceros
     'django_extensions',
     'crispy_forms',
@@ -273,3 +272,15 @@ LOGGING = {
         },
     },
 }
+# settings.py
+# Configuración de Celery
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # O 'redis://redis:6379/0' si usas Docker
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Asuncion'  # Ajusta a tu zona horaria
+
+# Opcional: Configurar colas específicas
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_CREATE_MISSING_QUEUES = True
