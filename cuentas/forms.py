@@ -757,8 +757,12 @@ class FormularioConfiguracion(forms.ModelForm):
 
     class Meta:
         model = Configuracion
-        fields = ['valor', 'descripcion']
+        fields = ['nombre', 'valor', 'descripcion']
         widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre legible (opcional)'
+            }),
             'valor': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Ingrese el valor'

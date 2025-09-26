@@ -2068,28 +2068,78 @@ def eliminar_usuario(request, usuario_id):
 
 
 class VistaConfiguracionSistema(MixinStaffRequerido, TemplateView):
-    """Vista para gestionar configuraciones del sistema."""
+    """Vista para gestionar configuraciones del sistema con edición inline."""
     template_name = 'cuentas/configuracion_sistema.html'
+
+    def _build_items_por_categoria(self, formulario_overrides=None):
+        """Crea una estructura por categoría con (config, form) para edición inline.
+
+        formulario_overrides: dict[int, FormularioConfiguracion]
+            Formularios ya ligados (con errores/POST) para reemplazar los iniciales por defecto.
+        """
+        from .forms import FormularioConfiguracion
+        configuraciones = Configuracion.objects.filter(es_editable=True)
+        items_por_categoria = {}
+        for config in configuraciones:
+            categoria = config.categoria
+            if categoria not in items_por_categoria:
+                items_por_categoria[categoria] = []
+
+            # Usar override si existe para este config.id (por ejemplo, tras POST inválido)
+            if formulario_overrides and config.id in formulario_overrides:
+                form = formulario_overrides[config.id]
+            else:
+                form = FormularioConfiguracion(instance=config, prefix=f"cfg_{config.id}")
+
+            items_por_categoria[categoria].append({
+                'config': config,
+                'form': form,
+            })
+        return items_por_categoria, configuraciones.count()
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
-
-        # Agrupar configuraciones por categoría
-        configuraciones = Configuracion.objects.filter(es_editable=True)
-        configuraciones_por_categoria = {}
-
-        for config in configuraciones:
-            categoria = config.categoria
-            if categoria not in configuraciones_por_categoria:
-                configuraciones_por_categoria[categoria] = []
-            configuraciones_por_categoria[categoria].append(config)
-
+        items_por_categoria, total = self._build_items_por_categoria()
         contexto.update({
-            'configuraciones_por_categoria': configuraciones_por_categoria,
-            'total_configuraciones': configuraciones.count(),
+            'items_por_categoria': items_por_categoria,
+            'total_configuraciones': total,
         })
-
         return contexto
+
+    def post(self, request, *args, **kwargs):
+        from .forms import FormularioConfiguracion
+        config_id = request.POST.get('config_id')
+        if not config_id:
+            messages.error(request, 'Solicitud inválida: falta el identificador de la configuración.')
+            return redirect('cuentas:configuracion_sistema')
+
+        try:
+            config = Configuracion.objects.get(id=config_id, es_editable=True)
+        except Configuracion.DoesNotExist:
+            messages.error(request, 'La configuración no existe o no es editable.')
+            return redirect('cuentas:configuracion_sistema')
+
+        # Usar el mismo prefix que en el render para esta config
+        prefix = f"cfg_{config.id}"
+        formulario = FormularioConfiguracion(request.POST, instance=config, prefix=prefix)
+
+        if formulario.is_valid():
+            # Guardar solo campos editables desde la UI inline (proteger 'nombre')
+            instancia = formulario.save(commit=False)
+            instancia.nombre = config.nombre  # mantener nombre original (no editable inline)
+            # Persistir cambios en valor y descripcion (y nombre intacto)
+            instancia.save(update_fields=['valor', 'descripcion', 'nombre'])
+            messages.success(request, f'Configuración "{config.clave}" actualizada correctamente.')
+            return redirect('cuentas:configuracion_sistema')
+        else:
+            # Volver a renderizar con errores únicamente para esta fila
+            overrides = {config.id: formulario}
+            items_por_categoria, total = self._build_items_por_categoria(formulario_overrides=overrides)
+            contexto = {
+                'items_por_categoria': items_por_categoria,
+                'total_configuraciones': total,
+            }
+            return render(request, self.template_name, contexto)
 
 
 class VistaEditarConfiguracion(MixinStaffRequerido, View):
