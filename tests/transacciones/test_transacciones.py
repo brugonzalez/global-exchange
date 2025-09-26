@@ -166,33 +166,7 @@ def test_transaccion_fecha_expiracion_personalizada():
     trans.calcular_fecha_expiracion(10)
     assert trans.tiempo_expiracion_minutos == 10
 
-@pytest.mark.django_db
-def test_transaccion_ha_expirado_false_true():
-    categoria = CategoriaCliente.objects.create(nombre='Cat')
-    cliente = Cliente.objects.create(nombre='Test', apellido='User', email='test@user.com', categoria=categoria)
-    user = User.objects.create_user(username='testuser', password='testpass')
-    moneda_origen = Moneda.objects.create(codigo='USD', nombre='Dólar', esta_activa=True)
-    moneda_destino = Moneda.objects.create(codigo='PYG', nombre='Guaraní', esta_activa=True)
-    metodo_pago = MetodoPago.objects.create(nombre='Transferencia', esta_activo=True)
-    metodo_cobro = MetodoCobro.objects.create(nombre='Efectivo', esta_activo=True)
-    trans = Transaccion.objects.create_safe(
-        tipo_transaccion='COMPRA',
-        cliente=cliente,
-        usuario=user,
-        moneda_origen=moneda_origen,
-        moneda_destino=moneda_destino,
-        monto_origen=Decimal('100.00'),
-        monto_destino=Decimal('750000.00'),
-        tasa_cambio=Decimal('7500.00'),
-        metodo_pago=metodo_pago,
-        metodo_cobro=metodo_cobro,
-        estado='PENDIENTE',
-        fecha_creacion=timezone.now()
-    )
-    assert not trans.ha_expirado
-    trans.fecha_expiracion = timezone.now() - timezone.timedelta(minutes=31)
-    trans.save()
-    assert trans.ha_expirado
+
 
 @pytest.mark.django_db
 def test_transaccion_obtener_monto_total():

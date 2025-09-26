@@ -1,4 +1,3 @@
-
 # Señales para crear PrecioBase y tasas de cambio automáticamente
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -6,6 +5,9 @@ from .models import Moneda, PrecioBase, TasaCambio
 from clientes.models import CategoriaCliente
 from django.db import transaction
 from decimal import Decimal
+from transacciones.models import Transaccion
+from django.utils import timezone
+from django.db import models
 
 @receiver(post_save, sender=PrecioBase)
 def crear_actualizar_tasas_cambio(sender, instance, created, **kwargs):
@@ -90,3 +92,18 @@ def crear_precio_base_al_crear_moneda(sender, instance, created, **kwargs):
 					'esta_activa': True
 				}
 			)
+
+@receiver(post_save, sender=TasaCambio)
+def cancelar_transacciones_pendientes_por_cambio_tasa(sender, instance, created, **kwargs):
+    """
+    Cancela transacciones pendientes si la moneda de origen o destino coincide con la moneda de la tasa cambiada.
+    """
+    if not created:
+        moneda_afectada = instance.moneda
+        pendientes = Transaccion.objects.filter(estado='PENDIENTE').filter(
+            models.Q(moneda_origen=moneda_afectada) | models.Q(moneda_destino=moneda_afectada)
+        )
+        for transaccion in pendientes:
+            transaccion.estado = 'CANCELADA'
+            transaccion.fecha_actualizacion = timezone.now()
+            transaccion.save(update_fields=['estado', 'fecha_actualizacion'])

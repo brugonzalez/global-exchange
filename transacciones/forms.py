@@ -40,15 +40,14 @@ class FormularioCancelarTransaccion(forms.Form):
         max_length=1000,
         help_text='Proporcione una descripción detallada del motivo de cancelación'
     )
+    moneda_origen = forms.ModelChoiceField(
+            queryset=Moneda.objects.filter(esta_activa=True, es_moneda_base=False),
+            widget=forms.Select(attrs={'class': 'form-select'}),
+            label='Moneda origen',
+            #help_text='Moneda que entrega'
+        )
+
     
-    confirmar_cancelacion = forms.BooleanField(
-        widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input',
-            'required': True
-        }),
-        label='Confirmo que deseo cancelar esta transacción',
-        help_text='Esta acción no se puede deshacer'
-    )
     
     def clean_motivo(self):
         motivo = self.cleaned_data['motivo']
@@ -308,8 +307,8 @@ class FormularioTransaccion(forms.Form):
         # Filtrar métodos de pago según el tipo de transacción
         if tipo_transaccion == 'COMPRA':
             monedas_activas = Moneda.objects.filter(esta_activa=True, es_moneda_base=False, disponible_para_compra=True).order_by('codigo')
-            self.fields['moneda_origen'].queryset = monedas_activas
-            self.fields['moneda_destino'].queryset = moneda_base
+            self.fields['moneda_origen'].queryset = moneda_base
+            self.fields['moneda_destino'].queryset = monedas_activas
             # Cargar métodos de pago (tarjetas) solo si existe un cliente seleccionado
             if cliente is not None:
                 tarjetas_clientes_qs = MedioPago.objects.filter(activo=True, cliente_id=cliente.id).order_by('id')

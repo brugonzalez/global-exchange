@@ -425,7 +425,7 @@ class Transaccion(models.Model):
             minutos_expiracion = getattr(self, '_tiempo_expiracion_configurado', 30)
         
         self.tiempo_expiracion_minutos = minutos_expiracion
-        self.fecha_expiracion = self.fecha_creacion + timedelta(minutes=minutos_expiracion)
+        self.fecha_expiracion = self.fecha_creacion or timezone.now() + timedelta(minutes=minutos_expiracion)
     
     @property
     def tiempo_restante(self):

@@ -12,6 +12,9 @@ Pillow==11.3.0
 # Generación de PDF
 reportlab==4.0.9
 weasyprint==61.2
+celery==5.5.3
+djangorestframework
+markdown
 
 
 # Generación de Excel
