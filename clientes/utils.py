@@ -176,3 +176,53 @@ def obtener_monto_transacciones_mes(cliente) -> Decimal:
         return Decimal(total).quantize(Decimal('0.01'))
     except Exception:
         return Decimal('0.00')
+
+def verificar_limites(cliente, monto_propuesto: Decimal):
+    """Devuelve un dict con el estado de límites para un monto propuesto.
+
+    Estructura retornada:
+        {
+          'limite_diario': Decimal|None,
+          'limite_mensual': Decimal|None,
+          'usado_diario': Decimal,
+          'usado_mensual': Decimal,
+          'restante_diario': Decimal|None,
+          'restante_mensual': Decimal|None,
+          'excede_diario': bool,
+          'excede_mensual': bool,
+        }
+    Si un límite es None o 0 se interpreta como "ilimitado" y no bloquea.
+    """
+    from . import utils as _u  # por si se importa indirectamente
+    # Para evitar recursión si renombrado, usamos funciones locales ya definidas
+    limite_d = obtener_limite_diario(cliente)
+    limite_m = obtener_limite_mensual(cliente)
+    usado_d = obtener_monto_transacciones_hoy(cliente)
+    usado_m = obtener_monto_transacciones_mes(cliente)
+
+    # Tratar None como 0 (sin límite => None => no se bloquea)
+    ilimitado_d = (limite_d is None or limite_d == 0)
+    ilimitado_m = (limite_m is None or limite_m == 0)
+
+    excede_diario = False
+    excede_mensual = False
+    restante_d = None
+    restante_m = None
+
+    if not ilimitado_d:
+        restante_d = limite_d - usado_d
+        excede_diario = (usado_d + monto_propuesto) > limite_d
+    if not ilimitado_m:
+        restante_m = limite_m - usado_m
+        excede_mensual = (usado_m + monto_propuesto) > limite_m
+
+    return {
+        'limite_diario': limite_d,
+        'limite_mensual': limite_m,
+        'usado_diario': usado_d,
+        'usado_mensual': usado_m,
+        'restante_diario': restante_d,
+        'restante_mensual': restante_m,
+        'excede_diario': excede_diario,
+        'excede_mensual': excede_mensual,
+    }
