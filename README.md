@@ -107,101 +107,38 @@ python manage.py createsuperuser
 
 ## ⚙️ Configuración de Producción
 
-### Base de Datos PostgreSQL
+### Todo estara montado en docker
 
-1. **Instalar PostgreSQL**
-2. **Crear base de datos:**
-   ```sql
-   CREATE DATABASE global_exchange;
-   CREATE USER global_exchange_user WITH PASSWORD 'tu_password';
-   GRANT ALL PRIVILEGES ON DATABASE global_exchange TO global_exchange_user;
-   ```
+1. **Instalar Docker:**
+    Siga las instrucciones oficiales en [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/).
+2. **Intrucciones luego de la instalación:**
+   Ubicarnos en la carpeta del proyecto donde se encuentr el archivo docker-compose.yml. Ejecutar en la terminal:
+    ```bash
+    docker compose up --build -d
+    ```
+    Si es la primera vez que lo ejecutas podria tardar un poco ya que descarga las imagenes y crea los contenedores.
 
-3.  **Actualizar configuración en `global_exchange/settings.py`:**
+    En cuyo caso es la primera vez que lo ejecutas, debes correr las migraciones y el comando init_system, tambien un comando que para los archivos estaticos
     
-   a. **Abra su archivo `.env`** y descomente las variables de entorno de la base de datos (`DB_*`).
+    ```bash
+      docker compose exec web python manage.py makemigrations
+      docker compose exec web python manage.py migrate
+      docker compose exec web python manage.py init_system
+      docker compose exec web python manage.py collectstatic --noinput
+    ```
    
-   b. **Complete las variables** con los datos de su base de datos PostgreSQL:
-   ```
-   DB_NAME=global_exchange
-   DB_USER=usuario_exchange
-   DB_PASSWORD=tu_contraseña
-   DB_HOST=localhost
-   DB_PORT=5432
-   ```
-   
-   c. En el archivo `settings.py`, asegúrese de que la sección de la base de datos de PostgreSQL esté descomentada para que lea estas variables de su archivo `.env`.
+    El primer comando crea las migraciones, el segundo aplica las migraciones, el tercero inicializa el sistema con datos basicos y el ultimo comando recopila los archivos estaticos en la carpeta definida en settings.py
 
-   d. **Configurar/crear servicio Gunicorn** en el archivo `/etc/systemd/system/gunicorn.service`:
-   ```
-   [Unit]
-   Description=gunicorn daemon
-   After=network.target
 
-   [Service]
-   User=tu_usuario
-   Group=www-data
-   WorkingDirectory=/ruta/a/tu/proyecto
-   Environment=DB_NAME=nombre_bd
-   Environment=DB_USER=usuario_bd
-   Environment=DB_PASSWORD=contraseña_bd
-   Environment=DB_HOST=localhost
-   ExecStart=/ruta/a/venv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/tmp/gunicorn.sock mi_proyecto.wsgi:application
+3. **Acceder a la aplicación:**
+   Abre tu navegador y ve a `http://localhost:8001` o `http://127.0.0.1:8001/` para acceder
 
-   [Install]
-   WantedBy=multi-user.target
-   ```
-   e. **Correr Gunicorn**:
+
+4. **Detener los contenedores:**
    ```bash
-   gunicorn -c gunicorn.conf.py global_exchange.wsgi
+   docker compose down
    ```
-   **Si estas en venv**
-   ```bash
-   python -m gunicorn -c gunicorn.conf.py global_exchange.wsgi
-   ```
-
-   f. **Gestionar el servicio**
-   ```bash
-   # Recargar configuración
-   sudo systemctl daemon-reload
-
-   # Iniciar servicio
-   sudo systemctl start gunicorn
-
-   # Habilitar inicio automático
-   sudo systemctl enable gunicorn
-
-   # Ver estado
-   sudo systemctl status gunicorn
-   ```
-
-   g. **Instalar Nginx**
-   ```bash
-   pip install nginx
-   ```
-
-   h. **Configurar Nginx como proxy inverso** en /etc/nginx/sites-available/tu_sitio
-   ```
-   server {
-      listen 80;
-      server_name tu_dominio.com;
-
-      location / {
-         proxy_pass http://unix:/tmp/gunicorn.sock;
-         proxy_set_header Host $host;
-         proxy_set_header X-Real-IP $remote_addr;
-      }
-
-      location /static/ {
-         alias /ruta/a/tu/proyecto/static/;
-      }
-
-      location /media/ {
-         alias /ruta/a/tu/proyecto/media/;
-      }
-   }
-   ```
-
+### Tareas asincronas con Celery y Redis
    Para tareas asincronas
    ```bash
    pip install celery redis

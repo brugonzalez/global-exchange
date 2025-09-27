@@ -1,39 +1,36 @@
+# Imagen base con Python 3.12
 FROM python:3.12
 
-ENV DEBIAN_FRONTEND=noninteractive \
-	PYTHONDONTWRITEBYTECODE=1 \
-	PYTHONUNBUFFERED=1 \
-	PGDATA=/var/lib/postgresql/data
+# Variables de entorno para que Python trabaje bien en Docker
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-	postgresql postgresql-client supervisor ca-certificates tzdata \
-  && rm -rf /var/lib/apt/lists/*
-#Instalacion de nginx
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql postgresql-client supervisor ca-certificates tzdata nginx \
-    && rm -rf /var/lib/apt/lists/*
-# Crea directorios de trabajo y datos
+# Establecer directorio de trabajo dentro del contenedor
 WORKDIR /app
-RUN mkdir -p /var/lib/postgresql/data && \
-	chown -R postgres:postgres /var/lib/postgresql
 
-# Instala dependencias Python y psycopg
-COPY requirements.txt /app/requirements.txt
-RUN python -m pip install --upgrade pip setuptools wheel && \
-	pip install "psycopg[binary]>=3.1" && \
-	pip install -r /app/requirements.txt
+# Instalar dependencias del sistema necesarias (ej: para psycopg2, Pillow, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    git \
+    ca-certificates \
+    tzdata \
+ && rm -rf /var/lib/apt/lists/*
 
-# Copia el código fuente
+# Copiar requirements e instalarlos primero (mejora el cache de Docker)
+COPY requirementsProduccion.txt /app/requirementsProduccion.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r /app/requirementsProduccion.txt
+
+# Copiar el código fuente de la app
 COPY . /app
 
-# Copia la configuración de Nginx
-COPY nginx.conf /etc/nginx/nginx.conf
+# Recolectar archivos estáticos (para que Nginx pueda servirlos)
+#RUN python manage.py collectstatic --noinput
 
-# Expone puertos para web, postgres y nginx
-EXPOSE 8000 5432 80
+# Exponer puerto de Gunicorn
+EXPOSE 8000
 
-# Volumen para persistencia de datos de PostgreSQL
-VOLUME ["/var/lib/postgresql/data"]
-
-# Arranca Gunicorn y Nginx juntos (simple, para demo/producción básica)
-CMD service nginx start && gunicorn -c gunicorn.conf.py global_exchange.wsgi
+# Comando de inicio: Gunicorn como servidor WSGI
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "global_exchange.wsgi"]

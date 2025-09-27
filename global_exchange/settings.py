@@ -2,17 +2,12 @@
 Configuración de Django para el proyecto global_exchange.
 
 Generado por 'django-admin startproject' usando Django 5.2.4.
-
-Para más información sobre este archivo, ver
-https://docs.djangoproject.com/en/5.2/topics/settings/
-
-Para la lista completa de configuraciones y sus valores, ver
-https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
 from pathlib import Path
 from decouple import config
+from django_extensions.settings import BASE_DIR
 
 # Construye las rutas dentro del proyecto así: DIRECTORIO_BASE / 'subdir'.
 DIRECTORIO_BASE = Path(__file__).resolve().parent.parent
@@ -23,11 +18,8 @@ DIRECTORIO_BASE = Path(__file__).resolve().parent.parent
 
 # ADVERTENCIA DE SEGURIDAD: ¡mantén la clave secreta utilizada en producción en secreto!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-(zfqwn(b_@^e17z=uohdbyxka#79mf^b)rdgn9n@$athop!a15')
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-# ADVERTENCIA DE SEGURIDAD: ¡no ejecutes con debug activado en producción!
-DEBUG = config('DEBUG', default=True, cast=bool)
-
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 
 # Definición de la aplicación
@@ -157,9 +149,7 @@ USE_TZ = True
 # Archivos estáticos (CSS, JavaScript, Imágenes)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [DIRECTORIO_BASE / 'static']
-STATIC_ROOT = DIRECTORIO_BASE / 'staticfiles'
+
 
 # Archivos de medios
 MEDIA_URL = '/media/'
@@ -213,11 +203,31 @@ SECURE_HSTS_PRELOAD = True
 CSRF_FAILURE_VIEW = 'clientes.views.fallo_csrf'
 CSRF_COOKIE_AGE = 31449600  # 1 año, igual que el por defecto de Django
 
-# Configuración de Sesión
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+# Configuración de Sesión, mantenemos el falso igual si es produccion, ya que no utilizamos HTTPS
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_AGE = 3600  # 1 hora
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Configuración para producción
+if not DEBUG:
+    # Proxy header para Nginx
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
+
+    # Orígenes confiables para CSRF cuando usas Nginx como proxy
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8001",
+        "http://127.0.0.1:8001",
+        "http://192.168.100.140:8001",  #siver para acceder desde otra pc
+    ]
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '192.168.100.140', 'web', 'nginx']
+    STATIC_URL = '/static/'
+    STATICFILES_DIRS = []  # vacío en producción
+    STATIC_ROOT = os.path.join(DIRECTORIO_BASE, 'staticfiles')
+else:
+    STATIC_URL = '/static/'
+    STATICFILES_DIRS = [DIRECTORIO_BASE / 'static']
+    STATIC_ROOT = DIRECTORIO_BASE / 'staticfiles'
 
 # Configuración de Bloqueo de Cuenta
 BLOQUEO_CUENTA_ACTIVADO = True

@@ -1,0 +1,33 @@
+# Clave secreta de Django (cambiar por una real en producción)
+SECRET_KEY=django-insecure-ejemplo1234567890
+
+# Modo de depuración (False en producción)
+DEBUG=False
+
+# Configuración de Email
+# Servidor SMTP (por defecto smtp.gmail.com)
+EMAIL_HOST=smtp.gmail.com
+# Puerto SMTP (por defecto 587 para TLS)
+EMAIL_PORT=587
+# Usar TLS para el envío de correos
+EMAIL_USE_TLS=True
+# Usuario de email
+EMAIL_HOST_USER=iproyecto27@gmail.com
+# Contraseña de email
+EMAIL_HOST_PASSWORD=nxofbvnurhaievip
+
+# API de tasas de cambio
+# Clave para la API de tasas de cambio
+API_KEY_TASA_CAMBIO=api-key-ejemplo
+
+# Configuración de Stripe
+STRIPE_CLAVE_PUBLICABLE=pk_test_51S3kLrLvithx6LhU7WAs5GxqJptS6fC9imeiiNP9hs0kslIHOm52DcvZL7wonQC1tqGQG4RBXDgGBOu0wQcLyuZK009deICInV
+STRIPE_CLAVE_SECRETA=sk_test_51S3kLrLvithx6LhU44aWES4HHRgLSsBvDYYX6xgjPWp4gyKhH41dIn8lw7DFGIlyoLsNvbh76CTlVRaCC72tA9h300GN1FALK9
+STRIPE_SECRETO_ENDPOINT=whsec_ejemplo123456
+
+# Configuración de base de datos PostgreSQL (descomentar y completar si se usa PostgreSQL)
+ DB_NAME=global_exchange
+ DB_USER=postgres
+ DB_PASSWORD=postgres
+ DB_HOST=db
+ DB_PORT=5432

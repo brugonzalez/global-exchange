@@ -3,27 +3,54 @@ version: '3.9'
 services:
   db:
     image: postgres:17
+    container_name: globalexchange-db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: global_exchange
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5433:5432"               # opcional: para conectarnos a la base de datos desde el host
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d global_exchange"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   web:
-    build: .
-    restart: always
-    command: gunicorn -c gunicorn.conf.py global_exchange.wsgi
-    volumes:
-      - .:/app
-    ports:
-      - "8001:8000"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: globalexchange-web
+    restart: unless-stopped
     env_file:
-      - .env
+      - .envProduccion
     depends_on:
       - db
+    # No montamos todo el código del host (producción). El código ya está copiado por Dockerfile.
+    volumes:
+      - static_volume:/app/staticfiles   # volumen compartido para archivos estáticos (STATIC_ROOT)
+      - media_volume:/app/media          # volumen compartido para medios (MEDIA_ROOT)
+    expose:
+      - "8000"                           # expone el puerto a la red interna de Compose (no al host)
+    command: gunicorn -c gunicorn.conf.py global_exchange.wsgi
+
+  nginx:
+    image: nginx:stable
+    container_name: globalexchange-nginx
+    restart: unless-stopped
+    ports:
+      - "8001:80"                        # el host accede en localhost:8001 -> Nginx:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media:ro
+    depends_on:
+      - web
+
 volumes:
   pgdata:
-  
+  static_volume:
+  media_volume:
