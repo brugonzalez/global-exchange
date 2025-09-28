@@ -1,12 +1,13 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from cuentas.models import Rol, Permiso
+from cuentas.models import Rol, Permiso, Configuracion
 from django.db import transaction
 from decimal import Decimal
 
-from divisas.models import Moneda, PrecioBase, TasaCambio, MetodoPago
-from clientes.models import CategoriaCliente
+from divisas.models import Moneda, PrecioBase, TasaCambio, MetodoPago, MetodoCobro
+from clientes.models import CategoriaCliente, Cliente, ClienteUsuario
 from notificaciones.models import PlantillaNotificacion
+from tauser.models import Tauser, StockTauser
 
 Usuario = get_user_model()
 
@@ -16,7 +17,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write('Inicializando sistema Global Exchange completo...')
-        
+
+
+        #dividimos en mas transacciones por dependencia
+
         with transaction.atomic():
             # Crear categorías de clientes
             self.crear_categorias_clientes()
@@ -38,7 +42,19 @@ class Command(BaseCommand):
             
             # Crear usuarios de prueba
             self.crear_usuarios_prueba()
-            
+
+            self.crear_metodos_cobro()
+
+            self.crear_configuraciones()
+
+            self.crear_tausers()
+
+            self.crear_clientes()
+
+            #self.asignar_cliente_usuario()
+
+            self.crear_stock_tausers()
+
         self.stdout.write(
             self.style.SUCCESS('¡Sistema Global Exchange inicializado exitosamente!')
         )
@@ -61,14 +77,14 @@ class Command(BaseCommand):
         
         datos_categorias = [
             {
-                'nombre': 'Minorista',
+                'nombre': 'RETAIL',
                 'limite_diario': Decimal('50000.00'),
                 'limite_mensual': Decimal('500000.00'),
                 'margen': Decimal('0.0000'),  # 0%
                 'prioridad': 3
             },
             {
-                'nombre': 'Corporativo',
+                'nombre': 'CORPORATE',
                 'limite_diario': Decimal('500000.00'),
                 'limite_mensual': Decimal('5000000.00'),
                 'margen': Decimal('0.0500'),  # 5%
@@ -82,7 +98,9 @@ class Command(BaseCommand):
                 'prioridad': 1
             }
         ]
-        
+
+        categoriasCliente = {}
+        i = 1
         for dato_cat in datos_categorias:
             categoria, creado = CategoriaCliente.objects.get_or_create(
                 nombre=dato_cat['nombre'],
@@ -94,7 +112,11 @@ class Command(BaseCommand):
                 }
             )
             if creado:
+                categoriasCliente[i] = categoria
+                i = i + 1
                 self.stdout.write(f'  ✓ Categoría de cliente creada: {categoria}')
+
+        return categoriasCliente
 
     def crear_monedas_y_tasas(self):
         """Crea las monedas y tasas de cambio iniciales."""
@@ -180,8 +202,9 @@ class Command(BaseCommand):
                 'soporta_venta': True,
                 'monto_minimo': Decimal('1000.00'),
                 'horas_procesamiento': 24,
-                'porcentaje_comision': Decimal('0.5000'),  # 0.5%
-                'grupo': 'BANKING'
+                'porcentaje_comision': Decimal('0.05000'),  # 0.5%
+                'grupo': 'BANKING',
+                'porcentaje_visual': 5
             },
             {
                 'nombre': 'Billetera Digital - MercadoPago',
@@ -190,28 +213,20 @@ class Command(BaseCommand):
                 'soporta_venta': True,
                 'monto_minimo': Decimal('100.00'),
                 'horas_procesamiento': 1,
-                'porcentaje_comision': Decimal('1.0000'),  # 1%
-                'grupo': 'DIGITAL_WALLETS'
+                'porcentaje_comision': Decimal('0.0100'),
+                'grupo': 'DIGITAL_WALLETS',
+                'porcentaje_visual': 1
             },
             {
-                'nombre': 'Tarjeta de Crédito (Stripe)',
+                'nombre': 'Tarjeta de Crédito',
                 'tipo': 'CREDIT_CARD',
                 'soporta_compra': True,
                 'soporta_venta': False,
                 'monto_minimo': Decimal('50.00'),
                 'horas_procesamiento': 1,
-                'porcentaje_comision': Decimal('2.9000'),  # 2.9% (tasa típica de Stripe)
-                'grupo': 'CARDS'
-            },
-            {
-                'nombre': 'SIPAP - Sistema de Pagos Paraguay',
-                'tipo': 'DIGITAL_WALLET',
-                'soporta_compra': True,
-                'soporta_venta': True,
-                'monto_minimo': Decimal('1000.00'),
-                'horas_procesamiento': 2,
-                'porcentaje_comision': Decimal('0.8000'),  # 0.8%
-                'grupo': 'DIGITAL_WALLETS'
+                'porcentaje_comision': Decimal('0.0290'),  # 2.9% (tasa típica de Stripe)
+                'grupo': 'CARDS',
+                'porcentaje_visual': 2
             },
             {
                 'nombre': 'Western Union',
@@ -220,8 +235,9 @@ class Command(BaseCommand):
                 'soporta_venta': True,
                 'monto_minimo': Decimal('5000.00'),
                 'horas_procesamiento': 4,
-                'porcentaje_comision': Decimal('1.5000'),  # 1.5%
-                'grupo': 'INTERNATIONAL_WALLETS'
+                'porcentaje_comision': Decimal('0.0150'),  # 1.5%
+                'grupo': 'INTERNATIONAL_WALLETS',
+                'porcentaje_visual': 1
             },
             {
                 'nombre': 'EuroTransfer',
@@ -230,8 +246,9 @@ class Command(BaseCommand):
                 'soporta_venta': True,
                 'monto_minimo': Decimal('10000.00'),
                 'horas_procesamiento': 6,
-                'porcentaje_comision': Decimal('1.2000'),  # 1.2%
-                'grupo': 'INTERNATIONAL_WALLETS'
+                'porcentaje_comision': Decimal('0.0120'),  # 1.2%
+                'grupo': 'INTERNATIONAL_WALLETS',
+                'porcentaje_visual': 1
             },
             {
                 'nombre': 'Efectivo',
@@ -241,7 +258,19 @@ class Command(BaseCommand):
                 'monto_minimo': Decimal('50000.00'),  # Mínimo CLP
                 'horas_procesamiento': 48,
                 'porcentaje_comision': Decimal('0.0000'),  # Sin comisión para retiro en efectivo
-                'grupo': 'CASH_PICKUP'
+                'grupo': 'CASH_PICKUP',
+                'porcentaje_visual': 0
+            },
+            {
+                'nombre': 'Cheque',
+                'tipo': 'CASH',
+                'soporta_compra': False,
+                'soporta_venta': True,
+                'monto_minimo': Decimal('50000.00'),  # Mínimo CLP
+                'horas_procesamiento': 48,
+                'porcentaje_comision': Decimal('0.0000'),  # Sin comisión para retiro en efectivo
+                'grupo': 'CASH_PICKUP',
+                'porcentaje_visual': 0
             }
         ]
         
@@ -256,12 +285,92 @@ class Command(BaseCommand):
                     'monto_minimo': dato_mp['monto_minimo'],
                     'tiempo_procesamiento_horas': dato_mp['horas_procesamiento'],
                     'porcentaje_comision': dato_mp['porcentaje_comision'],
+                    'porcentaje_visual': dato_mp['porcentaje_visual'],
                     'esta_activo': True,
                     'configuracion': {
                         'grupo': dato_mp['grupo'],
                         'pseudo_integracion': dato_mp['nombre'] in ['SIPAP - Sistema de Pagos Paraguay', 'Western Union', 'EuroTransfer'],
                         'requiere_manejo_especial': dato_mp['nombre'] == 'Retiro en Caja - Peso Chileno'
                     }
+                }
+            )
+            if creado:
+                self.stdout.write(f'  ✓ Método de pago creado: {metodo_pago}')
+
+    def crear_metodos_cobro(self):
+        """Crea los métodos de cobro disponibles."""
+        self.stdout.write('Creando métodos de cobro...')
+
+        datos_metodos_pago = [
+            {
+                'nombre': 'Transferencia Bancaria',
+                'tipo': 'BANK_TRANSFER',
+                'soporta_compra': True,
+                'soporta_venta': True,
+                'monto_minimo': Decimal('1000.00'),
+                'horas_procesamiento': 24,
+                'porcentaje_comision': Decimal('0.0100'),  # 0.5%
+                'grupo': 'BANKING',
+                'porcentaje_visual': 1
+            },
+            {
+                'nombre': 'Billetera Digital - MercadoPago',
+                'tipo': 'DIGITAL_WALLET',
+                'soporta_compra': False,
+                'soporta_venta': True,
+                'monto_minimo': Decimal('100.00'),
+                'horas_procesamiento': 1,
+                'porcentaje_comision': Decimal('0.0100'),
+                'grupo': 'DIGITAL_WALLETS',
+                'porcentaje_visual': 1
+            },
+            {
+                'nombre': 'Western Union',
+                'tipo': 'DIGITAL_WALLET',
+                'soporta_compra': False,
+                'soporta_venta': True,
+                'monto_minimo': Decimal('5000.00'),
+                'horas_procesamiento': 4,
+                'porcentaje_comision': Decimal('0.0150'),  # 1.5%
+                'grupo': 'INTERNATIONAL_WALLETS',
+                'porcentaje_visual': 1
+            },
+            {
+                'nombre': 'EuroTransfer',
+                'tipo': 'DIGITAL_WALLET',
+                'soporta_compra': False,
+                'soporta_venta': True,
+                'monto_minimo': Decimal('10000.00'),
+                'horas_procesamiento': 6,
+                'porcentaje_comision': Decimal('0.0120'),  # 1.2%
+                'grupo': 'INTERNATIONAL_WALLETS',
+                'porcentaje_visual': 1
+            },
+            {
+                'nombre': 'Efectivo',
+                'tipo': 'CASH',
+                'soporta_compra': False,
+                'soporta_venta': True,
+                'monto_minimo': Decimal('50000.00'),  # Mínimo CLP
+                'horas_procesamiento': 48,
+                'porcentaje_comision': Decimal('0.0100'),  # Sin comisión para retiro en efectivo
+                'grupo': 'CASH_PICKUP',
+                'porcentaje_visual': 1
+            }
+        ]
+
+        for dato_mp in datos_metodos_pago:
+            metodo_pago, creado = MetodoCobro.objects.get_or_create(
+                nombre=dato_mp['nombre'],
+                defaults={
+                    'tipo_metodo': dato_mp['tipo'],
+                    'grupo_metodo': dato_mp['grupo'],
+                    'soporta_compra': dato_mp['soporta_compra'],
+                    'soporta_venta': dato_mp['soporta_venta'],
+                    'monto_minimo': dato_mp['monto_minimo'],
+                    'porcentaje_comision': dato_mp['porcentaje_comision'],
+                    'porcentaje_visual': dato_mp['porcentaje_visual'],
+                    'esta_activo': True
                 }
             )
             if creado:
@@ -463,7 +572,9 @@ class Command(BaseCommand):
     def crear_usuarios_prueba(self):
         """Crea usuarios de prueba."""
         self.stdout.write('Creando usuarios de prueba...')
-        
+
+        usuarios = {}
+
         # Administradores
         for i in range(1, 3):
             username = f'admin{i}'
@@ -477,10 +588,12 @@ class Command(BaseCommand):
                 usuario.email_verificado = True
                 usuario.is_staff = True
                 usuario.is_superuser = True
+                usuarios[i] = usuario
                 usuario.save()
                 
                 # Asignar solo rol de Administrador (no Usuario)
                 rol_admin = Rol.objects.get(nombre_rol='Administrador')
+                self.stdout.write(f'  ✓ Objeto administrador: {rol_admin}')
                 usuario.roles.set([rol_admin])  # Use set() to replace instead of add()
                 
                 self.stdout.write(f'  ✓ Usuario administrador creado: {username}')
@@ -502,6 +615,247 @@ class Command(BaseCommand):
                 # Asignar rol de Usuario
                 rol_usuario = Rol.objects.get(nombre_rol='Usuario')
                 usuario.roles.set([rol_usuario])  # Use set() to ensure only this role
-                
+
+                usuarios[i] = usuario
+
                 self.stdout.write(f'  ✓ Usuario regular creado: {username}')
                 self.stdout.write(f'    Contraseña: {username} (¡cambiar inmediatamente!)')
+
+        return usuarios
+
+    def crear_clientes(self):
+        """Crea clientes de prueba."""
+        self.stdout.write('Creando clientes...')
+
+        clientes = [
+            {'tipo': 'FISICA', 'estado': 'ACTIVO', 'nombre': 'Juan', 'apellido': 'Perez', 'nombre_empresa': '', 'numero_identificacion': '12345', 'email': 'JuanPerez@gmail.com', 'saldo_cuenta': 0, 'stripe_customer_id': 'cus_SznbqGdw7Ep1G4', 'usa_limites': True},
+            {'tipo': 'JURIDICA', 'estado': 'ACTIVO', 'nombre': '', 'apellido': '', 'nombre_empresa': 'Cervepar', 'numero_identificacion': '12346', 'email': 'cervepar@gmail.com', 'saldo_cuenta': 0, 'stripe_customer_id': 'cus_SzqrNFH3P4HGFp', 'usa_limites': True},
+            {'tipo': 'JURIDICA', 'estado': 'ACTIVO', 'nombre': '', 'apellido': '', 'nombre_empresa': 'FPUNA', 'numero_identificacion': '12347', 'email': 'fpuna@gmail.com', 'saldo_cuenta': 0, 'stripe_customer_id': 'cus_SzqrNFH3P4HGFp', 'usa_limites': True},
+        ]
+
+        clientes_creados = {}
+
+        usuario_creador = Usuario.objects.get(username='admin1')
+        categoria_retail = CategoriaCliente.objects.get(nombre='RETAIL')
+        categoria_corporate = CategoriaCliente.objects.get(nombre='CORPORATE')
+        categoria_vip = CategoriaCliente.objects.get(nombre='VIP')
+
+        # Usuarios regulares
+        for i, data in enumerate(clientes):
+            if i == 0:
+                categorias_cliente = categoria_retail
+            elif i == 1:
+                categorias_cliente = categoria_corporate
+            else:
+                categorias_cliente = categoria_vip
+
+            cliente = Cliente.objects.create(
+                tipo_cliente=clientes[i]['tipo'],
+                estado=clientes[i]['estado'],
+                nombre=clientes[i]['nombre'],
+                apellido=clientes[i]['apellido'],
+                nombre_empresa=clientes[i]['nombre_empresa'],
+                numero_identificacion=clientes[i]['numero_identificacion'],
+                email=clientes[i]['email'],
+                saldo_cuenta=clientes[i]['saldo_cuenta'],
+                stripe_customer_id=clientes[i]['stripe_customer_id'],
+                usa_limites_default=clientes[i]['usa_limites'],
+                creado_por=usuario_creador,
+                categoria_id=categorias_cliente.id,
+            )
+
+            self.stdout.write(f'  ✓ Cliente creado: {cliente}')
+            clientes_creados[i] = cliente
+            cliente.save()
+
+        return clientes_creados
+
+    def asignar_cliente_usuario(self):
+        """Asigna clientes a usuarios de prueba."""
+        self.stdout.write('Asignando clientes...')
+
+        clientes = [
+            {'rol': 'AUTORIZADO', 'esta_activo': True, 'asignado_por': 1, 'cliente_id': 2, 'usuario_id': 3},
+            {'rol': 'AUTORIZADO', 'esta_activo': True, 'asignado_por': 1, 'cliente_id': 2, 'usuario_id': 4},
+            {'rol': 'AUTORIZADO', 'esta_activo': True, 'asignado_por': 1, 'cliente_id': 1, 'usuario_id': 3},
+            {'rol': 'AUTORIZADO', 'esta_activo': True, 'asignado_por': 1, 'cliente_id': 1, 'usuario_id': 4},
+            {'rol': 'AUTORIZADO', 'esta_activo': True, 'asignado_por': 1, 'cliente_id': 1, 'usuario_id': 5},
+            {'rol': 'AUTORIZADO', 'esta_activo': True, 'asignado_por': 1, 'cliente_id': 3, 'usuario_id': 3},
+        ]
+
+        usuario_creador = Usuario.objects.get(username='admin1')
+        cliente1 = Cliente.objects.get(nombre='Juan')
+        cliente2 = Cliente.objects.get(nombre_empresa='Cervepar')
+        cliente3 = Cliente.objects.get(nombre_empresa='FPUNA')
+
+        # Usuarios regulares
+        for i in range(1, 6):
+
+            if i in [1, 2]:
+                cliente_id = cliente1.id
+            elif i in [3, 5]:
+                cliente_id = cliente2.id
+            else:
+                cliente_id = cliente3.id
+
+            #
+
+            self.stdout.write('Se realizo la asignacion de cliente a usuario')
+            #cliente.save()
+
+    def crear_tausers(self):
+        """Crea los tausers del sistema."""
+        self.stdout.write('Creando tausers...')
+
+        datos_tausers = [
+            {
+                'nombre': 'asuncion',
+                'estado': 'ACTIVO',
+                'direccion': 'calle palma',
+                'ciudad': 'asuncion',
+                'pais': 'paraguay',
+                'permite_depositos': True,
+                'permite_retiros': True
+            },
+            {
+                'nombre': 'san lorenzo',
+                'estado': 'ACTIVO',
+                'direccion': 'saturio rios',
+                'ciudad': 'san lorenzo',
+                'pais': 'paraguay',
+                'permite_depositos': True,
+                'permite_retiros': True
+            },
+            {
+                'nombre': 'ñemby',
+                'estado': 'ACTIVO',
+                'direccion': 'santa rosa',
+                'ciudad': 'ñemby',
+                'pais': 'paraguay',
+                'permite_depositos': True,
+                'permite_retiros': True
+            }
+        ]
+
+        tausers = {}
+        i = 1
+        for dato_tauser in datos_tausers:
+            tauser, creado = Tauser.objects.get_or_create(
+                nombre=dato_tauser['nombre'],
+                defaults={
+                    'estado': dato_tauser['estado'],
+                    'direccion': dato_tauser['direccion'],
+                    'ciudad': dato_tauser['ciudad'],
+                    'pais': dato_tauser['pais'],
+                    'permite_depositos': dato_tauser['permite_depositos'],
+                    'permite_retiros': dato_tauser['permite_retiros']
+                }
+            )
+            if creado:
+                tausers[i] = tauser
+                self.stdout.write(f'  ✓ Tauser creado: {tauser}')
+
+        return tausers
+
+    def crear_configuraciones(self):
+        """Crea las configuraciones del sistema."""
+        self.stdout.write('Creando configuraciones del sistema...')
+
+        datos_configuraciones = [
+            {
+                'clave': 'LIMITE_TRANSACCION_DIARIO_DEFAULT',
+                'valor': '100000000',
+                'tipo_valor': 'MONTO',
+                'descripcion': 'Límite del monto total equivalente a la suma de los montos de las transacciones de un cliente en el día',
+                'categoria': 'Transacciones',
+                'nombre': 'Limite Diario'
+            },
+            {
+                'clave': 'LIMITE_TRANSACCION_MENSUAL_DEFAULT',
+                'valor': '100000000',
+                'tipo_valor': 'MONTO',
+                'descripcion': 'Límite del monto total equivalente a la suma de los montos de las transacciones de un cliente en el mes',
+                'categoria': 'Transacciones',
+                'nombre': 'Limite Mensual'
+            },
+            {
+                'clave': 'INTENTOS_MAX_BLOQUEO_CUENTA',
+                'valor': '5',
+                'tipo_valor': 'NUMBER',
+                'descripcion': 'intentos maximos que tiene el usuario antes que se le bloquee la cuenta',
+                'categoria': 'Cuenta'
+            },
+            {
+                'clave': 'DURACION_BLOQUEO_CUENTA',
+                'valor': '1800',
+                'tipo_valor': 'NUMBER',
+                'descripcion': 'duracion de bloqueo de la cuenta',
+                'categoria': 'Cuenta'
+            }
+        ]
+
+        for dato_config in datos_configuraciones:
+            configuracion, creado = Configuracion.objects.get_or_create(
+                clave=dato_config['clave'],
+                defaults={
+                    'valor': dato_config['valor'],
+                    'tipo_valor': dato_config['tipo_valor'],
+                    'descripcion': dato_config['descripcion'],
+                    'categoria': dato_config['categoria'],
+                    'nombre': dato_config.get('nombre', ''),
+                    'es_editable': True
+                }
+            )
+            if creado:
+                self.stdout.write(f'  ✓ Configuración creada: {configuracion.clave}')
+
+    def crear_stock_tausers(self):
+        """Crea el stock de monedas para los tausers."""
+        self.stdout.write('Creando stock de tausers...')
+
+        # Datos de stock basados en el JSON proporcionado
+        # Nota: Los IDs se generan automáticamente, por lo que los omitimos
+        datos_stock = [
+            # Stock para tauser 1 (asuncion)
+            {'moneda_codigo': 'USD', 'tauser_nombre': 'asuncion', 'cantidad_disponible': Decimal('1000.00'), 'tauser_id': 1},
+            {'moneda_codigo': 'EUR', 'tauser_nombre': 'asuncion', 'cantidad_disponible': Decimal('1000.00'), 'tauser_id': 1},
+            {'moneda_codigo': 'BRL', 'tauser_nombre': 'asuncion', 'cantidad_disponible': Decimal('1000.00'), 'tauser_id': 1},
+            {'moneda_codigo': 'PYG', 'tauser_nombre': 'asuncion', 'cantidad_disponible': Decimal('10000.00'), 'tauser_id': 1},
+
+            # Stock para tauser 2 (san lorenzo)
+            {'moneda_codigo': 'USD', 'tauser_nombre': 'san lorenzo', 'cantidad_disponible': Decimal('50.00'), 'tauser_id': 2},
+            {'moneda_codigo': 'EUR', 'tauser_nombre': 'san lorenzo', 'cantidad_disponible': Decimal('50.00'), 'tauser_id': 2},
+            {'moneda_codigo': 'BRL', 'tauser_nombre': 'san lorenzo', 'cantidad_disponible': Decimal('50.00'), 'tauser_id': 2},
+
+            # Stock para tauser 3 (ñemby)
+            {'moneda_codigo': 'USD', 'tauser_nombre': 'ñemby', 'cantidad_disponible': Decimal('10.00'), 'tauser_id': 3},
+            {'moneda_codigo': 'EUR', 'tauser_nombre': 'ñemby', 'cantidad_disponible': Decimal('10.00'), 'tauser_id': 3},
+            {'moneda_codigo': 'BRL', 'tauser_nombre': 'ñemby', 'cantidad_disponible': Decimal('10.00'), 'tauser_id': 3},
+        ]
+
+        for dato_stock in datos_stock:
+            try:
+                moneda = Moneda.objects.get(codigo=dato_stock['moneda_codigo'])
+                tauser = Tauser.objects.get(nombre=dato_stock['tauser_nombre'])
+
+                stock, creado = StockTauser.objects.get_or_create(
+                    moneda=moneda,
+                    tauser=tauser,
+                    defaults={
+                        'cantidad_disponible': dato_stock['cantidad_disponible'],
+                        'cantidad_reservada': Decimal('0.00'),
+                        'stock_minimo': Decimal('1.00'),
+                        'stock_maximo': Decimal('100000000.00'),
+                        'alerta_stock_bajo': False
+                    }
+                )
+                if creado:
+                    self.stdout.write(
+                        f'  ✓ Stock creado: {tauser.nombre} - {moneda.codigo} ({dato_stock["cantidad_disponible"]})')
+
+            except Moneda.DoesNotExist:
+                self.stdout.write(f'  ❌ Moneda no encontrada: {dato_stock["moneda_codigo"]}')
+            except Tauser.DoesNotExist:
+                self.stdout.write(f'  ❌ Tauser no encontrado: {dato_stock["tauser_nombre"]}')
+
+    # ... resto de métodos existentes permanecen igual ...
